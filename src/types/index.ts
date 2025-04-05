@@ -1,0 +1,95 @@
+/**
+ * Application types
+ */
+
+export interface Story {
+  id: string;
+  title: string;
+  description: string;
+  language: string;
+  frames: StoryFrame[];
+  reference?: string;
+  introduction?: string;
+}
+
+export interface StoryFrame {
+  id: string;
+  number: number;
+  text: string;
+  image: {
+    url: string;
+    resolutions?: {
+      low: string;
+      medium: string;
+      high: string;
+    };
+  };
+}
+
+export interface Language {
+  id?: string;
+  code: string;
+  name: string;
+  downloaded?: boolean;
+  owner?: string;
+}
+
+export interface DownloadProgress {
+  storyId: string;
+  language: string;
+  progress: number;
+  completed: boolean;
+  error?: string;
+}
+
+export interface AppSettings {
+  darkMode: boolean;
+  autoDownload: boolean;
+  highQualityImages: boolean;
+  defaultLanguage: string;
+}
+
+// Types for the OBS data structures
+export interface StoriesData {
+  stories: Record<string, Story>;
+  version: string;
+}
+
+export interface Reference {
+  story: number;
+  frame: number;
+}
+
+// Bookmark types
+export interface Bookmark {
+  id: string;
+  storyId: number;
+  frameId: number;
+  note?: string;
+  dateCreated: string;
+}
+
+// Context types
+export interface OBSState {
+  reference: Reference;
+  OBS: StoriesData | null;
+  language: Language;
+  bookmarks: Bookmark[];
+}
+
+export interface OBSContextType {
+  OBSState: OBSState;
+  setOBState: React.Dispatch<OBSAction>;
+}
+
+// Action types for the reducer
+export type OBSAction =
+  | { type: "GO_NEXT" }
+  | { type: "GO_PREV" }
+  | { type: "NAV_TO"; payload: { story: number; frame?: number } }
+  | { type: "SET_OBS"; payload: StoriesData }
+  | { type: "SET_LANGUAGE"; payload: Language }
+  | { type: "ADD_BOOKMARK"; payload: Bookmark }
+  | { type: "REMOVE_BOOKMARK"; payload: string }
+  | { type: "UPDATE_BOOKMARK"; payload: Bookmark }
+  | { type: "ADD_BOOKMARKS"; payload: Bookmark[] };
