@@ -6,8 +6,10 @@ import {
   SectionList,
   TouchableOpacity,
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  StatusBar
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -106,17 +108,22 @@ export default function DownloadsScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4a90e2" />
-        <Text style={styles.loadingText}>Loading downloads...</Text>
-      </View>
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#4a90e2" />
+          <Text style={styles.loadingText}>Loading downloads...</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   const sections = getSectionData();
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Downloaded Content</Text>
         <Text style={styles.storageInfo}>
@@ -187,7 +194,7 @@ export default function DownloadsScreen() {
           <Text style={styles.manageButtonText}>Download More Content</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 

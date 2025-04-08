@@ -7,9 +7,9 @@ import {
   StyleSheet,
   Image,
   ActivityIndicator,
-  SafeAreaView,
   StatusBar
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -164,29 +164,6 @@ export default function HomeScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
-
-      <View style={styles.footer}>
-        <Link href="/(main)/settings" asChild>
-          <TouchableOpacity style={styles.footerButton}>
-            <Ionicons name="settings-outline" size={24} color="#555" />
-            <Text style={styles.footerButtonText}>Settings</Text>
-          </TouchableOpacity>
-        </Link>
-
-        <Link href="/(main)/downloads" asChild>
-          <TouchableOpacity style={styles.footerButton}>
-            <Ionicons name="download-outline" size={24} color="#555" />
-            <Text style={styles.footerButtonText}>Downloads</Text>
-          </TouchableOpacity>
-        </Link>
-
-        <Link href="/(main)/about" asChild>
-          <TouchableOpacity style={styles.footerButton}>
-            <Ionicons name="information-circle-outline" size={24} color="#555" />
-            <Text style={styles.footerButtonText}>About</Text>
-          </TouchableOpacity>
-        </Link>
-      </View>
     </SafeAreaView>
   );
 }

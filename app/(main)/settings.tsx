@@ -6,7 +6,9 @@ import {
   Switch,
   ScrollView,
   TouchableOpacity,
-  Alert
+  Alert,
+  SafeAreaView,
+  StatusBar
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -37,93 +39,97 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Display</Text>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-        <View style={styles.settingRow}>
-          <View style={styles.settingInfo}>
-            <Ionicons name="moon-outline" size={22} color="#555" style={styles.settingIcon} />
-            <Text style={styles.settingLabel}>Dark Mode</Text>
+      <ScrollView style={styles.scrollView}>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Display</Text>
+
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <Ionicons name="moon-outline" size={22} color="#555" style={styles.settingIcon} />
+              <Text style={styles.settingLabel}>Dark Mode</Text>
+            </View>
+            <Switch
+              value={darkMode}
+              onValueChange={setDarkMode}
+              trackColor={{ false: '#e0e0e0', true: '#4a90e2' }}
+              thumbColor="#fff"
+            />
           </View>
-          <Switch
-            value={darkMode}
-            onValueChange={setDarkMode}
-            trackColor={{ false: '#e0e0e0', true: '#4a90e2' }}
-            thumbColor="#fff"
-          />
-        </View>
 
-        <View style={styles.settingRow}>
-          <View style={styles.settingInfo}>
-            <Ionicons name="image-outline" size={22} color="#555" style={styles.settingIcon} />
-            <Text style={styles.settingLabel}>High Quality Images</Text>
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <Ionicons name="image-outline" size={22} color="#555" style={styles.settingIcon} />
+              <Text style={styles.settingLabel}>High Quality Images</Text>
+            </View>
+            <Switch
+              value={highQualityImages}
+              onValueChange={setHighQualityImages}
+              trackColor={{ false: '#e0e0e0', true: '#4a90e2' }}
+              thumbColor="#fff"
+            />
           </View>
-          <Switch
-            value={highQualityImages}
-            onValueChange={setHighQualityImages}
-            trackColor={{ false: '#e0e0e0', true: '#4a90e2' }}
-            thumbColor="#fff"
-          />
         </View>
-      </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Content</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Content</Text>
 
-        <View style={styles.settingRow}>
-          <View style={styles.settingInfo}>
-            <Ionicons name="cloud-download-outline" size={22} color="#555" style={styles.settingIcon} />
-            <Text style={styles.settingLabel}>Auto-download Stories</Text>
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <Ionicons name="cloud-download-outline" size={22} color="#555" style={styles.settingIcon} />
+              <Text style={styles.settingLabel}>Auto-download Stories</Text>
+            </View>
+            <Switch
+              value={autoDownload}
+              onValueChange={setAutoDownload}
+              trackColor={{ false: '#e0e0e0', true: '#4a90e2' }}
+              thumbColor="#fff"
+            />
           </View>
-          <Switch
-            value={autoDownload}
-            onValueChange={setAutoDownload}
-            trackColor={{ false: '#e0e0e0', true: '#4a90e2' }}
-            thumbColor="#fff"
-          />
-        </View>
 
-        <View style={styles.settingRow}>
-          <View style={styles.settingInfo}>
-            <Ionicons name="notifications-outline" size={22} color="#555" style={styles.settingIcon} />
-            <Text style={styles.settingLabel}>Notifications</Text>
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <Ionicons name="notifications-outline" size={22} color="#555" style={styles.settingIcon} />
+              <Text style={styles.settingLabel}>Notifications</Text>
+            </View>
+            <Switch
+              value={notifications}
+              onValueChange={setNotifications}
+              trackColor={{ false: '#e0e0e0', true: '#4a90e2' }}
+              thumbColor="#fff"
+            />
           </View>
-          <Switch
-            value={notifications}
-            onValueChange={setNotifications}
-            trackColor={{ false: '#e0e0e0', true: '#4a90e2' }}
-            thumbColor="#fff"
-          />
         </View>
-      </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Storage</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Storage</Text>
 
-        <TouchableOpacity style={styles.actionButton} onPress={handleClearCache}>
-          <View style={styles.settingInfo}>
-            <Ionicons name="trash-outline" size={22} color="#555" style={styles.settingIcon} />
-            <Text style={styles.settingLabel}>Clear Cache</Text>
+          <TouchableOpacity style={styles.actionButton} onPress={handleClearCache}>
+            <View style={styles.settingInfo}>
+              <Ionicons name="trash-outline" size={22} color="#555" style={styles.settingIcon} />
+              <Text style={styles.settingLabel}>Clear Cache</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#aaa" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>App Info</Text>
+
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Version</Text>
+            <Text style={styles.infoValue}>1.0.0</Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color="#aaa" />
-        </TouchableOpacity>
-      </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>App Info</Text>
-
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Version</Text>
-          <Text style={styles.infoValue}>1.0.0</Text>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Build</Text>
+            <Text style={styles.infoValue}>2023.04.05</Text>
+          </View>
         </View>
-
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Build</Text>
-          <Text style={styles.infoValue}>2023.04.05</Text>
-        </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -131,6 +137,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  scrollView: {
+    flex: 1,
   },
   section: {
     marginVertical: 12,

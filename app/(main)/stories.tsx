@@ -7,10 +7,14 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
-  Dimensions
+  Dimensions,
+  StatusBar
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { SearchBar } from '../../components/SearchBar';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 interface Story {
   id: string;
@@ -18,6 +22,7 @@ interface Story {
   description: string;
   thumbnailUrl: string;
   frameCount: number;
+  language: string;
 }
 
 // Mock data - This would come from your API in a real app
@@ -28,6 +33,7 @@ const MOCK_STORIES: Story[] = [
     description: 'This is how God made everything in the beginning.',
     thumbnailUrl: 'https://cdn.door43.org/obs/jpg/360px/obs-en-01-01.jpg',
     frameCount: 16,
+    language: 'en',
   },
   {
     id: '02',
@@ -35,6 +41,7 @@ const MOCK_STORIES: Story[] = [
     description: 'Adam and Eve disobeyed God.',
     thumbnailUrl: 'https://cdn.door43.org/obs/jpg/360px/obs-en-02-01.jpg',
     frameCount: 12,
+    language: 'en',
   },
   {
     id: '03',
@@ -42,6 +49,7 @@ const MOCK_STORIES: Story[] = [
     description: 'God decided to destroy the whole world with a flood because the people were so evil.',
     thumbnailUrl: 'https://cdn.door43.org/obs/jpg/360px/obs-en-03-01.jpg',
     frameCount: 14,
+    language: 'en',
   },
   {
     id: '04',
@@ -49,6 +57,7 @@ const MOCK_STORIES: Story[] = [
     description: 'God made a covenant with Abraham.',
     thumbnailUrl: 'https://cdn.door43.org/obs/jpg/360px/obs-en-04-01.jpg',
     frameCount: 15,
+    language: 'en',
   },
   {
     id: '05',
@@ -56,6 +65,7 @@ const MOCK_STORIES: Story[] = [
     description: 'God fulfilled his promise to Abraham.',
     thumbnailUrl: 'https://cdn.door43.org/obs/jpg/360px/obs-en-05-01.jpg',
     frameCount: 10,
+    language: 'en',
   },
   {
     id: '06',
@@ -63,6 +73,7 @@ const MOCK_STORIES: Story[] = [
     description: 'God provided a wife for Isaac.',
     thumbnailUrl: 'https://cdn.door43.org/obs/jpg/360px/obs-en-06-01.jpg',
     frameCount: 11,
+    language: 'en',
   },
   {
     id: '07',
@@ -70,6 +81,7 @@ const MOCK_STORIES: Story[] = [
     description: 'God blessed Jacob and changed his name to Israel.',
     thumbnailUrl: 'https://cdn.door43.org/obs/jpg/360px/obs-en-07-01.jpg',
     frameCount: 13,
+    language: 'en',
   },
   {
     id: '08',
@@ -77,6 +89,7 @@ const MOCK_STORIES: Story[] = [
     description: 'God used Joseph to save his family from a famine.',
     thumbnailUrl: 'https://cdn.door43.org/obs/jpg/360px/obs-en-08-01.jpg',
     frameCount: 14,
+    language: 'en',
   },
 ];
 
@@ -85,10 +98,21 @@ const { width } = Dimensions.get('window');
 const numColumns = 2;
 const cardWidth = (width - 48) / numColumns; // 48 accounts for margins and padding
 
+// Categories for filtering
+const categories = [
+  { id: 'all', name: 'All' },
+  { id: 'fantasy', name: 'Fantasy' },
+  { id: 'sci-fi', name: 'Sci-Fi' },
+  { id: 'mystery', name: 'Mystery' },
+  { id: 'thriller', name: 'Thriller' },
+  { id: 'adventure', name: 'Adventure' }
+];
+
 export default function StoriesScreen() {
-  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [stories, setStories] = useState<Story[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
 
   // Load stories
   useEffect(() => {
@@ -99,30 +123,71 @@ export default function StoriesScreen() {
     }, 800);
   }, []);
 
+  // Filter stories based on search query and selected category
+  const filteredStories = stories.filter(story => {
+    const matchesSearch = story.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         story.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' ||
+                           story.language.toLowerCase() === selectedCategory.toLowerCase();
+    return matchesSearch && matchesCategory;
+  });
+
   const handleStoryPress = (story: Story) => {
-    router.push(`/story/en/${story.id}`);
+    router.push(`/story/${story.language}/${story.id}`);
   };
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4a90e2" />
-        <Text style={styles.loadingText}>Loading stories...</Text>
-      </View>
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#4a90e2" />
+          <Text style={styles.loadingText}>Loading stories...</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Bible Stories</Text>
-        <Text style={styles.headerSubtitle}>
-          Explore all 50 key stories from the Bible
-        </Text>
+        <SearchBar
+          placeholder="Search stories or authors..."
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
       </View>
 
       <FlatList
-        data={stories}
+        horizontal
+        data={categories}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={[
+              styles.categoryItem,
+              selectedCategory === item.id && styles.categoryItemSelected
+            ]}
+            onPress={() => setSelectedCategory(item.id)}
+          >
+            <Text
+              style={[
+                styles.categoryItemText,
+                selectedCategory === item.id && styles.categoryItemTextSelected
+              ]}
+            >
+              {item.name}
+            </Text>
+          </TouchableOpacity>
+        )}
+        keyExtractor={item => item.id}
+        style={styles.categoriesList}
+        showsHorizontalScrollIndicator={false}
+      />
+
+      <FlatList
+        data={filteredStories}
         keyExtractor={item => item.id}
         numColumns={numColumns}
         columnWrapperStyle={styles.columnWrapper}
@@ -152,7 +217,7 @@ export default function StoriesScreen() {
           </TouchableOpacity>
         )}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -177,15 +242,28 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+  categoriesList: {
+    maxHeight: 50,
+    backgroundColor: '#fff',
+    paddingLeft: 8,
     marginBottom: 4,
   },
-  headerSubtitle: {
-    fontSize: 14,
-    color: '#666',
+  categoryItem: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginHorizontal: 8,
+    backgroundColor: '#f0f0f0',
+  },
+  categoryItemSelected: {
+    backgroundColor: '#4a90e2',
+  },
+  categoryItemText: {
+    color: '#555',
+    fontWeight: '500',
+  },
+  categoryItemTextSelected: {
+    color: '#fff',
   },
   storyGrid: {
     padding: 12,

@@ -5,24 +5,19 @@ import { Ionicons } from '@expo/vector-icons';
 
 export default function MainLayout() {
   const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: isDark ? '#fff' : '#4a90e2',
-        tabBarInactiveTintColor: isDark ? '#888' : '#888',
+        tabBarActiveTintColor: colorScheme === 'dark' ? '#fff' : '#4a90e2',
+        tabBarInactiveTintColor: colorScheme === 'dark' ? '#888' : '#888',
         tabBarStyle: {
-          backgroundColor: isDark ? '#121212' : '#fff',
-          borderTopColor: isDark ? '#333' : '#e0e0e0',
+          backgroundColor: colorScheme === 'dark' ? '#121212' : '#fff',
         },
         headerStyle: {
-          backgroundColor: isDark ? '#121212' : '#fff',
+          backgroundColor: colorScheme === 'dark' ? '#121212' : '#fff',
         },
-        headerTintColor: isDark ? '#fff' : '#000',
-        headerTitleStyle: {
-          fontWeight: '600',
-        },
+        headerTintColor: colorScheme === 'dark' ? '#fff' : '#000',
       }}
     >
       <Tabs.Screen
@@ -32,6 +27,7 @@ export default function MainLayout() {
           tabBarIcon: ({ color, size }: { color: string, size: number }) => (
             <Ionicons name="home" size={size} color={color} />
           ),
+          headerShown: false,
         }}
       />
 
@@ -42,6 +38,7 @@ export default function MainLayout() {
           tabBarIcon: ({ color, size }: { color: string, size: number }) => (
             <Ionicons name="book" size={size} color={color} />
           ),
+          headerShown: false,
         }}
       />
 
@@ -52,6 +49,7 @@ export default function MainLayout() {
           tabBarIcon: ({ color, size }: { color: string, size: number }) => (
             <Ionicons name="globe" size={size} color={color} />
           ),
+          headerShown: false,
         }}
       />
 
@@ -62,6 +60,7 @@ export default function MainLayout() {
           tabBarIcon: ({ color, size }: { color: string, size: number }) => (
             <Ionicons name="download" size={size} color={color} />
           ),
+          headerShown: false,
         }}
       />
 

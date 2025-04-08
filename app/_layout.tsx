@@ -27,7 +27,7 @@ export default function RootLayout() {
           options={{
             headerShown: true,
             headerBackTitle: "Back",
-            headerTitle: "Story"
+            headerTitle: "Historia"
           }}
         />
         <Stack.Screen name="index" options={{ headerShown: false }} />
