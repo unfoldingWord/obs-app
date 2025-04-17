@@ -1,4 +1,5 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import * as FileSystem from 'expo-file-system';
 import { useNetworkState } from 'expo-network';
 import { router } from 'expo-router';
 import React, { useState, useEffect } from 'react';
@@ -14,8 +15,23 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { SearchBar } from '../components/SearchBar';
+import { SearchBar } from '../../../components/SearchBar';
+import { Repository, RepositoryManager } from '../../../../src/core/repositoryManager';
 
+/**
+ * Represents a language in the Door43 catalog
+ * @interface Language
+ * @property {string[]} alt - Alternative names for the language
+ * @property {string} ang - English name of the language
+ * @property {string[]} cc - Country codes where this language is spoken
+ * @property {boolean} gw - Whether this is a Gateway language (commonly used for translation)
+ * @property {string} hc - Home country code (primary country where the language is spoken)
+ * @property {string} lc - Language code (ISO 639-3 code)
+ * @property {'ltr' | 'rtl'} ld - Text direction (left-to-right or right-to-left)
+ * @property {string} ln - Native name of the language
+ * @property {string} lr - Language region (continent or region where the language is spoken)
+ * @property {number} pk - Primary key in the database
+ */
 interface Language {
   alt: string[];
   ang: string;
@@ -29,9 +45,11 @@ interface Language {
   pk: number;
 }
 
-export default function LanguagesScreen() {
+export default function DownloadsScreen() {
   const [loading, setLoading] = useState(true);
+  const [collections, setCollections] = useState<Repository[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [storageInfo, setStorageInfo] = useState<{ used: number; total: number } | null>(null);
   const [languages, setLanguages] = useState<Language[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const { isConnected } = useNetworkState();
@@ -47,6 +65,113 @@ export default function LanguagesScreen() {
     }
   }, [isConnected]);
 
+  const loadDownloadedCollections = async () => {
+    try {
+      setLoading(true);
+      // In a real app, this would load from local storage
+      const repoManager = RepositoryManager.getInstance();
+      const results = await repoManager.searchRepositories('obs');
+      setCollections(results);
+      setError(null);
+    } catch (err) {
+      setError('Failed to load downloaded collections. Please try again later.');
+      console.error('Error loading collections:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStorageInfo = async () => {
+    try {
+      const info = await FileSystem.getInfoAsync(FileSystem.documentDirectory!);
+      if (info.exists && !info.isDirectory) {
+        setStorageInfo({
+          used: info.size || 0,
+          total: 1000000000, // 1GB for example
+        });
+      } else {
+        setStorageInfo({
+          used: 0,
+          total: 1000000000,
+        });
+      }
+    } catch (err) {
+      console.error('Error getting storage info:', err);
+      setStorageInfo({
+        used: 0,
+        total: 1000000000,
+      });
+    }
+  };
+
+  const handleDeleteCollection = async (collection: Repository) => {
+    // In a real app, this would delete the collection from local storage
+    setCollections(collections.filter((c) => c.id !== collection.id));
+  };
+
+  const handleClearAll = async () => {
+    // In a real app, this would clear all collections from local storage
+    setCollections([]);
+  };
+
+  // Group collections by language
+  const groupedCollections = collections.reduce((groups: LanguageGroup[], collection) => {
+    const existingGroup = groups.find((g) => g.language === collection.language);
+    if (existingGroup) {
+      existingGroup.collections.push(collection);
+    } else {
+      groups.push({
+        language: collection.language,
+        collections: [collection],
+      });
+    }
+    return groups;
+  }, []);
+
+  const renderCollectionItem = ({ item }: { item: Repository }) => (
+    <View className={`m-2 rounded-lg p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-sm`}>
+      <View className="flex-row items-center justify-between">
+        <View className="flex-1">
+          <Text className={`text-lg font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            {item.displayName}
+          </Text>
+          <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            Version {item.version || '1.0.0'}
+          </Text>
+          <Text className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+            Size: 25 MB
+          </Text>
+        </View>
+        <TouchableOpacity onPress={() => handleDeleteCollection(item)}>
+          <Ionicons
+            name="trash-outline"
+            size={24}
+            className={isDark ? 'text-red-400' : 'text-red-500'}
+          />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  interface LanguageGroup {
+    language: string;
+    collections: Repository[];
+  }
+
+  const renderLanguageGroup = ({ item }: { item: LanguageGroup }) => (
+    <View className="mb-6">
+      <Text className={`mb-3 text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+        {item.language}
+      </Text>
+      <FlatList
+        data={item.collections}
+        renderItem={renderCollectionItem}
+        keyExtractor={(collection) => collection.id.toString()}
+        ItemSeparatorComponent={() => <View className="h-3" />}
+      />
+    </View>
+  );
+
   const loadLanguages = async () => {
     try {
       setLoading(true);
@@ -57,7 +182,8 @@ export default function LanguagesScreen() {
         throw new Error(`Failed to load languages: ${response.status}`);
       }
 
-      const data: Language[] = await response.json();
+      const data: Language[] = await response.json().then((res) => res.data);
+      console.log({ data });
       setLanguages(data);
       setError(null);
     } catch (err) {
@@ -84,7 +210,7 @@ export default function LanguagesScreen() {
       );
       return;
     }
-    router.push(`/languages/${language.lc}`);
+    router.push(`/downloads/${language.lc}`);
   };
 
   const renderLanguageItem = ({ item }: { item: Language }) => (
@@ -94,15 +220,15 @@ export default function LanguagesScreen() {
       <View className="flex-row items-center justify-between">
         <View>
           <Text className={`text-lg font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            {item.ang}
+            {item.ln}
           </Text>
           {item.ln && (
             <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              {item.ln}
+              {item.ang} ({item.lc})
             </Text>
           )}
           <Text className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-            {item.cc.length} countries
+            {item.cc.length ? `${item.cc.length} countries` : ''}
           </Text>
         </View>
         <MaterialIcons

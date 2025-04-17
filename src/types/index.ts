@@ -17,8 +17,9 @@ export interface StoryFrame {
   number: number;
   text: string;
   image: {
+    id: string;
     url: string;
-    resolutions?: {
+    resolutions: {
       low: string;
       medium: string;
       high: string;
@@ -51,8 +52,24 @@ export interface AppSettings {
 
 // Types for the OBS data structures
 export interface StoriesData {
-  stories: Record<string, Story>;
+  stories: Record<string, ProcessedStory>;
   version: string;
+  language: string;
+  targetAudience?: 'children' | 'adults' | 'bible-study';
+  imagePack?: {
+    id: string;
+    version: string;
+    url: string;
+  };
+}
+
+export interface ProcessedStory {
+  id: string;
+  number: number;
+  title: string;
+  introduction: string;
+  frames: StoryFrame[];
+  reference: string;
 }
 
 export interface Reference {

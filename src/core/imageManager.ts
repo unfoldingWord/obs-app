@@ -1,14 +1,34 @@
 import * as FileSystem from 'expo-file-system';
-import { ImageSet, StoryFrame } from '../types';
+import { ImageSet } from '../types';
+import { StoriesData, StoryFrame } from '../types/index';
 import { warn } from './utils';
 
 const IMAGE_CACHE_DIR = 'image-cache';
 const BUNDLED_IMAGES_DIR = 'bundled-images';
 
+export interface ImagePack {
+  id: string;
+  version: string;
+  name: string;
+  description: string;
+  frameCount: number;
+  images: {
+    id: string;
+    path: string;
+    size: number;
+    dimensions: {
+      width: number;
+      height: number;
+    };
+  }[];
+}
+
 export class ImageManager {
   private static instance: ImageManager;
   private cacheDir: string;
   private bundledDir: string;
+  private imagePacks: Map<string, ImagePack> = new Map();
+  private defaultImagePack: ImagePack | null = null;
 
   private constructor() {
     this.cacheDir = `${FileSystem.cacheDirectory}${IMAGE_CACHE_DIR}`;
@@ -35,37 +55,100 @@ export class ImageManager {
       if (!bundledDirInfo.exists) {
         await FileSystem.makeDirectoryAsync(this.bundledDir, { intermediates: true });
       }
+
+      // Load default image pack
+      this.defaultImagePack = await this.loadDefaultImagePack();
+      if (this.defaultImagePack) {
+        this.imagePacks.set(this.defaultImagePack.id, this.defaultImagePack);
+      }
     } catch (error) {
-      warn(`Error initializing image directories: ${error}`);
+      warn(`Error initializing image directories: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
-  async getImageUrl(frame: StoryFrame, resolution: 'low' | 'medium' | 'high'): Promise<string> {
-    const frameRef = this.getFrameReference(frame);
-    const bundledPath = `${this.bundledDir}/${frameRef}.jpg`;
-    const cachedPath = `${this.cacheDir}/${frameRef}.jpg`;
+  async loadDefaultImagePack(): Promise<ImagePack | null> {
+    try {
+      // In a real app, this would load from bundled assets
+      // For now, return mock data
+      return {
+        id: 'default-image-pack',
+        version: '1.0.0',
+        name: 'Default Image Pack',
+        description: 'Default image pack for Open Bible Stories',
+        frameCount: 50,
+        images: Array.from({ length: 50 }, (_, i) => ({
+          id: `frame${i + 1}`,
+          path: `images/frame${i + 1}.png`,
+          size: 102400,
+          dimensions: {
+            width: 800,
+            height: 600,
+          },
+        })),
+      };
+    } catch (error) {
+      warn(`Error loading default image pack: ${error instanceof Error ? error.message : String(error)}`);
+      return null;
+    }
+  }
+
+  async getImagePack(id: string): Promise<ImagePack | null> {
+    // Check if pack is already loaded
+    if (this.imagePacks.has(id)) {
+      return this.imagePacks.get(id) || null;
+    }
 
     try {
-      // Check bundled images first
-      const bundledInfo = await FileSystem.getInfoAsync(bundledPath);
-      if (bundledInfo.exists) {
-        return bundledPath;
+      // Download image pack
+      const response = await fetch(`https://git.door43.org/api/v1/image-packs/${id}`);
+      if (!response.ok) {
+        throw new Error(`Failed to download image pack: ${response.status}`);
       }
 
-      // Then check cache
-      const cachedInfo = await FileSystem.getInfoAsync(cachedPath);
-      if (cachedInfo.exists) {
-        return cachedPath;
-      }
-
-      // If not found, download from CDN
-      const url = frame.image.resolutions[resolution];
-      await FileSystem.downloadAsync(url, cachedPath);
-      return cachedPath;
+      const imagePack = await response.json();
+      this.imagePacks.set(id, imagePack);
+      return imagePack;
     } catch (error) {
-      warn(`Error getting image: ${error}`);
-      return frame.image.resolutions[resolution]; // Fallback to remote URL
+      warn(`Error getting image pack: ${error instanceof Error ? error.message : String(error)}`);
+      return null;
     }
+  }
+
+  async getImageUrl(storiesData: StoriesData, frameId: string): Promise<string> {
+    try {
+      // Get image pack
+      const imagePackId = storiesData.imagePack?.id || 'default-image-pack';
+      const imagePack = await this.getImagePack(imagePackId);
+      if (!imagePack) {
+        throw new Error('Image pack not found');
+      }
+
+      // Find image in pack
+      const image = imagePack.images.find(img => img.id === frameId);
+      if (!image) {
+        throw new Error('Image not found in pack');
+      }
+
+      // In a real app, this would return the actual image URL
+      // For now, return a mock URL
+      return `https://example.com/images/${image.path}`;
+    } catch (error) {
+      warn(`Error getting image URL: ${error instanceof Error ? error.message : String(error)}`);
+      return '';
+    }
+  }
+
+  async getImageResolutions(storiesData: StoriesData, frameId: string): Promise<{
+    low: string;
+    medium: string;
+    high: string;
+  }> {
+    const baseUrl = await this.getImageUrl(storiesData, frameId);
+    return {
+      low: `${baseUrl}?size=360`,
+      medium: `${baseUrl}?size=720`,
+      high: `${baseUrl}?size=1080`,
+    };
   }
 
   private getFrameReference(frame: StoryFrame): string {

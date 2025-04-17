@@ -3,7 +3,7 @@ import JSZipUtils from 'jszip-utils';
 import { parse } from 'yaml';
 
 import { warn } from './utils';
-import { StoriesData, ProcessedStory, StoryFrame } from '../types';
+import { StoriesData, ProcessedStory, StoryFrame } from '../types/index';
 
 /**
  * Main function to fetch stories from a Git repository
@@ -15,27 +15,26 @@ export const fetchStories = async (owner: string, languageCode: string): Promise
   try {
     console.log('Loading stories from internet');
 
-    // Step 1: Get latest release info
-    const latestRelease = await getLatestRelease(owner, languageCode);
-    if (!latestRelease) {
-      throw new Error('No release found for the specified language and owner');
+    // Step 1: Get repository details
+    const repository = await getRepositoryDetails(owner, languageCode);
+    if (!repository) {
+      throw new Error('Repository not found');
     }
 
-    // Step 2: Get version from manifest
-    const latestVersion = await getLatestVersion(owner, languageCode, latestRelease['tag_name']);
-
-    // Step 3: Prepare result structure
+    // Step 2: Prepare result structure
     const result: StoriesData = {
       stories: {},
-      version: latestVersion || '1.0.0',
+      version: repository.version,
       language: languageCode,
+      targetAudience: repository.targetAudience,
+      imagePack: repository.imagePack,
     };
 
-    // Step 4: Download and extract zip file
-    const storiesUrl = latestRelease['zipball_url'];
+    // Step 3: Download and extract zip file
+    const storiesUrl = `https://git.door43.org/api/v1/repos/${owner}/${languageCode}_obs/archive/zipball`;
     const extractedFiles = await downloadAndExtractZip(storiesUrl);
 
-    // Step 5: Process story files
+    // Step 4: Process story files
     await processStoryFiles(extractedFiles, result);
 
     return result;
@@ -79,11 +78,30 @@ const processStoryFiles = async (files: Record<string, any> | null, result: Stor
     throw new Error('No files to process');
   }
 
+  // Process metadata first
+  const metadataFile = Object.keys(files).find(file => file.endsWith('metadata.json'));
+  if (metadataFile) {
+    const metadataContent = await files[metadataFile].async('string');
+    const metadata = JSON.parse(metadataContent) as {
+      version: string;
+      targetAudience?: 'children' | 'adults' | 'bible-study';
+      imagePack?: {
+        id: string;
+        version: string;
+        url: string;
+      };
+    };
+    result.version = metadata.version;
+    result.targetAudience = metadata.targetAudience;
+    result.imagePack = metadata.imagePack;
+  }
+
+  // Process stories
   for (const fileName in files) {
     if (isStoryFile(fileName)) {
-      const storyNumber = extractStoryNumber(fileName);
+      const storyId = extractStoryId(fileName);
       const fileContent = await files[fileName].async('string');
-      result.stories[storyNumber] = parseStoryContent(fileContent);
+      result.stories[storyId] = parseStoryContent(fileContent);
     }
   }
 };
@@ -92,194 +110,66 @@ const processStoryFiles = async (files: Record<string, any> | null, result: Stor
  * Checks if a file is a story content file
  */
 const isStoryFile = (fileName: string): boolean => {
-  return !!fileName.match(/\/content\/\d/gm);
+  return fileName.includes('/stories/') && fileName.endsWith('content.json');
 };
 
 /**
- * Extracts the story number from a file name
+ * Extracts the story ID from a file name
  */
-const extractStoryNumber = (fileName: string): string => {
-  return fileName.slice(-5, -3);
+const extractStoryId = (fileName: string): string => {
+  const match = fileName.match(/\/stories\/([^/]+)\/content\.json$/);
+  return match ? match[1] : '';
 };
 
 /**
- * Gets the latest release from the repository
- * @param owner Repository owner
- * @param languageCode Language code
- * @returns Promise with release data
+ * Gets repository details from catalog
  */
-export const getLatestRelease = async (owner: string, languageCode: string): Promise<any> => {
-  const url = `https://git.door43.org/api/v1/repos/${owner}/${languageCode}_obs/releases/latest`;
+const getRepositoryDetails = async (owner: string, languageCode: string): Promise<any> => {
+  const params = new URLSearchParams({
+    subject: 'Open Bible Stories',
+    lang: languageCode,
+    owner: owner,
+    stage: 'prod',
+  });
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(`https://git.door43.org/api/v1/catalog/search?${params}`);
     if (!response.ok) {
-      throw new Error(`Failed to fetch latest release: ${response.status} ${response.statusText}`);
+      throw new Error(`Failed to get repository details: ${response.status}`);
     }
-    return await response.json();
+
+    const data = await response.json();
+    return data[0] || null;
   } catch (error) {
-    warn(`Error getting latest release: ${error instanceof Error ? error.message : String(error)}`);
+    warn(`Error getting repository details: ${error instanceof Error ? error.message : String(error)}`);
     return null;
   }
 };
 
 /**
- * Gets the latest version from the manifest
- * @param owner Repository owner
- * @param languageCode Language code
- * @param tagName Release tag name
- * @returns Promise with the version string
+ * Parses a story from its JSON content
  */
-export const getLatestVersion = async (
-  owner: string,
-  languageCode: string,
-  tagName: string
-): Promise<string> => {
-  const url = `https://git.door43.org/api/v1/repos/${owner}/${languageCode}_obs/raw/manifest.yaml?ref=${tagName}`;
-
-  try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch manifest: ${response.status} ${response.statusText}`);
-    }
-
-    const latestManifest = await response.text();
-    return getVersionFromYamlManifest(latestManifest) || '1.0.0';
-  } catch (error) {
-    warn(`Error getting latest version: ${error instanceof Error ? error.message : String(error)}`);
-    return '1.0.0';
-  }
-};
-
-/**
- * Extracts version from YAML manifest
- * @param yaml YAML manifest content
- * @returns Version string
- */
-const getVersionFromYamlManifest = (yaml: string): string | null => {
-  try {
-    const manifest = parse(yaml);
-    return manifest['dublin_core']?.version || null;
-  } catch (error) {
-    warn(`Error parsing manifest: ${error instanceof Error ? error.message : String(error)}`);
-    return null;
-  }
-};
-
-/**
- * Parses a story from its string content
- * @param obsString Story content in string format
- * @returns Structured story object
- */
-const parseStoryContent = (obsString: string): ProcessedStory => {
-  const lines = obsString.split('\n');
-  const { title, number, id } = extractStoryInfo(lines[0]);
-
-  let introduction = '';
-  const frames: StoryFrame[] = [];
-  let currentFrame: Partial<StoryFrame> = {};
-  let reference = '';
-
-  // Process each line of the story
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-
-    if (isFrameHeader(line)) {
-      if (currentFrame.text) {
-        frames.push(currentFrame as StoryFrame);
-      }
-      currentFrame = createEmptyFrame(frames.length + 1);
-    } else if (isImageLine(line)) {
-      currentFrame.image = extractImageInfo(line);
-    } else if (isReferenceFooter(line)) {
-      reference = extractReference(line);
-    } else if (!currentFrame.text) {
-      introduction += line + '\n';
-    } else {
-      currentFrame.text += line + '\n';
-    }
-  }
-
-  // Add the last frame if it exists
-  if (currentFrame.text) {
-    frames.push(currentFrame as StoryFrame);
-  }
-
+const parseStoryContent = (content: string): ProcessedStory => {
+  const story = JSON.parse(content);
   return {
-    id,
-    number,
-    title,
-    introduction: introduction.trim(),
-    frames,
-    reference,
+    id: story.id,
+    number: story.number,
+    title: story.title,
+    introduction: story.introduction,
+    frames: story.frames.map((frame: any) => ({
+      id: frame.id,
+      number: frame.number,
+      text: frame.text,
+      image: {
+        id: frame.imageId,
+        url: '', // Will be populated by image manager
+        resolutions: {
+          low: '',
+          medium: '',
+          high: '',
+        },
+      },
+    })),
+    reference: story.metadata.bibleReference,
   };
-};
-
-/**
- * Extract story info from the title line
- */
-const extractStoryInfo = (titleLine: string) => {
-  const title = titleLine.replace('#', '').trim();
-  const number = parseInt(title.split('.')[0]);
-  const id = String(number).padStart(2, '0');
-  const titleText = title.split('.')[1]?.trim() || '';
-
-  return { title: titleText, number, id };
-};
-
-/**
- * Create an empty frame structure
- */
-const createEmptyFrame = (frameNumber: number): Partial<StoryFrame> => ({
-  id: String(frameNumber).padStart(2, '0'),
-  number: frameNumber,
-  text: '',
-  image: {
-    url: '',
-    resolutions: {
-      low: '',
-      medium: '',
-      high: '',
-    },
-  },
-});
-
-/**
- * Checks if a line is a frame header
- */
-const isFrameHeader = (line: string): boolean => line.startsWith('## Frame');
-
-/**
- * Checks if a line contains an image
- */
-const isImageLine = (line: string): boolean => line.startsWith('![OBS Image]');
-
-/**
- * Checks if a line is the reference footer
- */
-const isReferenceFooter = (line: string): boolean => line.startsWith('_A Bible story from:');
-
-/**
- * Extract image information from an image line
- */
-const extractImageInfo = (line: string) => {
-  const imageUrl = line.match(/\((.*?)\)/)?.[1] || '';
-  const resolutions = {
-    low: imageUrl.replace('360px', '360px'),
-    medium: imageUrl.replace('360px', '720px'),
-    high: imageUrl.replace('360px', '1080px'),
-  };
-
-  return {
-    url: imageUrl,
-    resolutions,
-  };
-};
-
-/**
- * Extract the reference from a reference line
- */
-const extractReference = (line: string): string => {
-  return line.replace(/[_*]/g, '').trim();
 };

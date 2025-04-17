@@ -47,11 +47,5 @@ export interface ImageSet {
   downloadUrl: string;
 }
 
-export interface StoriesData {
-  stories: {
-    [key: string]: ProcessedStory;
-  };
-  version: string;
-  language: string;
-  imageSet?: ImageSet;
-} 
+// Export StoriesData from index.ts
+export type { StoriesData } from './types/index';

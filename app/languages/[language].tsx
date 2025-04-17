@@ -1,6 +1,5 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { useNetworkState } from 'expo-network';
-import { router } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -14,7 +13,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { SearchBar } from '../components/SearchBar';
+import { SearchBar } from '../../components/SearchBar';
+import { RepositoryManager, Repository } from '../../src/core/repositoryManager';
 
 interface Language {
   alt: string[];
@@ -29,80 +29,80 @@ interface Language {
   pk: number;
 }
 
-export default function LanguagesScreen() {
+export default function LanguageScreen() {
+  const { language } = useLocalSearchParams<{ language: string }>();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [languages, setLanguages] = useState<Language[]>([]);
+  const [collections, setCollections] = useState<Repository[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const { isConnected } = useNetworkState();
+  const [languageInfo, setLanguageInfo] = useState<Language | null>(null);
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
   useEffect(() => {
-    if (isConnected === false) {
-      setError('No internet connection. Please check your network settings.');
-      setLoading(false);
-    } else if (isConnected === true) {
-      loadLanguages();
-    }
-  }, [isConnected]);
+    loadLanguageInfo();
+    loadCollections();
+  }, [language]);
 
-  const loadLanguages = async () => {
+  const loadLanguageInfo = async () => {
     try {
-      setLoading(true);
       const response = await fetch(
         'https://git.door43.org/api/v1/catalog/list/languages?subject=Open%20Bible%20Stories&stage=prod'
       );
       if (!response.ok) {
-        throw new Error(`Failed to load languages: ${response.status}`);
+        throw new Error(`Failed to load language info: ${response.status}`);
       }
 
       const data: Language[] = await response.json();
-      setLanguages(data);
+      const langInfo = data.find((lang) => lang.lc === language);
+      if (!langInfo) {
+        throw new Error('Language not found');
+      }
+      setLanguageInfo(langInfo);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load language info');
+      console.error('Error loading language info:', err);
+    }
+  };
+
+  const loadCollections = async () => {
+    try {
+      setLoading(true);
+      const repoManager = RepositoryManager.getInstance();
+      const results = await repoManager.searchRepositories(language);
+      setCollections(results);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load languages');
-      console.error('Error loading languages:', err);
+      setError('Failed to load collections. Please try again later.');
+      console.error('Error loading collections:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredLanguages = languages.filter(
-    (lang) =>
-      lang.ang?.toLowerCase().includes(searchQuery?.toLowerCase()) ||
-      lang.ln?.toLowerCase().includes(searchQuery?.toLowerCase()) ||
-      lang.lc?.toLowerCase().includes(searchQuery?.toLowerCase())
+  const filteredCollections = collections.filter((collection) =>
+    collection.displayName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleLanguagePress = (language: Language) => {
-    if (!isConnected) {
-      Alert.alert(
-        'No Internet Connection',
-        'You need an internet connection to browse collections.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-    router.push(`/languages/${language.lc}`);
+  const handleCollectionPress = (collection: Repository) => {
+    router.push(`/collections/${collection.id}`);
   };
 
-  const renderLanguageItem = ({ item }: { item: Language }) => (
+  const renderCollectionItem = ({ item }: { item: Repository }) => (
     <TouchableOpacity
-      onPress={() => handleLanguagePress(item)}
+      onPress={() => handleCollectionPress(item)}
       className={`m-2 rounded-lg p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-sm`}>
       <View className="flex-row items-center justify-between">
         <View>
           <Text className={`text-lg font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            {item.ang}
+            {item.displayName}
           </Text>
-          {item.ln && (
-            <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              {item.ln}
-            </Text>
-          )}
+          <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+            Version {item.version || '1.0.0'}
+          </Text>
           <Text className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-            {item.cc.length} countries
+            Size: 25 MB
           </Text>
         </View>
         <MaterialIcons
@@ -121,7 +121,7 @@ export default function LanguagesScreen() {
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color={isDark ? '#60A5FA' : '#3B82F6'} />
           <Text className={`mt-4 text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            Loading languages...
+            Loading collections...
           </Text>
         </View>
       </SafeAreaView>
@@ -143,7 +143,7 @@ export default function LanguagesScreen() {
             {error}
           </Text>
           <TouchableOpacity
-            onPress={loadLanguages}
+            onPress={loadCollections}
             className={`mt-4 rounded-lg px-6 py-3 ${isDark ? 'bg-blue-900' : 'bg-blue-600'}`}>
             <Text className="font-medium text-white">Try Again</Text>
           </TouchableOpacity>
@@ -160,17 +160,27 @@ export default function LanguagesScreen() {
         className={`p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} border-b ${
           isDark ? 'border-gray-700' : 'border-gray-200'
         }`}>
+        <View className="mb-4">
+          <Text className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            {languageInfo?.ang}
+          </Text>
+          {languageInfo?.ln && (
+            <Text className={`text-lg ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+              {languageInfo.ln}
+            </Text>
+          )}
+        </View>
         <SearchBar
-          placeholder="Search languages..."
+          placeholder="Search collections..."
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
       </View>
 
       <FlatList
-        data={filteredLanguages}
-        renderItem={renderLanguageItem}
-        keyExtractor={(item) => item.lc}
+        data={filteredCollections}
+        renderItem={renderCollectionItem}
+        keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={{ padding: 12 }}
         showsVerticalScrollIndicator={false}
       />
