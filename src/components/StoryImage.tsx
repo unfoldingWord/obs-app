@@ -1,3 +1,4 @@
+import * as FileSystem from 'expo-file-system';
 import React, { useState } from 'react';
 import {
   Image,
@@ -7,10 +8,10 @@ import {
   ImageStyle,
   ActivityIndicator,
   View,
-  Text
+  Text,
 } from 'react-native';
+
 import { BundledImageKey } from '../core/bundledImageManager';
-import * as FileSystem from 'expo-file-system';
 
 interface StoryImageProps {
   /**
@@ -47,7 +48,7 @@ export const StoryImage: React.FC<StoryImageProps> = ({
   imageName,
   fallbackUrl,
   style,
-  alt = 'Story illustration'
+  alt = 'Story illustration',
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -95,7 +96,7 @@ export const StoryImage: React.FC<StoryImageProps> = ({
         source={imageSource}
         style={[styles.image, style, (isLoading || hasError) && styles.hidden]}
         resizeMode="contain"
-        accessible={true}
+        accessible
         accessibilityLabel={alt}
         onLoadStart={() => setIsLoading(true)}
         onLoad={() => setIsLoading(false)}

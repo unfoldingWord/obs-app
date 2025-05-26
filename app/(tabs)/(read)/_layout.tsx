@@ -28,6 +28,13 @@ export default function ReadLayout() {
           headerShown: false,
         }}
       />
+      <Stack.Screen
+        name="stories"
+        options={{
+          title: 'Stories',
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 }

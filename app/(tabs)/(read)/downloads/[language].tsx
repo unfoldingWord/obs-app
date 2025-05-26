@@ -14,16 +14,23 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { RepositoryManager } from '../../../../src/core/repositoryManager';
+import {
+  CollectionsManager,
+  Collection as CoreCollection,
+} from '../../../../src/core/CollectionsManager';
 import { SearchBar } from '../../../components/SearchBar';
+import { hashStringToNumber } from '../../../../src/core/hashStringToNumber';
 
 interface Collection {
   id: string;
   title: string;
   owner: string;
+  language: string;
+  version: string;
   thumbnailUrl: string;
   localThumbnailUrl?: string | null;
   downloaded: boolean;
+  coreCollection: CoreCollection;
 }
 
 export default function LanguageScreen() {
@@ -33,31 +40,77 @@ export default function LanguageScreen() {
   const [collections, setCollections] = useState<Collection[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [collectionsManager, setCollectionsManager] = useState<CollectionsManager | null>(null);
   const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
   useEffect(() => {
-    loadCollections();
-  }, [language]);
+    const initManager = async () => {
+      const manager = CollectionsManager.getInstance();
+      await manager.initialize();
+      setCollectionsManager(manager);
+    };
+    initManager();
+  }, []);
+
+  useEffect(() => {
+    if (collectionsManager && language) {
+      loadCollections();
+    }
+  }, [language, collectionsManager]);
 
   const loadCollections = async () => {
+    if (!collectionsManager || !language) return;
     try {
       setLoading(true);
-      const repoManager = RepositoryManager.getInstance();
-      const repos = await repoManager.searchRepositories(language as string);
-      console.log({ repos, language, repoManager });
-      setCollections(
-        repos.map((repo: any) => ({
-          id: repo.id,
-          title: repo.displayName || repo.id,
-          owner: repo.owner || 'unknown',
-          thumbnailUrl:
-            repo.thumbnail || `https://cdn.door43.org/obs/jpg/360px/obs-en-${Math.floor(Math.random() * 50)}-01.jpg`,
-          localThumbnailUrl: repo.localThumbnail,
-          downloaded: repo.isDownloaded || false,
-        }))
+      const remoteCollectionsPromise = collectionsManager.getRemoteCollectionsByLanguage(
+        language as string
       );
+      console.log({ remoteCollectionsPromise });
+      const localCollectionsPromise = collectionsManager.getLocalCollectionsByLanguage(
+        language as string
+      );
+      console.log({ localCollectionsPromise });
+
+      const [remoteCollections, localCollections] = await Promise.all([
+        remoteCollectionsPromise,
+        localCollectionsPromise,
+      ]);
+
+      const localCollectionIds = new Set(localCollections.map((lc) => lc.id));
+
+      const allCollectionsData: CoreCollection[] = [
+        ...localCollections,
+        ...remoteCollections.filter((rc) => !localCollectionIds.has(rc.id)),
+      ];
+
+      const collectionsPromises = allCollectionsData.map(async (coreCollection: CoreCollection) => {
+        const localThumbnailUrl = await collectionsManager.getCollectionThumbnail(
+          coreCollection.id
+        );
+        const storyNumber = hashStringToNumber(coreCollection.id); // Keep for default thumbnail if needed
+
+        console.log({ coreCollection, localThumbnailUrl, storyNumber });
+
+        return {
+          id: coreCollection.id,
+          title: coreCollection.displayName || coreCollection.id,
+          owner: coreCollection.owner || 'unknown',
+          language: coreCollection.language,
+          version: coreCollection.version,
+          thumbnailUrl:
+            coreCollection.metadata?.thumbnail ||
+            `https://cdn.door43.org/obs/jpg/360px/obs-en-${String(storyNumber).padStart(2, '0')}-01.jpg`,
+          localThumbnailUrl,
+          downloaded: coreCollection.isDownloaded || false,
+          coreCollection, // Store original
+        };
+      });
+
+      const mappedCollections = await Promise.all(collectionsPromises);
+
+      setCollections(mappedCollections);
       setError(null);
     } catch (err) {
       console.error(err);
@@ -68,17 +121,15 @@ export default function LanguageScreen() {
   };
 
   const handleSelectCollection = (collection: Collection) => {
-    router.push(`/story/${collection.id}`);
+    router.push(`../story/${collection.id}/01/01`);
   };
 
   const handleDownload = async (collection: Collection) => {
+    if (!collectionsManager) return;
     try {
       setDownloadingId(collection.id);
-      const repoManager = RepositoryManager.getInstance();
-      await repoManager.downloadRepository(collection.owner, language as string);
-
-      // Reload collections to get updated data with local thumbnails
-      await loadCollections();
+      await collectionsManager.downloadRemoteCollection(collection.coreCollection);
+      await loadCollections(); // Refresh the list
     } catch (err) {
       console.error('Download failed:', err);
       Alert.alert(
@@ -92,36 +143,30 @@ export default function LanguageScreen() {
   };
 
   const handleDeleteCollection = async (collection: Collection) => {
-    Alert.alert(
-      'Delete Collection',
-      `Are you sure you want to delete ${collection.title}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setDownloadingId(collection.id);
-              const repoManager = RepositoryManager.getInstance();
-              await repoManager.deleteRepository(collection.owner, language as string);
-
-              // Reload collections after delete
-              await loadCollections();
-            } catch (err) {
-              console.error('Delete failed:', err);
-              Alert.alert(
-                'Delete Failed',
-                'There was an error deleting this collection. Please try again.',
-                [{ text: 'OK' }]
-              );
-            } finally {
-              setDownloadingId(null);
-            }
-          },
+    if (!collectionsManager) return;
+    Alert.alert('Delete Collection', `Are you sure you want to delete ${collection.title}?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            setDownloadingId(collection.id);
+            await collectionsManager.deleteCollection(collection.id);
+            await loadCollections(); // Refresh the list
+          } catch (err) {
+            console.error('Delete failed:', err);
+            Alert.alert(
+              'Delete Failed',
+              'There was an error deleting this collection. Please try again.',
+              [{ text: 'OK' }]
+            );
+          } finally {
+            setDownloadingId(null);
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const filteredCollections = collections.filter((item) => {

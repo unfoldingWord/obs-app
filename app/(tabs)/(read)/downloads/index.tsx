@@ -1,5 +1,4 @@
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import * as FileSystem from 'expo-file-system';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useNetworkState } from 'expo-network';
 import { router } from 'expo-router';
 import React, { useState, useEffect } from 'react';
@@ -16,8 +15,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SearchBar } from '../../../components/SearchBar';
-import { Repository, RepositoryManager } from '../../../../src/core/repositoryManager';
-
 /**
  * Represents a language in the Door43 catalog
  * @interface Language
@@ -47,9 +44,7 @@ interface Language {
 
 export default function DownloadsScreen() {
   const [loading, setLoading] = useState(true);
-  const [collections, setCollections] = useState<Repository[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [storageInfo, setStorageInfo] = useState<{ used: number; total: number } | null>(null);
   const [languages, setLanguages] = useState<Language[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const { isConnected } = useNetworkState();
@@ -64,113 +59,6 @@ export default function DownloadsScreen() {
       loadLanguages();
     }
   }, [isConnected]);
-
-  const loadDownloadedCollections = async () => {
-    try {
-      setLoading(true);
-      // In a real app, this would load from local storage
-      const repoManager = RepositoryManager.getInstance();
-      const results = await repoManager.searchRepositories('obs');
-      setCollections(results);
-      setError(null);
-    } catch (err) {
-      setError('Failed to load downloaded collections. Please try again later.');
-      console.error('Error loading collections:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getStorageInfo = async () => {
-    try {
-      const info = await FileSystem.getInfoAsync(FileSystem.documentDirectory!);
-      if (info.exists && !info.isDirectory) {
-        setStorageInfo({
-          used: info.size || 0,
-          total: 1000000000, // 1GB for example
-        });
-      } else {
-        setStorageInfo({
-          used: 0,
-          total: 1000000000,
-        });
-      }
-    } catch (err) {
-      console.error('Error getting storage info:', err);
-      setStorageInfo({
-        used: 0,
-        total: 1000000000,
-      });
-    }
-  };
-
-  const handleDeleteCollection = async (collection: Repository) => {
-    // In a real app, this would delete the collection from local storage
-    setCollections(collections.filter((c) => c.id !== collection.id));
-  };
-
-  const handleClearAll = async () => {
-    // In a real app, this would clear all collections from local storage
-    setCollections([]);
-  };
-
-  // Group collections by language
-  const groupedCollections = collections.reduce((groups: LanguageGroup[], collection) => {
-    const existingGroup = groups.find((g) => g.language === collection.language);
-    if (existingGroup) {
-      existingGroup.collections.push(collection);
-    } else {
-      groups.push({
-        language: collection.language,
-        collections: [collection],
-      });
-    }
-    return groups;
-  }, []);
-
-  const renderCollectionItem = ({ item }: { item: Repository }) => (
-    <View className={`m-2 rounded-lg p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-sm`}>
-      <View className="flex-row items-center justify-between">
-        <View className="flex-1">
-          <Text className={`text-lg font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            {item.displayName}
-          </Text>
-          <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            Version {item.version || '1.0.0'}
-          </Text>
-          <Text className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-            Size: 25 MB
-          </Text>
-        </View>
-        <TouchableOpacity onPress={() => handleDeleteCollection(item)}>
-          <Ionicons
-            name="trash-outline"
-            size={24}
-            className={isDark ? 'text-red-400' : 'text-red-500'}
-          />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  interface LanguageGroup {
-    language: string;
-    collections: Repository[];
-  }
-
-  const renderLanguageGroup = ({ item }: { item: LanguageGroup }) => (
-    <View className="mb-6">
-      <Text className={`mb-3 text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-        {item.language}
-      </Text>
-      <FlatList
-        data={item.collections}
-        renderItem={renderCollectionItem}
-        keyExtractor={(collection) => collection.id.toString()}
-        ItemSeparatorComponent={() => <View className="h-3" />}
-      />
-    </View>
-  );
 
   const loadLanguages = async () => {
     try {
@@ -227,9 +115,6 @@ export default function DownloadsScreen() {
               {item.ang} ({item.lc})
             </Text>
           )}
-          <Text className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-            {item.cc.length ? `${item.cc.length} countries` : ''}
-          </Text>
         </View>
         <MaterialIcons
           name="chevron-right"
@@ -282,6 +167,20 @@ export default function DownloadsScreen() {
     <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
+      {/* Header with back button */}
+      <View
+        className={`flex-row items-center px-4 py-3 ${isDark ? 'bg-gray-800' : 'bg-white'} border-b ${
+          isDark ? 'border-gray-700' : 'border-gray-200'
+        }`}>
+        <TouchableOpacity onPress={() => router.back()} className="mr-3 p-1">
+          <MaterialIcons name="arrow-back" size={24} color={isDark ? '#9CA3AF' : '#374151'} />
+        </TouchableOpacity>
+        <Text className={`flex-1 text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+          Download Collections
+        </Text>
+      </View>
+
+      {/* Search bar */}
       <View
         className={`p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} border-b ${
           isDark ? 'border-gray-700' : 'border-gray-200'

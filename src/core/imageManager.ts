@@ -1,10 +1,12 @@
 import * as FileSystem from 'expo-file-system';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { ImageSet } from '../types';
 import { StoriesData, StoryFrame } from '../types/index';
 import { warn } from './utils';
 
 const IMAGE_CACHE_DIR = 'image-cache';
 const BUNDLED_IMAGES_DIR = 'bundled-images';
+const THUMBNAILS_DIR = 'thumbnails';
 
 export interface ImagePack {
   id: string;
@@ -27,12 +29,14 @@ export class ImageManager {
   private static instance: ImageManager;
   private cacheDir: string;
   private bundledDir: string;
+  private thumbnailsDir: string;
   private imagePacks: Map<string, ImagePack> = new Map();
   private defaultImagePack: ImagePack | null = null;
 
   private constructor() {
     this.cacheDir = `${FileSystem.cacheDirectory}${IMAGE_CACHE_DIR}`;
     this.bundledDir = `${FileSystem.documentDirectory}${BUNDLED_IMAGES_DIR}`;
+    this.thumbnailsDir = `${FileSystem.documentDirectory}${THUMBNAILS_DIR}`;
   }
 
   static getInstance(): ImageManager {
@@ -54,6 +58,12 @@ export class ImageManager {
       const bundledDirInfo = await FileSystem.getInfoAsync(this.bundledDir);
       if (!bundledDirInfo.exists) {
         await FileSystem.makeDirectoryAsync(this.bundledDir, { intermediates: true });
+      }
+
+      // Initialize thumbnails directory
+      const thumbnailsDirInfo = await FileSystem.getInfoAsync(this.thumbnailsDir);
+      if (!thumbnailsDirInfo.exists) {
+        await FileSystem.makeDirectoryAsync(this.thumbnailsDir, { intermediates: true });
       }
 
       // Load default image pack
@@ -210,6 +220,57 @@ export class ImageManager {
       await this.initialize();
     } catch (error) {
       warn(`Error clearing image cache: ${error}`);
+    }
+  }
+
+  async saveCollectionThumbnail(collectionId: string, imageData: string): Promise<void> {
+    try {
+      const thumbPath = `${this.thumbnailsDir}/${collectionId}.jpg`;
+
+      // Save the original image
+      await FileSystem.writeAsStringAsync(thumbPath, imageData, {
+        encoding: FileSystem.EncodingType.Base64
+      });
+
+      // Generate and save thumbnail
+      const manipResult = await ImageManipulator.manipulateAsync(
+        thumbPath,
+        [{ resize: { width: 200, height: 200 } }],
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+      );
+
+      await FileSystem.writeAsStringAsync(thumbPath, manipResult.uri, {
+        encoding: FileSystem.EncodingType.Base64
+      });
+    } catch (error) {
+      warn(`Error saving collection thumbnail: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  async getCollectionThumbnail(collectionId: string): Promise<string | null> {
+    try {
+      const thumbPath = `${this.thumbnailsDir}/${collectionId}.jpg`;
+      const fileInfo = await FileSystem.getInfoAsync(thumbPath);
+
+      if (!fileInfo.exists) {
+        return null;
+      }
+
+      return await FileSystem.readAsStringAsync(thumbPath, {
+        encoding: FileSystem.EncodingType.Base64
+      });
+    } catch (error) {
+      warn(`Error getting collection thumbnail: ${error instanceof Error ? error.message : String(error)}`);
+      return null;
+    }
+  }
+
+  async deleteCollectionThumbnail(collectionId: string): Promise<void> {
+    try {
+      const thumbPath = `${this.thumbnailsDir}/${collectionId}.jpg`;
+      await FileSystem.deleteAsync(thumbPath, { idempotent: true });
+    } catch (error) {
+      warn(`Error deleting collection thumbnail: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 }

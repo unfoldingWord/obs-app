@@ -1,10 +1,10 @@
 export interface CatalogSearchResponse {
   ok: boolean;
-  data: CatalogSearchResult[];
+  data: CatalogEntry[];
   last_updated: string;
 }
 
-export interface CatalogSearchResult {
+export interface CatalogEntry {
   id: number;
   url: string;
   name: string;

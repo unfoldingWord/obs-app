@@ -27,6 +27,19 @@ export interface StoryFrame {
   };
 }
 
+export interface LanguageItem {
+  alt: string[]; // alternative names
+  ang: string; // language name
+  cc: string[]; // country codes
+  gw: boolean; // is a gateway language
+  hc: string; // country code
+  lc: string; // language code
+  ld: string; // ltr or rtl
+  ln: string; // language name
+  lr: string; // Africa, Asia, Europe, North America, South America, Oceania, Antarctica
+  pk: number; // population
+}
+
 export interface Language {
   id?: string;
   code: string;
