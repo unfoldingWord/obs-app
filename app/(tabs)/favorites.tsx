@@ -15,18 +15,35 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CollectionsManager, Story, Frame } from '../../src/core/CollectionsManager';
 import { StoryManager, UserMarker } from '../../src/core/storyManager';
+import { CommentsManager, FrameComment } from '../../src/core/CommentsManager';
 
 interface FavoriteStory extends Story {
   collectionDisplayName?: string;
   thumbnailUrl?: string;
 }
 
+interface FavoriteFrame extends Frame {
+  storyTitle?: string;
+  collectionDisplayName?: string;
+}
+
+interface FavoriteMarker extends UserMarker {
+  storyTitle?: string;
+  collectionDisplayName?: string;
+}
+
+interface FavoriteComment extends FrameComment {
+  storyTitle?: string;
+  collectionDisplayName?: string;
+}
+
 export default function FavoritesScreen() {
-  const [activeTab, setActiveTab] = useState<'stories' | 'markers'>('stories');
+  const [activeTab, setActiveTab] = useState<'stories' | 'frames' | 'markers' | 'comments'>('stories');
   const [loading, setLoading] = useState(true);
   const [favoriteStories, setFavoriteStories] = useState<FavoriteStory[]>([]);
-  const [favoriteFrames, setFavoriteFrames] = useState<Frame[]>([]);
-  const [markers, setMarkers] = useState<UserMarker[]>([]);
+  const [favoriteFrames, setFavoriteFrames] = useState<FavoriteFrame[]>([]);
+  const [markers, setMarkers] = useState<FavoriteMarker[]>([]);
+  const [comments, setComments] = useState<FavoriteComment[]>([]);
   const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -54,13 +71,52 @@ export default function FavoritesScreen() {
       );
       setFavoriteStories(storiesWithThumbnails);
 
-      // Load favorite frames
+      // Load favorite frames with story titles
       const favFrames = await collectionsManager.getFavoriteFrames();
-      setFavoriteFrames(favFrames);
+      const framesWithTitles = await Promise.all(
+        favFrames.map(async (frame) => {
+          const story = await collectionsManager.getStory(frame.collectionId, frame.storyNumber);
+          const collection = await collectionsManager.getCollectionById(frame.collectionId);
+          return {
+            ...frame,
+            storyTitle: story?.title || `Story ${frame.storyNumber}`,
+            collectionDisplayName: collection?.displayName || frame.collectionId,
+          };
+        })
+      );
+      setFavoriteFrames(framesWithTitles);
 
-      // Load all markers
+      // Load all markers with story titles
       const allMarkers = await storyManager.getAllMarkers();
-      setMarkers(allMarkers);
+      const markersWithTitles = await Promise.all(
+        allMarkers.map(async (marker) => {
+          const story = await collectionsManager.getStory(marker.collectionId, marker.storyNumber);
+          const collection = await collectionsManager.getCollectionById(marker.collectionId);
+          return {
+            ...marker,
+            storyTitle: story?.title || `Story ${marker.storyNumber}`,
+            collectionDisplayName: collection?.displayName || marker.collectionId,
+          };
+        })
+      );
+      setMarkers(markersWithTitles);
+
+      // Load all comments with story titles
+      const commentsManager = CommentsManager.getInstance();
+      await commentsManager.initialize();
+      const allComments = await commentsManager.getAllComments();
+      const commentsWithTitles = await Promise.all(
+        allComments.map(async (comment) => {
+          const story = await collectionsManager.getStory(comment.collectionId, comment.storyNumber);
+          const collection = await collectionsManager.getCollectionById(comment.collectionId);
+          return {
+            ...comment,
+            storyTitle: story?.title || `Story ${comment.storyNumber}`,
+            collectionDisplayName: collection?.displayName || comment.collectionId,
+          };
+        })
+      );
+      setComments(commentsWithTitles);
     } catch (error) {
       console.error('Error loading favorites data:', error);
     } finally {
@@ -90,13 +146,52 @@ export default function FavoritesScreen() {
       );
       setFavoriteStories(storiesWithThumbnails);
 
-      // Load favorite frames
+      // Load favorite frames with story titles
       const favFrames = await collectionsManager.getFavoriteFrames();
-      setFavoriteFrames(favFrames);
+      const framesWithTitles = await Promise.all(
+        favFrames.map(async (frame) => {
+          const story = await collectionsManager.getStory(frame.collectionId, frame.storyNumber);
+          const collection = await collectionsManager.getCollectionById(frame.collectionId);
+          return {
+            ...frame,
+            storyTitle: story?.title || `Story ${frame.storyNumber}`,
+            collectionDisplayName: collection?.displayName || frame.collectionId,
+          };
+        })
+      );
+      setFavoriteFrames(framesWithTitles);
 
-      // Load all markers
+      // Load all markers with story titles
       const allMarkers = await storyManager.getAllMarkers();
-      setMarkers(allMarkers);
+      const markersWithTitles = await Promise.all(
+        allMarkers.map(async (marker) => {
+          const story = await collectionsManager.getStory(marker.collectionId, marker.storyNumber);
+          const collection = await collectionsManager.getCollectionById(marker.collectionId);
+          return {
+            ...marker,
+            storyTitle: story?.title || `Story ${marker.storyNumber}`,
+            collectionDisplayName: collection?.displayName || marker.collectionId,
+          };
+        })
+      );
+      setMarkers(markersWithTitles);
+
+      // Load all comments with story titles
+      const commentsManager = CommentsManager.getInstance();
+      await commentsManager.initialize();
+      const allComments = await commentsManager.getAllComments();
+      const commentsWithTitles = await Promise.all(
+        allComments.map(async (comment) => {
+          const story = await collectionsManager.getStory(comment.collectionId, comment.storyNumber);
+          const collection = await collectionsManager.getCollectionById(comment.collectionId);
+          return {
+            ...comment,
+            storyTitle: story?.title || `Story ${comment.storyNumber}`,
+            collectionDisplayName: collection?.displayName || comment.collectionId,
+          };
+        })
+      );
+      setComments(commentsWithTitles);
     } catch (error) {
       console.error('Error refreshing favorites data:', error);
     }
@@ -142,6 +237,22 @@ export default function FavoritesScreen() {
     }
   };
 
+  const navigateToComment = (comment: FavoriteComment) => {
+    router.push(
+      `/story/${encodeURIComponent(comment.collectionId)}/${comment.storyNumber}/${comment.frameNumber}`
+    );
+  };
+
+  const deleteComment = async (commentId: string) => {
+    try {
+      const commentsManager = CommentsManager.getInstance();
+      await commentsManager.deleteComment(commentId);
+      await loadFavoritesData(); // Reload data
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+    }
+  };
+
   const renderFavoriteStory = ({ item }: { item: FavoriteStory }) => (
     <TouchableOpacity
       onPress={() => navigateToStory(item)}
@@ -161,17 +272,17 @@ export default function FavoritesScreen() {
     </TouchableOpacity>
   );
 
-  const renderFavoriteFrame = ({ item }: { item: Frame }) => (
+  const renderFavoriteFrame = ({ item }: { item: FavoriteFrame }) => (
     <TouchableOpacity
       onPress={() => navigateToFrame(item)}
       className={`m-2 rounded-lg overflow-hidden ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-sm`}>
       <Image source={{ uri: item.imageUrl }} className="w-full h-32" />
       <View className="p-4">
         <Text className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-          Story {item.storyNumber}, Frame {item.frameNumber}
+          {item.storyTitle}, Frame {item.frameNumber}
         </Text>
         <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-          {item.collectionId}
+          {item.collectionDisplayName}
         </Text>
         <Text className={`text-sm mt-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`} numberOfLines={2}>
           {item.text}
@@ -180,13 +291,13 @@ export default function FavoritesScreen() {
     </TouchableOpacity>
   );
 
-  const renderMarker = ({ item }: { item: UserMarker }) => (
+  const renderMarker = ({ item }: { item: FavoriteMarker }) => (
     <TouchableOpacity
       onPress={() => navigateToMarker(item)}
       className={`m-2 p-4 rounded-lg ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-sm`}>
       <View className="flex-row items-center justify-between mb-2">
         <Text className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-          Story {item.storyNumber}, Frame {item.frameNumber}
+          {item.storyTitle}, Frame {item.frameNumber}
         </Text>
         <TouchableOpacity
           onPress={() => deleteMarker(item.id)}
@@ -199,7 +310,7 @@ export default function FavoritesScreen() {
         </TouchableOpacity>
       </View>
       <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-        {item.collectionId}
+        {item.collectionDisplayName}
       </Text>
       {item.note && (
         <Text className={`mt-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -214,6 +325,43 @@ export default function FavoritesScreen() {
         <Text className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
           {new Date(item.timestamp).toLocaleDateString()}
         </Text>
+      </View>
+    </TouchableOpacity>
+  );
+
+  const renderComment = ({ item }: { item: FavoriteComment }) => (
+    <TouchableOpacity
+      onPress={() => navigateToComment(item)}
+      className={`m-2 p-4 rounded-lg ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-sm`}>
+      <View className="flex-row items-center justify-between mb-2">
+        <Text className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+          {item.storyTitle}, Frame {item.frameNumber}
+        </Text>
+        <TouchableOpacity
+          onPress={() => deleteComment(item.id)}
+          className="p-1">
+          <MaterialIcons
+            name="delete"
+            size={20}
+            color={isDark ? '#EF4444' : '#DC2626'}
+          />
+        </TouchableOpacity>
+      </View>
+      <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+        {item.collectionDisplayName}
+      </Text>
+      <Text className={`mt-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+        {item.comment}
+      </Text>
+      <View className="flex-row items-center justify-between mt-2">
+        <Text className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+          {item.createdAt.toLocaleDateString()}
+        </Text>
+        {item.updatedAt.getTime() !== item.createdAt.getTime() && (
+          <Text className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+            edited
+          </Text>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -251,7 +399,7 @@ export default function FavoritesScreen() {
                 : isDark ? 'bg-gray-700' : 'bg-gray-200'
             }`}>
             <Text
-              className={`text-center ${
+              className={`text-center text-xs ${
                 activeTab === 'stories'
                   ? 'text-white'
                   : isDark ? 'text-gray-400' : 'text-gray-600'
@@ -260,19 +408,51 @@ export default function FavoritesScreen() {
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
+            onPress={() => setActiveTab('frames')}
+            className={`flex-1 py-2 ${
+              activeTab === 'frames'
+                ? isDark ? 'bg-blue-600' : 'bg-blue-500'
+                : isDark ? 'bg-gray-700' : 'bg-gray-200'
+            }`}>
+            <Text
+              className={`text-center text-xs ${
+                activeTab === 'frames'
+                  ? 'text-white'
+                  : isDark ? 'text-gray-400' : 'text-gray-600'
+              }`}>
+              Frames ({favoriteFrames.length})
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             onPress={() => setActiveTab('markers')}
-            className={`flex-1 py-2 rounded-r-lg ${
+            className={`flex-1 py-2 ${
               activeTab === 'markers'
                 ? isDark ? 'bg-blue-600' : 'bg-blue-500'
                 : isDark ? 'bg-gray-700' : 'bg-gray-200'
             }`}>
             <Text
-              className={`text-center ${
+              className={`text-center text-xs ${
                 activeTab === 'markers'
                   ? 'text-white'
                   : isDark ? 'text-gray-400' : 'text-gray-600'
               }`}>
               Bookmarks ({markers.length})
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setActiveTab('comments')}
+            className={`flex-1 py-2 rounded-r-lg ${
+              activeTab === 'comments'
+                ? isDark ? 'bg-blue-600' : 'bg-blue-500'
+                : isDark ? 'bg-gray-700' : 'bg-gray-200'
+            }`}>
+            <Text
+              className={`text-center text-xs ${
+                activeTab === 'comments'
+                  ? 'text-white'
+                  : isDark ? 'text-gray-400' : 'text-gray-600'
+              }`}>
+              Comments ({comments.length})
             </Text>
           </TouchableOpacity>
         </View>
@@ -302,10 +482,58 @@ export default function FavoritesScreen() {
             </Text>
           </View>
         )
-      ) : markers.length > 0 ? (
+      ) : activeTab === 'frames' ? (
+        favoriteFrames.length > 0 ? (
+          <FlatList
+            data={favoriteFrames}
+            renderItem={renderFavoriteFrame}
+            keyExtractor={(item) => `${item.collectionId}-${item.storyNumber}-${item.frameNumber}`}
+            contentContainerStyle={{ padding: 12 }}
+            showsVerticalScrollIndicator={false}
+          />
+        ) : (
+          <View className="flex-1 items-center justify-center p-4">
+            <MaterialIcons
+              name="favorite-border"
+              size={48}
+              color={isDark ? '#9CA3AF' : '#6B7280'}
+            />
+            <Text className={`mt-4 text-center text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              No favorite frames yet
+            </Text>
+            <Text className={`mt-2 text-center text-sm ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+              Tap the heart icon on frames while reading to add them to your favorites
+            </Text>
+          </View>
+        )
+      ) : activeTab === 'markers' ? (
+        markers.length > 0 ? (
+          <FlatList
+            data={markers}
+            renderItem={renderMarker}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={{ padding: 12 }}
+            showsVerticalScrollIndicator={false}
+          />
+        ) : (
+          <View className="flex-1 items-center justify-center p-4">
+            <MaterialIcons
+              name="bookmark-border"
+              size={48}
+              color={isDark ? '#9CA3AF' : '#6B7280'}
+            />
+            <Text className={`mt-4 text-center text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              No bookmarks yet
+            </Text>
+            <Text className={`mt-2 text-center text-sm ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+              Tap the bookmark icon while reading to add markers to your collection
+            </Text>
+          </View>
+        )
+      ) : comments.length > 0 ? (
         <FlatList
-          data={markers}
-          renderItem={renderMarker}
+          data={comments}
+          renderItem={renderComment}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ padding: 12 }}
           showsVerticalScrollIndicator={false}
@@ -313,15 +541,15 @@ export default function FavoritesScreen() {
       ) : (
         <View className="flex-1 items-center justify-center p-4">
           <MaterialIcons
-            name="bookmark-border"
+            name="comment"
             size={48}
             color={isDark ? '#9CA3AF' : '#6B7280'}
           />
           <Text className={`mt-4 text-center text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            No bookmarks yet
+            No comments yet
           </Text>
           <Text className={`mt-2 text-center text-sm ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-            Tap the bookmark icon while reading to add markers to your collection
+            Add comments while reading to see them here
           </Text>
         </View>
       )}

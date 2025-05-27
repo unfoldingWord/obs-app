@@ -98,7 +98,22 @@ export default function DownloadsScreen() {
       );
       return;
     }
-    router.push(`/downloads/${language.lc}`);
+
+    // Pass the entire language object as query parameters
+    const languageParams = new URLSearchParams({
+      lc: language.lc,
+      ln: language.ln || '',
+      ang: language.ang || '',
+      ld: language.ld || 'ltr',
+      gw: language.gw ? 'true' : 'false',
+      hc: language.hc || '',
+      lr: language.lr || '',
+      pk: language.pk.toString(),
+      alt: JSON.stringify(language.alt || []),
+      cc: JSON.stringify(language.cc || [])
+    });
+
+    router.push(`/downloads/${language.lc}?${languageParams.toString()}`);
   };
 
   const renderLanguageItem = ({ item }: { item: Language }) => (

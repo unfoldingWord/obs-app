@@ -14,12 +14,26 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CollectionInfoModal } from '../../../../src/components/CollectionInfoModal';
 import {
   CollectionsManager,
   Collection as CoreCollection,
 } from '../../../../src/core/CollectionsManager';
-import { SearchBar } from '../../../components/SearchBar';
 import { hashStringToNumber } from '../../../../src/core/hashStringToNumber';
+import { SearchBar } from '../../../components/SearchBar';
+
+interface Language {
+  alt: string[];
+  ang: string;
+  cc: string[];
+  gw: boolean;
+  hc: string;
+  lc: string;
+  ld: 'ltr' | 'rtl';
+  ln: string;
+  lr: string;
+  pk: number;
+}
 
 interface Collection {
   id: string;
@@ -34,16 +48,32 @@ interface Collection {
 }
 
 export default function LanguageScreen() {
-  const { language } = useLocalSearchParams();
+  const params = useLocalSearchParams();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [collectionsManager, setCollectionsManager] = useState<CollectionsManager | null>(null);
+  const [selectedCollection, setSelectedCollection] = useState<CoreCollection | null>(null);
+  const [showInfoModal, setShowInfoModal] = useState(false);
   const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+
+  // Parse language data from URL parameters
+  const language: Language = {
+    lc: (params.lc as string) || (params.language as string) || '',
+    ln: (params.ln as string) || '',
+    ang: (params.ang as string) || '',
+    ld: (params.ld as 'ltr' | 'rtl') || 'ltr',
+    gw: params.gw === 'true',
+    hc: (params.hc as string) || '',
+    lr: (params.lr as string) || '',
+    pk: parseInt((params.pk as string) || '0', 10),
+    alt: params.alt ? JSON.parse(params.alt as string) : [],
+    cc: params.cc ? JSON.parse(params.cc as string) : []
+  };
 
   useEffect(() => {
     const initManager = async () => {
@@ -55,23 +85,22 @@ export default function LanguageScreen() {
   }, []);
 
   useEffect(() => {
-    if (collectionsManager && language) {
+    if (collectionsManager && language.lc) {
       loadCollections();
     }
-  }, [language, collectionsManager]);
+  }, [language.lc, collectionsManager]);
 
   const loadCollections = async () => {
-    if (!collectionsManager || !language) return;
+    if (!collectionsManager || !language.lc) return;
     try {
       setLoading(true);
       const remoteCollectionsPromise = collectionsManager.getRemoteCollectionsByLanguage(
-        language as string
+        language.lc
       );
-      console.log({ remoteCollectionsPromise });
+
       const localCollectionsPromise = collectionsManager.getLocalCollectionsByLanguage(
-        language as string
+        language.lc
       );
-      console.log({ localCollectionsPromise });
 
       const [remoteCollections, localCollections] = await Promise.all([
         remoteCollectionsPromise,
@@ -90,8 +119,6 @@ export default function LanguageScreen() {
           coreCollection.id
         );
         const storyNumber = hashStringToNumber(coreCollection.id); // Keep for default thumbnail if needed
-
-        console.log({ coreCollection, localThumbnailUrl, storyNumber });
 
         return {
           id: coreCollection.id,
@@ -121,14 +148,21 @@ export default function LanguageScreen() {
   };
 
   const handleSelectCollection = (collection: Collection) => {
-    router.push(`../story/${collection.id}/01/01`);
+    if (collection.downloaded) {
+      // Navigate to stories screen for downloaded collections
+      router.push(`/stories?collectionId=${encodeURIComponent(collection.id)}`);
+    } else {
+      // Show info modal for non-downloaded collections
+      handleShowInfo(collection);
+    }
   };
 
   const handleDownload = async (collection: Collection) => {
     if (!collectionsManager) return;
     try {
       setDownloadingId(collection.id);
-      await collectionsManager.downloadRemoteCollection(collection.coreCollection);
+      // Pass the language data to the download method
+      await collectionsManager.downloadRemoteCollection(collection.coreCollection, language);
       await loadCollections(); // Refresh the list
     } catch (err) {
       console.error('Download failed:', err);
@@ -169,6 +203,20 @@ export default function LanguageScreen() {
     ]);
   };
 
+  const handleShowInfo = (collection: Collection) => {
+    setSelectedCollection(collection.coreCollection);
+    setShowInfoModal(true);
+  };
+
+  const handleCloseInfo = () => {
+    setShowInfoModal(false);
+    setSelectedCollection(null);
+  };
+
+  const handleCollectionDeleted = () => {
+    loadCollections(); // Refresh the list
+  };
+
   const filteredCollections = collections.filter((item) => {
     const q = searchQuery.toLowerCase();
     return (
@@ -202,6 +250,14 @@ export default function LanguageScreen() {
           Owner: {item.owner}
         </Text>
       </View>
+      <TouchableOpacity
+        onPress={(e) => {
+          e.stopPropagation();
+          handleShowInfo(item);
+        }}
+        className={`mr-2 rounded-full p-2 ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
+        <MaterialIcons name="info" size={16} color={isDark ? '#9CA3AF' : '#6B7280'} />
+      </TouchableOpacity>
       {!item.downloaded ? (
         <TouchableOpacity
           onPress={(e) => {
@@ -285,12 +341,69 @@ export default function LanguageScreen() {
   }
 
   return (
-    <>
+          <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
+
+      {/* Language Header */}
+      <View
+        style={{
+          backgroundColor: isDark ? '#1F2937' : '#fff',
+          paddingHorizontal: 16,
+          paddingTop: 16,
+          paddingBottom: 12,
+          borderBottomWidth: 1,
+          borderBottomColor: isDark ? '#374151' : '#E5E7EB',
+        }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+          <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 12, padding: 4 }}>
+            <MaterialIcons name="arrow-back" size={24} color={isDark ? '#9CA3AF' : '#374151'} />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <Text style={{
+              fontSize: 20,
+              fontWeight: 'bold',
+              color: isDark ? '#fff' : '#000',
+              textAlign: language.ld === 'rtl' ? 'right' : 'left'
+            }}>
+              {language.ln || language.ang || language.lc}
+            </Text>
+            {language.ln && language.ang && language.ln !== language.ang && (
+              <Text style={{
+                fontSize: 14,
+                color: isDark ? '#9CA3AF' : '#6B7280',
+                textAlign: language.ld === 'rtl' ? 'right' : 'left'
+              }}>
+                {language.ang} ({language.lc})
+              </Text>
+            )}
+            {language.gw && (
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                marginTop: 4,
+                justifyContent: language.ld === 'rtl' ? 'flex-end' : 'flex-start'
+              }}>
+                <MaterialIcons name="language" size={16} color={isDark ? '#60A5FA' : '#3B82F6'} />
+                <Text style={{
+                  fontSize: 12,
+                  color: isDark ? '#60A5FA' : '#3B82F6',
+                  marginLeft: language.ld === 'rtl' ? 0 : 4,
+                  marginRight: language.ld === 'rtl' ? 4 : 0,
+                  fontWeight: '500'
+                }}>
+                  Gateway Language
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </View>
+
+      {/* Search Bar */}
       <View
         style={{
           backgroundColor: isDark ? '#1F2937' : '#fff',
           paddingHorizontal: 12,
-          paddingTop: 12,
+          paddingTop: 8,
           paddingBottom: 8,
           zIndex: 10,
         }}>
@@ -326,6 +439,14 @@ export default function LanguageScreen() {
           }
         />
       </View>
-    </>
+
+      <CollectionInfoModal
+        collection={selectedCollection}
+        visible={showInfoModal}
+        onClose={handleCloseInfo}
+        onCollectionDeleted={handleCollectionDeleted}
+        isDark={isDark}
+      />
+    </SafeAreaView>
   );
 }

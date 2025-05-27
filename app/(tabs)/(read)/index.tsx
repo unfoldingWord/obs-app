@@ -133,7 +133,7 @@ export default function ReadScreen() {
         10 // Default total frames, will be updated when actual story is loaded
       );
 
-      router.push('/stories');
+      router.push(`/stories?collectionId=${encodeURIComponent(collection.id)}`);
     } catch (err) {
       console.error('Error saving selected collection:', err);
     }
@@ -169,7 +169,12 @@ export default function ReadScreen() {
       <FlatList
         data={collections}
         renderItem={({ item }) => (
-          <CollectionItem item={item} onPress={handleSelectCollection} isDark={isDark} />
+          <CollectionItem
+            item={item}
+            onPress={handleSelectCollection}
+            onCollectionDeleted={refreshData}
+            isDark={isDark}
+          />
         )}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ padding: 16 }}

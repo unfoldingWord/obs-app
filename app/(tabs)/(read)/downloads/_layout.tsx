@@ -25,7 +25,7 @@ export default function DownloadsLayout() {
         name="[language]"
         options={{
           title: 'Available Stories',
-          headerShown: true,
+          headerShown: false,
         }}
       />
     </Stack>

@@ -13,14 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-interface SearchResult {
-  id: string;
-  storyId: string;
-  storyTitle: string;
-  frame: number;
-  text: string;
-  language: string;
-}
+import { CollectionsManager, SearchResult } from '../../src/core/CollectionsManager';
 
 export default function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -34,31 +27,28 @@ export default function SearchScreen() {
     if (!searchQuery.trim()) return;
 
     setLoading(true);
-    // In a real app, this would be an API call
-    setTimeout(() => {
-      setResults([
-        {
-          id: '1',
-          storyId: '01',
-          storyTitle: 'The Creation',
-          frame: 1,
-          text: 'In the beginning, God created the universe and everything in it.',
-          language: 'en',
-        },
-      ]);
+    try {
+      const collectionsManager = CollectionsManager.getInstance();
+      await collectionsManager.initialize();
+      const searchResults = await collectionsManager.searchContent(searchQuery);
+      setResults(searchResults);
+    } catch (error) {
+      console.error('Search error:', error);
+      setResults([]);
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
 
   const renderResult = ({ item }: { item: SearchResult }) => (
     <TouchableOpacity
-      onPress={() => router.push(`/story/${item.storyId}?frame=${item.frame}`)}
+      onPress={() => router.push(`/story/${encodeURIComponent(item.collectionId)}/${item.storyNumber}/${item.frameNumber}`)}
       className={`m-2 p-4 rounded-lg ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-sm`}>
       <Text className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
         {item.storyTitle}
       </Text>
       <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-        Frame {item.frame}
+        {item.collectionName} - Frame {item.frameNumber}
       </Text>
       <Text className={`mt-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
         {item.text}

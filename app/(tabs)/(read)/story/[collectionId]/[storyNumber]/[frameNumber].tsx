@@ -2,6 +2,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useObsImage } from 'hooks/useObsImage';
 import React, { useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   Text,
@@ -12,9 +13,15 @@ import {
   useColorScheme,
   ScrollView,
 } from 'react-native';
-import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
+import {
+  GestureHandlerRootView,
+  PanGestureHandler,
+  State,
+  Directions,
+} from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CommentsSection } from '../../../../../../src/components/CommentsSection';
 import {
   CollectionsManager,
   Collection,
@@ -43,12 +50,16 @@ export default function StoryFrameScreen() {
     frameNumber ? parseInt(frameNumber as string, 10) : 1
   );
   const [markers, setMarkers] = useState<UserMarker[]>([]);
+  const [showComments, setShowComments] = useState(false);
+  const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large' | 'xlarge'>('medium');
+  const [showFontSizeMenu, setShowFontSizeMenu] = useState(false);
   const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
   useEffect(() => {
     loadStoryData();
+    loadFontSizePreference();
   }, [collectionId, storyNumber]);
 
   // Effect to update when frame number changes
@@ -246,6 +257,37 @@ export default function StoryFrameScreen() {
     }
   };
 
+  const loadFontSizePreference = async () => {
+    try {
+      const savedFontSize = await AsyncStorage.getItem('fontSizePreference');
+      if (savedFontSize) {
+        setFontSize(savedFontSize as 'small' | 'medium' | 'large' | 'xlarge');
+      }
+    } catch (error) {
+      console.error('Error loading font size preference:', error);
+    }
+  };
+
+  const changeFontSize = async (newSize: 'small' | 'medium' | 'large' | 'xlarge') => {
+    try {
+      setFontSize(newSize);
+      await AsyncStorage.setItem('fontSizePreference', newSize);
+      setShowFontSizeMenu(false);
+    } catch (error) {
+      console.error('Error saving font size preference:', error);
+    }
+  };
+
+  const getFontSizeClass = () => {
+    switch (fontSize) {
+      case 'small': return 'text-base';
+      case 'medium': return 'text-lg';
+      case 'large': return 'text-xl';
+      case 'xlarge': return 'text-2xl';
+      default: return 'text-lg';
+    }
+  };
+
   const goToNextFrame = () => {
     if (currentFrameNumber < totalFrames) {
       navigateToFrame(currentFrameNumber + 1);
@@ -330,128 +372,192 @@ export default function StoryFrameScreen() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
-        <Stack.Screen
-          options={{
-            title: story?.title || `Story ${storyNumber}`,
-            headerStyle: {
-              backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-              marginBottom: 0,
-            },
-            headerTintColor: isDark ? '#FFFFFF' : '#000000',
-            headerRight: () => (
-              <View className="flex-row space-x-2">
-                <TouchableOpacity onPress={toggleFavorite} className="p-2">
-                  <MaterialIcons
-                    name={currentFrame?.isFavorite ? 'favorite' : 'favorite-border'}
-                    size={24}
-                    color={currentFrame?.isFavorite ? '#EF4444' : isDark ? '#FFFFFF' : '#000000'}
-                  />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => addMarker()} className="p-2">
-                  <MaterialIcons
-                    name="bookmark-add"
-                    size={24}
-                    color={isDark ? '#FFFFFF' : '#000000'}
-                  />
-                </TouchableOpacity>
-              </View>
-            ),
-          }}
-        />
+        <Stack.Screen options={{ headerShown: false }} />
         <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
-        {/* <PanGestureHandler onGestureEvent={onSwipeGestureEvent}> */}
-        <View style={{ flex: 1 }}>
-          <ScrollView className="flex-1">
-            <View className="relative">
-              <Image source={image} style={{ width: '100%', height: 200 }} resizeMode="cover" />
+        {/* Custom Header */}
+        <View
+          className={`flex-row items-center justify-between px-4 py-3 ${
+            isDark ? 'bg-gray-800' : 'bg-white'
+          } border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+          <TouchableOpacity
+            onPress={() => router.push(`/stories?collection=${encodeURIComponent(collectionId)}`)}
+            className="p-2">
+            <MaterialIcons name="arrow-back" size={24} color={isDark ? '#FFFFFF' : '#000000'} />
+          </TouchableOpacity>
 
-              {/* Markers indicator */}
-              {markers.length > 0 && (
-                <View className="absolute right-2 top-2">
-                  <View
-                    className={`flex-row items-center rounded-full px-2 py-1 ${
-                      isDark ? 'bg-black/50' : 'bg-white/80'
-                    }`}>
-                    <MaterialIcons
-                      name="bookmark"
-                      size={16}
-                      color={isDark ? '#FFD700' : '#F59E0B'}
-                    />
-                    <Text
-                      className={`ml-1 text-xs font-medium ${
-                        isDark ? 'text-white' : 'text-gray-900'
-                      }`}>
-                      {markers.length}
-                    </Text>
-                  </View>
-                </View>
-              )}
-            </View>
+          <Text
+            className={`flex-1 text-center text-lg font-semibold ${
+              isDark ? 'text-white' : 'text-gray-900'
+            }`}
+            numberOfLines={1}>
+            {story?.title || `Story ${storyNumber}`}
+          </Text>
 
-            <View className="p-4">
-              <View className="mb-2 flex-row items-center justify-between">
+          <View className="flex-row">
+            <TouchableOpacity onPress={() => setShowFontSizeMenu(!showFontSizeMenu)} className="p-2">
+              <MaterialIcons name="text-fields" size={24} color={isDark ? '#FFFFFF' : '#000000'} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={toggleFavorite} className="p-2">
+              <MaterialIcons
+                name={currentFrame?.isFavorite ? 'favorite' : 'favorite-border'}
+                size={24}
+                color={currentFrame?.isFavorite ? '#EF4444' : isDark ? '#FFFFFF' : '#000000'}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => addMarker()} className="p-2">
+              <MaterialIcons name="bookmark-add" size={24} color={isDark ? '#FFFFFF' : '#000000'} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Font Size Menu */}
+        {showFontSizeMenu && (
+          <View
+            className={`absolute top-16 right-4 z-50 rounded-lg p-2 shadow-lg ${
+              isDark ? 'bg-gray-800' : 'bg-white'
+            } border ${isDark ? 'border-gray-700' : 'border-gray-200'}`}
+          >
+            {(['small', 'medium', 'large', 'xlarge'] as const).map((size) => (
+              <TouchableOpacity
+                key={size}
+                onPress={() => changeFontSize(size)}
+                className={`flex-row items-center p-3 rounded ${
+                  fontSize === size ? (isDark ? 'bg-blue-600' : 'bg-blue-100') : ''
+                }`}
+              >
+                <MaterialIcons
+                  name="text-fields"
+                  size={size === 'small' ? 16 : size === 'medium' ? 20 : size === 'large' ? 24 : 28}
+                  color={
+                    fontSize === size
+                      ? isDark ? '#FFFFFF' : '#1F2937'
+                      : isDark ? '#9CA3AF' : '#6B7280'
+                  }
+                />
                 <Text
-                  className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Frame {currentFrameNumber} of {totalFrames}
+                  className={`ml-2 capitalize ${
+                    fontSize === size
+                      ? isDark ? 'text-white' : 'text-gray-900'
+                      : isDark ? 'text-gray-300' : 'text-gray-700'
+                  }`}
+                >
+                  {size === 'xlarge' ? 'Extra Large' : size}
                 </Text>
-                {currentFrame?.isFavorite && (
-                  <MaterialIcons name="favorite" size={20} color="#EF4444" />
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        <PanGestureHandler
+          onHandlerStateChange={onSwipeGestureEvent}
+          activeOffsetX={[-50, 50]}
+          failOffsetY={[-20, 20]}
+          shouldCancelWhenOutside>
+          <View style={{ flex: 1 }} onTouchStart={() => setShowFontSizeMenu(false)}>
+            <ScrollView className="flex-1">
+              <View className="relative">
+                <Image source={image} style={{ width: '100%', height: 200 }} resizeMode="cover" />
+
+                {/* Markers indicator */}
+                {markers.length > 0 && (
+                  <View className="absolute right-2 top-2">
+                    <View
+                      className={`flex-row items-center rounded-full px-2 py-1 ${
+                        isDark ? 'bg-black/50' : 'bg-white/80'
+                      }`}>
+                      <MaterialIcons
+                        name="bookmark"
+                        size={16}
+                        color={isDark ? '#FFD700' : '#F59E0B'}
+                      />
+                      <Text
+                        className={`ml-1 text-xs font-medium ${
+                          isDark ? 'text-white' : 'text-gray-900'
+                        }`}>
+                        {markers.length}
+                      </Text>
+                    </View>
+                  </View>
                 )}
               </View>
 
-              <Text
-                className={`text-lg leading-relaxed ${isDark ? 'text-white' : 'text-gray-800'}`}>
+              <View className="p-4">
+                <View className="mb-2 flex-row items-center justify-between">
+                  <Text
+                    className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                    Frame {currentFrameNumber} of {totalFrames}
+                  </Text>
+                  {currentFrame?.isFavorite && (
+                    <MaterialIcons name="favorite" size={20} color="#EF4444" />
+                  )}
+                </View>
+
+                              <Text
+                className={`${getFontSizeClass()} leading-relaxed ${isDark ? 'text-white' : 'text-gray-800'}`}>
                 {currentFrame.text}
               </Text>
 
-              {/* Display markers if any */}
-              {markers.length > 0 && (
-                <View className="mt-4">
-                  <Text
-                    className={`mb-2 text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                    Bookmarks ({markers.length})
-                  </Text>
-                  {markers.map((marker) => (
-                    <View
-                      key={marker.id}
-                      className={`mb-2 rounded-lg p-3 ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
-                      <View className="flex-row items-center justify-between">
-                        <View className="flex-1 flex-row items-center">
-                          <View
-                            className="mr-2 h-3 w-3 rounded-full"
-                            style={{ backgroundColor: marker.color || '#FFD700' }}
-                          />
-                          <Text className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-                            {new Date(marker.timestamp).toLocaleDateString()}
-                          </Text>
+                {/* Display markers if any */}
+                {markers.length > 0 && (
+                  <View className="mt-4">
+                    <Text
+                      className={`mb-2 text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Bookmarks ({markers.length})
+                    </Text>
+                    {markers.map((marker) => (
+                      <View
+                        key={marker.id}
+                        className={`mb-2 rounded-lg p-3 ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                        <View className="flex-row items-center justify-between">
+                          <View className="flex-1 flex-row items-center">
+                            <View
+                              className="mr-2 h-3 w-3 rounded-full"
+                              style={{ backgroundColor: marker.color || '#FFD700' }}
+                            />
+                            <Text
+                              className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                              {new Date(marker.timestamp).toLocaleDateString()}
+                            </Text>
+                          </View>
+                          <TouchableOpacity
+                            onPress={() => {
+                              const storyManager = StoryManager.getInstance();
+                              storyManager.deleteMarker(marker.id).then(() => loadMarkers());
+                            }}
+                            className="p-1">
+                            <MaterialIcons
+                              name="delete"
+                              size={16}
+                              color={isDark ? '#EF4444' : '#DC2626'}
+                            />
+                          </TouchableOpacity>
                         </View>
-                        <TouchableOpacity
-                          onPress={() => {
-                            const storyManager = StoryManager.getInstance();
-                            storyManager.deleteMarker(marker.id).then(() => loadMarkers());
-                          }}
-                          className="p-1">
-                          <MaterialIcons
-                            name="delete"
-                            size={16}
-                            color={isDark ? '#EF4444' : '#DC2626'}
-                          />
-                        </TouchableOpacity>
+                        {marker.note && (
+                          <Text
+                            className={`mt-1 text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                            {marker.note}
+                          </Text>
+                        )}
                       </View>
-                      {marker.note && (
-                        <Text className={`mt-1 text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                          {marker.note}
-                        </Text>
-                      )}
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          </ScrollView>
-        </View>
-        {/* </PanGestureHandler> */}
+                    ))}
+                  </View>
+                )}
+              </View>
+            </ScrollView>
+
+            {/* Comments Section */}
+            {currentFrame && (
+              <CommentsSection
+                collectionId={collectionId as string}
+                storyNumber={parseInt(storyNumber as string, 10)}
+                frameNumber={currentFrameNumber}
+                isVisible={showComments}
+                onToggleVisibility={() => setShowComments(!showComments)}
+              />
+            )}
+          </View>
+        </PanGestureHandler>
 
         {/* Navigation controls */}
         <View

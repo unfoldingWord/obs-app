@@ -9,21 +9,10 @@ export default function StoryLayout() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: {
-          backgroundColor: isDark ? '#121212' : '#fff',
-        },
-        headerTintColor: isDark ? '#fff' : '#000',
-        headerBackTitle: 'Back',
-        headerTitleStyle: {
-          fontWeight: '600',
-        },
+        headerShown: false,
         contentStyle: {
           backgroundColor: isDark ? '#000' : '#f5f5f5',
         },
-
-      }}
-      options={{
-        headerShown: false,
       }}
     />
   );

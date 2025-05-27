@@ -1,7 +1,7 @@
 import { FontAwesome, MaterialIcons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   StyleSheet,
   FlatList,
@@ -28,17 +28,41 @@ export default function StoriesScreen() {
 
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const { collectionId } = useLocalSearchParams();
 
-  useEffect(() => {
-    loadCollections();
+  const loadProgress = useCallback(async (collectionId: string, storiesList: CollectionStory[]) => {
+    try {
+      const storyManager = StoryManager.getInstance();
+      await storyManager.initialize();
+      const progressMap = new Map<number, UserProgress>();
+
+      // Load progress for all stories in this collection
+      for (const story of storiesList) {
+        const progress = await storyManager.getReadingProgress(collectionId, story.storyNumber);
+        if (progress) {
+          progressMap.set(story.storyNumber, progress);
+        }
+      }
+
+      setProgressMap(progressMap);
+    } catch (error) {
+      console.error('Error loading progress:', error);
+    }
   }, []);
 
-  useEffect(() => {
-    if (currentCollection) {
-      loadStories(currentCollection.id);
-      loadProgress(currentCollection.id);
+  const loadStories = useCallback(async (collectionId: string) => {
+    try {
+      const collectionsManager = CollectionsManager.getInstance();
+      await collectionsManager.initialize();
+      const collectionStories = await collectionsManager.getCollectionStories(collectionId);
+      setStories(collectionStories);
+
+      // Load progress after stories are loaded
+      await loadProgress(collectionId, collectionStories);
+    } catch (error) {
+      console.error('Error loading stories:', error);
     }
-  }, [currentCollection]);
+  }, [loadProgress]);
 
   const loadCollections = async () => {
     try {
@@ -53,19 +77,27 @@ export default function StoriesScreen() {
       setCollections(downloaded);
 
       if (downloaded.length > 0) {
-        // Try to get the last viewed collection from user progress
-        const storyManager = StoryManager.getInstance();
-        await storyManager.initialize();
-        const allProgress = await storyManager.getAllReadingProgress();
-
         let selectedCollection = downloaded[0]; // Default to first
 
-        if (allProgress.length > 0) {
-          // Find the most recently viewed collection
-          const recentProgress = allProgress.sort((a, b) => b.timestamp - a.timestamp)[0];
-          const recentCollection = downloaded.find(c => c.id === recentProgress.collectionId);
-          if (recentCollection) {
-            selectedCollection = recentCollection;
+        // Check if a specific collection was requested via query parameter
+        if (collectionId && typeof collectionId === 'string') {
+          const requestedCollection = downloaded.find(c => c.id === collectionId);
+          if (requestedCollection) {
+            selectedCollection = requestedCollection;
+          }
+        } else {
+          // Try to get the last viewed collection from user progress
+          const storyManager = StoryManager.getInstance();
+          await storyManager.initialize();
+          const allProgress = await storyManager.getAllReadingProgress();
+
+          if (allProgress.length > 0) {
+            // Find the most recently viewed collection
+            const recentProgress = allProgress.sort((a, b) => b.timestamp - a.timestamp)[0];
+            const recentCollection = downloaded.find(c => c.id === recentProgress.collectionId);
+            if (recentCollection) {
+              selectedCollection = recentCollection;
+            }
           }
         }
 
@@ -81,34 +113,24 @@ export default function StoriesScreen() {
     }
   };
 
-  const loadStories = async (collectionId: string) => {
-    try {
-      const storyManager = StoryManager.getInstance();
-      const collectionStories = await storyManager.getStoriesForCollection(collectionId);
-      setStories(collectionStories);
-    } catch (error) {
-      console.error('Error loading stories:', error);
+  useEffect(() => {
+    loadCollections();
+  }, []);
+
+  useEffect(() => {
+    if (currentCollection) {
+      loadStories(currentCollection.id);
     }
-  };
+  }, [currentCollection, loadStories]);
 
-  const loadProgress = async (collectionId: string) => {
-    try {
-      const storyManager = StoryManager.getInstance();
-      const progressMap = new Map<number, UserProgress>();
-
-      // Load progress for all stories in this collection
-      for (const story of stories) {
-        const progress = await storyManager.getReadingProgress(collectionId, story.storyNumber);
-        if (progress) {
-          progressMap.set(story.storyNumber, progress);
-        }
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (currentCollection) {
+        loadStories(currentCollection.id);
       }
-
-      setProgressMap(progressMap);
-    } catch (error) {
-      console.error('Error loading progress:', error);
-    }
-  };
+    }, [currentCollection, loadStories])
+  );
 
   const selectCollection = (collection: Collection) => {
     setCurrentCollection(collection);
@@ -119,6 +141,20 @@ export default function StoriesScreen() {
     const progress = progressMap.get(storyNumber);
     if (!progress) return 0;
     return Math.round((progress.frameNumber / progress.totalFrames) * 100);
+  };
+
+    const toggleStoryFavorite = async (story: CollectionStory) => {
+    if (!currentCollection) return;
+
+    try {
+      const collectionsManager = CollectionsManager.getInstance();
+      await collectionsManager.toggleStoryFavorite(currentCollection.id, story.storyNumber);
+
+      // Reload stories to get updated favorite status
+      await loadStories(currentCollection.id);
+    } catch (error) {
+      console.error('Error toggling story favorite:', error);
+    }
   };
 
   const renderStoryItem = ({ item }: { item: CollectionStory }) => {
@@ -138,9 +174,18 @@ export default function StoriesScreen() {
             <Text style={[styles.storyNumber, isDark ? { color: '#9CA3AF' } : { color: '#6B7280' }]}>
               Story {item.storyNumber}
             </Text>
-            {item.isFavorite && (
-              <MaterialIcons name="favorite" size={20} color="#EF4444" />
-            )}
+            <TouchableOpacity
+              onPress={(e) => {
+                e.stopPropagation();
+                toggleStoryFavorite(item);
+              }}
+              style={{ padding: 4 }}>
+              <MaterialIcons
+                name={item.isFavorite ? 'favorite' : 'favorite-border'}
+                size={20}
+                color={item.isFavorite ? '#EF4444' : (isDark ? '#9CA3AF' : '#6B7280')}
+              />
+            </TouchableOpacity>
           </View>
 
           <Text style={[styles.storyTitle, isDark ? { color: '#fff' } : { color: '#000' }]}>

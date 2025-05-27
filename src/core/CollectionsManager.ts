@@ -4,6 +4,7 @@ import JSZip from 'jszip';
 // import { Language, LanguageItem } from 'types/index';
 
 import { ImageManager } from './imageManager';
+import { LanguagesManager } from './LanguagesManager';
 import { warn } from './utils';
 
 export interface Collection {
@@ -57,6 +58,17 @@ interface RemoteCollection {
     description: string;
     avatar_url: string;
   };
+}
+
+export interface SearchResult {
+  id: string;
+  collectionId: string;
+  collectionName: string;
+  storyNumber: number;
+  storyTitle: string;
+  frameNumber: number;
+  text: string;
+  highlightedText: string;
 }
 
 export class CollectionsManager {
@@ -173,7 +185,6 @@ export class CollectionsManager {
       }
 
       const { data } = await response.json();
-      console.log({ data });
       return (data || []).map((item: RemoteCollection) => this.convertRemoteToCollection(item));
     } catch (error) {
       warn(
@@ -183,7 +194,7 @@ export class CollectionsManager {
     }
   }
 
-  async downloadRemoteCollection(collection: Collection): Promise<void> {
+  async downloadRemoteCollection(collection: Collection, languageData?: any): Promise<void> {
     if (!this.initialized) await this.initialize();
     try {
       const [owner, repoName] = collection.id.split('/');
@@ -203,6 +214,9 @@ export class CollectionsManager {
       }
 
       await this.markAsDownloaded(collection.id, true);
+
+      // Save language data to languages database
+      await this.saveLanguageData(collection.language, languageData);
     } catch (error) {
       warn(
         `Error downloading collection ${collection.id}: ${error instanceof Error ? error.message : String(error)}`
@@ -374,12 +388,20 @@ export class CollectionsManager {
   ): Promise<void> {
     if (!this.initialized) await this.initialize();
     try {
+      // First check current state
+      const currentFrame = await this.getFrame(collectionId, storyNumber, frameNumber);
+      console.log(`Toggling favorite for frame ${frameNumber} (story ${storyNumber}), current state: ${currentFrame?.isFavorite}`);
+
       await this.db.runAsync(
         'UPDATE frames SET is_favorite = CASE WHEN is_favorite = 0 THEN 1 ELSE 0 END WHERE collection_id = ? AND story_number = ? AND frame_number = ?',
         collectionId,
         storyNumber,
         frameNumber
       );
+
+      // Verify the change
+      const updatedFrame = await this.getFrame(collectionId, storyNumber, frameNumber);
+      console.log(`Frame favorite toggled, new state: ${updatedFrame?.isFavorite}`);
     } catch (error) {
       warn(
         `Error toggling favorite for frame ${frameNumber} (story ${storyNumber}): ${error instanceof Error ? error.message : String(error)}`
@@ -452,6 +474,49 @@ export class CollectionsManager {
     await this.imagesManager.deleteCollectionThumbnail(id);
   }
 
+    // Search functionality
+  async searchContent(query: string, collectionId?: string): Promise<SearchResult[]> {
+    if (!this.initialized) await this.initialize();
+
+    const searchQuery = `%${query.toLowerCase()}%`;
+    const sql = `
+      SELECT
+        f.collection_id,
+        f.story_number,
+        f.frame_number,
+        f.text,
+        s.title as story_title,
+        c.displayName as collection_name
+      FROM frames f
+      JOIN stories s ON f.collection_id = s.collection_id AND f.story_number = s.story_number
+      JOIN collections c ON f.collection_id = c.id
+      WHERE LOWER(f.text) LIKE ?
+      ${collectionId ? 'AND f.collection_id = ?' : ''}
+      ORDER BY f.collection_id, f.story_number, f.frame_number
+      LIMIT 100
+    `;
+
+    const params = collectionId ? [searchQuery, collectionId] : [searchQuery];
+    const results = await this.db.getAllAsync<any>(sql, params);
+
+    return results.map((row: any) => ({
+      id: `${row.collection_id}-${row.story_number}-${row.frame_number}`,
+      collectionId: row.collection_id,
+      collectionName: row.collection_name,
+      storyNumber: row.story_number,
+      storyTitle: row.story_title,
+      frameNumber: row.frame_number,
+      text: row.text,
+      // Highlight matching text
+      highlightedText: this.highlightSearchTerm(row.text, query)
+    }));
+  }
+
+  private highlightSearchTerm(text: string, term: string): string {
+    const regex = new RegExp(`(${term})`, 'gi');
+    return text.replace(regex, '<mark>$1</mark>');
+  }
+
   async deleteCollection(id: string): Promise<void> {
     if (!this.initialized) {
       await this.initialize();
@@ -469,6 +534,9 @@ export class CollectionsManager {
     }
 
     try {
+      // Clean up all user data associated with this collection
+      await this.cleanupUserDataForCollection(id);
+
       // Explicitly delete from dependent tables first.
       // This ensures data is removed even if ON DELETE CASCADE isn't active for some reason.
       await this.db.runAsync('DELETE FROM frames WHERE collection_id = ?', id);
@@ -478,14 +546,160 @@ export class CollectionsManager {
       // Then delete from the main collections table
       await this.db.runAsync('DELETE FROM collections WHERE id = ?', id);
 
+      // Get the language of the deleted collection before removing it from cache
+      const deletedCollection = this.collections.get(id);
+      const languageCode = deletedCollection?.language;
+
       this.collections.delete(id); // Clear from in-memory cache
       await this.imagesManager.deleteCollectionThumbnail(id); // Delete associated thumbnail image
-      warn(`Collection ${id} deleted successfully.`);
+
+      // Check if this was the last collection in this language
+      if (languageCode) {
+        await this.updateLanguageCollectionStatus(languageCode);
+      }
+
+      warn(`Collection ${id} deleted successfully with all associated user data.`);
     } catch (error) {
       warn(
         `Error deleting collection ${id}: ${error instanceof Error ? error.message : String(error)}`
       );
       // Consider re-throwing or handling more robustly if deletion is critical
+    }
+  }
+
+  /**
+   * Clean up all user data associated with a collection
+   * This includes reading progress, markers, recently viewed, and comments
+   */
+  private async cleanupUserDataForCollection(collectionId: string): Promise<void> {
+    try {
+      // Import managers dynamically to avoid circular dependencies
+      const { StoryManager } = await import('./storyManager');
+      const { CommentsManager } = await import('./CommentsManager');
+
+      // Clean up reading progress from AsyncStorage
+      await this.cleanupReadingProgress(collectionId);
+
+      // Clean up user markers from AsyncStorage
+      await this.cleanupUserMarkers(collectionId);
+
+      // Clean up recently viewed from AsyncStorage
+      await this.cleanupRecentlyViewed(collectionId);
+
+      // Clean up comments from SQLite database
+      const commentsManager = CommentsManager.getInstance();
+      await commentsManager.initialize();
+      await this.cleanupComments(commentsManager, collectionId);
+
+      warn(`Cleaned up all user data for collection ${collectionId}`);
+    } catch (error) {
+      warn(
+        `Error cleaning up user data for collection ${collectionId}: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+
+  private async cleanupReadingProgress(collectionId: string): Promise<void> {
+    try {
+      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+      const keys = await AsyncStorage.getAllKeys();
+      const progressKeys = keys.filter(key =>
+        key.startsWith('@reading_progress:') && key.includes(collectionId)
+      );
+
+      if (progressKeys.length > 0) {
+        await AsyncStorage.multiRemove(progressKeys);
+        warn(`Removed ${progressKeys.length} reading progress entries for collection ${collectionId}`);
+      }
+    } catch (error) {
+      warn(`Error cleaning up reading progress: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  private async cleanupUserMarkers(collectionId: string): Promise<void> {
+    try {
+      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+      const keys = await AsyncStorage.getAllKeys();
+      const markerKeys = keys.filter(key => key.startsWith('@marker:'));
+
+      if (markerKeys.length > 0) {
+        const markerEntries = await AsyncStorage.multiGet(markerKeys);
+        const keysToRemove: string[] = [];
+
+        for (const [key, value] of markerEntries) {
+          if (value) {
+            try {
+              const marker = JSON.parse(value);
+              if (marker.collectionId === collectionId) {
+                keysToRemove.push(key);
+              }
+            } catch (parseError) {
+              // If we can't parse the marker, skip it
+              warn(`Error parsing marker ${key}: ${parseError}`);
+            }
+          }
+        }
+
+        if (keysToRemove.length > 0) {
+          await AsyncStorage.multiRemove(keysToRemove);
+          warn(`Removed ${keysToRemove.length} user markers for collection ${collectionId}`);
+        }
+      }
+    } catch (error) {
+      warn(`Error cleaning up user markers: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  private async cleanupRecentlyViewed(collectionId: string): Promise<void> {
+    try {
+      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+      const keys = await AsyncStorage.getAllKeys();
+      const recentlyViewedKeys = keys.filter(key => key.startsWith('@recently_viewed:'));
+
+      if (recentlyViewedKeys.length > 0) {
+        const recentlyViewedEntries = await AsyncStorage.multiGet(recentlyViewedKeys);
+        const keysToRemove: string[] = [];
+
+        for (const [key, value] of recentlyViewedEntries) {
+          if (value) {
+            try {
+              const items = JSON.parse(value);
+              if (Array.isArray(items)) {
+                const filteredItems = items.filter(item => item.collectionId !== collectionId);
+                if (filteredItems.length !== items.length) {
+                  if (filteredItems.length > 0) {
+                    // Update the list without the deleted collection's items
+                    await AsyncStorage.setItem(key, JSON.stringify(filteredItems));
+                  } else {
+                    // Remove the entire key if no items remain
+                    keysToRemove.push(key);
+                  }
+                }
+              }
+            } catch (parseError) {
+              warn(`Error parsing recently viewed ${key}: ${parseError}`);
+            }
+          }
+        }
+
+        if (keysToRemove.length > 0) {
+          await AsyncStorage.multiRemove(keysToRemove);
+        }
+        warn(`Cleaned up recently viewed entries for collection ${collectionId}`);
+      }
+    } catch (error) {
+      warn(`Error cleaning up recently viewed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+      private async cleanupComments(commentsManager: any, collectionId: string): Promise<void> {
+    try {
+      // Use the CommentsManager's efficient bulk delete method
+      await commentsManager.initialize();
+      const deletedCount = await commentsManager.deleteCommentsForCollection(collectionId);
+      warn(`Removed ${deletedCount} comments for collection ${collectionId}`);
+    } catch (error) {
+      warn(`Error cleaning up comments: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -647,7 +861,6 @@ export class CollectionsManager {
             rawContentMd: content,
             isFavorite: false,
           };
-          console.log({ story, storyNumber });
           await this.saveStoryToDB(story);
 
           let frameNumber = 0;
@@ -657,7 +870,6 @@ export class CollectionsManager {
             frameNumber++;
             const imageUrl = match[1].trim();
             const frameText = match[2].trim();
-            console.log(frameText);
             if (!imageUrl || !frameText) {
               warn(
                 `Skipping empty frame ${frameNumber} in story ${storyNumber} of ${collection.id}`
@@ -675,9 +887,6 @@ export class CollectionsManager {
             };
             await this.saveFrameToDB(frame);
           }
-          warn(
-            `Processed story ${storyNumber} with ${frameNumber} frames for collection ${collection.id}.`
-          );
         } else {
           const zipRootFolder =
             filesToProcess.find((f) => f[1].dir && f[0].endsWith('/'))?.[0] || '';
@@ -795,6 +1004,58 @@ export class CollectionsManager {
       warn(
         `Error downloading thumbnail for ${collection.id}: ${error instanceof Error ? error.message : String(error)}`
       );
+    }
+  }
+
+  private async saveLanguageData(languageCode: string, languageData?: any): Promise<void> {
+    try {
+      const languagesManager = LanguagesManager.getInstance();
+      await languagesManager.initialize();
+
+      // If we have language data from the remote source, save it
+      if (languageData) {
+        await languagesManager.updateLanguageFromRemote(languageData);
+      } else {
+        // If no language data provided, create a minimal entry with just the language code
+        await languagesManager.saveLanguage({
+          lc: languageCode,
+          ln: languageCode, // Use language code as fallback for native name
+          ang: languageCode, // Use language code as fallback for English name
+        });
+      }
+
+      // Mark this language as having collections
+      await languagesManager.markLanguageAsHavingCollections(languageCode);
+    } catch (error) {
+      warn(
+        `Error saving language data for ${languageCode}: ${error instanceof Error ? error.message : String(error)}`
+      );
+      // Don't throw error here as language data saving is not critical for collection download
+    }
+  }
+
+  private async updateLanguageCollectionStatus(languageCode: string): Promise<void> {
+    try {
+      const languagesManager = LanguagesManager.getInstance();
+      await languagesManager.initialize();
+
+      // Check if there are any remaining downloaded collections in this language
+      const collectionsInLanguage = Array.from(this.collections.values())
+        .filter(collection => collection.language === languageCode && collection.isDownloaded);
+
+      if (collectionsInLanguage.length === 0) {
+        // No more collections in this language, mark as not having collections
+        await languagesManager.markLanguageAsNotHavingCollections(languageCode);
+        warn(`Language ${languageCode} marked as not having collections (no downloaded collections remaining)`);
+      } else {
+        // Still has collections, ensure it's marked as having collections
+        await languagesManager.markLanguageAsHavingCollections(languageCode);
+      }
+    } catch (error) {
+      warn(
+        `Error updating language collection status for ${languageCode}: ${error instanceof Error ? error.message : String(error)}`
+      );
+      // Don't throw error here as language status update is not critical
     }
   }
 }

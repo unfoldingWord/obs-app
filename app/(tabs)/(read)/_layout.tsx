@@ -35,6 +35,12 @@ export default function ReadLayout() {
           headerShown: false,
         }}
       />
+      <Stack.Screen
+        name="story"
+        options={{
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 }

@@ -1,8 +1,9 @@
 import { useObsImage } from 'hooks/useObsImage';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Image, TouchableOpacity } from 'react-native';
 
 import { UserProgress } from '../core/storyManager';
+import { CollectionsManager, Story, Collection } from '../core/CollectionsManager';
 
 interface ContinueReadingProps {
   lastReadProgress: UserProgress;
@@ -11,11 +12,37 @@ interface ContinueReadingProps {
 }
 
 export function ContinueReading({ lastReadProgress, onPress, isDark }: ContinueReadingProps) {
-  // Generate image URL based on the current story/frame
+  const [story, setStory] = useState<Story | null>(null);
+  const [collection, setCollection] = useState<Collection | null>(null);
 
+  // Generate image URL based on the current story/frame
   const image = useObsImage({
     reference: { story: lastReadProgress.storyNumber, frame: lastReadProgress.frameNumber },
   });
+
+  useEffect(() => {
+    const loadStoryData = async () => {
+      try {
+        const collectionsManager = CollectionsManager.getInstance();
+        await collectionsManager.initialize();
+
+        // Fetch story details
+        const storyData = await collectionsManager.getStory(
+          lastReadProgress.collectionId,
+          lastReadProgress.storyNumber
+        );
+        setStory(storyData);
+
+        // Fetch collection details
+        const collectionData = await collectionsManager.getCollectionById(lastReadProgress.collectionId);
+        setCollection(collectionData);
+      } catch (error) {
+        console.error('Error loading story data for continue reading:', error);
+      }
+    };
+
+    loadStoryData();
+  }, [lastReadProgress.collectionId, lastReadProgress.storyNumber]);
 
   return (
     <View className="mb-4">
@@ -28,13 +55,13 @@ export function ContinueReading({ lastReadProgress, onPress, isDark }: ContinueR
         <Image source={image} style={{ width: '100%', height: 120 }} resizeMode="cover" />
         <View className="p-4">
           <Text className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            Story {lastReadProgress.storyNumber}
+            {story?.title || `Story ${lastReadProgress.storyNumber}`}
           </Text>
           <Text className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
             Frame {lastReadProgress.frameNumber} of {lastReadProgress.totalFrames}
           </Text>
           <Text className={`mt-1 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-            {lastReadProgress.collectionId}
+            {collection?.displayName || lastReadProgress.collectionId}
           </Text>
 
           {/* Progress bar */}
