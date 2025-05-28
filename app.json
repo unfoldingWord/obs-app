@@ -22,7 +22,7 @@
           "image": "./assets/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#f7eedd"
+          "backgroundColor": "#006a78"
         }
       ]
     ],
@@ -36,9 +36,10 @@
       "supportsTablet": true,
       "icon": "./assets/icon.png",
       "splash": {
-        "image": "./assets/splash.png",
+        "image": "./assets/splash-icon.png",
+        "imageWidth": 200,
         "resizeMode": "contain",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#006a78"
       }
     },
     "android": {
@@ -46,16 +47,6 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      },
-      "splash": {
-        "image": "./assets/splash.png",
-        "resizeMode": "contain",
-        "backgroundColor": "#ffffff",
-        "mdpi": "./assets/splash.png",
-        "hdpi": "./assets/splash.png",
-        "xhdpi": "./assets/splash.png",
-        "xxhdpi": "./assets/splash.png",
-        "xxxhdpi": "./assets/splash.png"
       },
       "package": "com.abelpz.obsapp"
     }

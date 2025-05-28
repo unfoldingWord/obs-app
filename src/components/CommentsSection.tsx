@@ -6,7 +6,7 @@ import { AddCommentModal } from '../components/AddCommentModal';
 import { CommentItem } from '../components/CommentItem';
 import { CommentsManager, FrameComment } from '../core/CommentsManager';
 
-interface CommentsSectionProps {
+interface NotesSectionProps {
   collectionId: string;
   storyNumber: number;
   frameNumber: number;
@@ -14,103 +14,103 @@ interface CommentsSectionProps {
   onToggleVisibility?: () => void;
 }
 
-export const CommentsSection: React.FC<CommentsSectionProps> = ({
+export const NotesSection: React.FC<NotesSectionProps> = ({
   collectionId,
   storyNumber,
   frameNumber,
   isVisible = false,
   onToggleVisibility,
 }) => {
-  const [comments, setComments] = useState<FrameComment[]>([]);
+  const [notes, setNotes] = useState<FrameComment[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [editingComment, setEditingComment] = useState<FrameComment | null>(null);
-  const [commentsCount, setCommentsCount] = useState(0);
+  const [editingNote, setEditingNote] = useState<FrameComment | null>(null);
+  const [notesCount, setNotesCount] = useState(0);
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
-  const loadComments = useCallback(async () => {
+  const loadNotes = useCallback(async () => {
     try {
       setLoading(true);
       const commentsManager = CommentsManager.getInstance();
       await commentsManager.initialize();
 
-      const frameComments = await commentsManager.getFrameComments(
+      const frameNotes = await commentsManager.getFrameComments(
         collectionId,
         storyNumber,
         frameNumber
       );
       const count = await commentsManager.getCommentsCount(collectionId, storyNumber, frameNumber);
 
-      setComments(frameComments);
-      setCommentsCount(count);
+      setNotes(frameNotes);
+      setNotesCount(count);
     } catch (error) {
-      console.error('Error loading comments:', error);
-      Alert.alert('Error', 'Failed to load comments. Please try again.');
+      console.error('Error loading notes:', error);
+      Alert.alert('Error', 'Failed to load notes. Please try again.');
     } finally {
       setLoading(false);
     }
   }, [collectionId, storyNumber, frameNumber]);
 
-  const loadCommentsCount = useCallback(async () => {
+  const loadNotesCount = useCallback(async () => {
     try {
       const commentsManager = CommentsManager.getInstance();
       await commentsManager.initialize();
 
       const count = await commentsManager.getCommentsCount(collectionId, storyNumber, frameNumber);
 
-      setCommentsCount(count);
+      setNotesCount(count);
     } catch (error) {
-      console.error('Error loading comments count:', error);
+      console.error('Error loading notes count:', error);
       // Don't show alert for count loading errors, just log them
     }
   }, [collectionId, storyNumber, frameNumber]);
 
   useEffect(() => {
     if (isVisible) {
-      loadComments();
+      loadNotes();
     }
-  }, [isVisible, loadComments]);
+  }, [isVisible, loadNotes]);
 
-  // Load comments count when frame changes (even when not visible)
+  // Load notes count when frame changes (even when not visible)
   useEffect(() => {
-    loadCommentsCount();
+    loadNotesCount();
   }, [collectionId, storyNumber, frameNumber]);
 
-  const handleAddComment = async (commentText: string) => {
+  const handleAddNote = async (noteText: string) => {
     try {
       const commentsManager = CommentsManager.getInstance();
-      await commentsManager.addComment(collectionId, storyNumber, frameNumber, commentText);
+      await commentsManager.addComment(collectionId, storyNumber, frameNumber, noteText);
       if (isVisible) {
-        await loadComments();
+        await loadNotes();
       } else {
-        await loadCommentsCount();
+        await loadNotesCount();
       }
       setShowAddModal(false);
     } catch (error) {
-      console.error('Error adding comment:', error);
-      Alert.alert('Error', 'Failed to add comment. Please try again.');
+      console.error('Error adding note:', error);
+      Alert.alert('Error', 'Failed to add note. Please try again.');
     }
   };
 
-  const handleEditComment = async (commentId: string, newText: string) => {
+  const handleEditNote = async (noteId: string, newText: string) => {
     try {
       const commentsManager = CommentsManager.getInstance();
-      await commentsManager.updateComment(commentId, newText);
+      await commentsManager.updateComment(noteId, newText);
       if (isVisible) {
-        await loadComments();
+        await loadNotes();
       } else {
-        await loadCommentsCount();
+        await loadNotesCount();
       }
-      setEditingComment(null);
+      setEditingNote(null);
     } catch (error) {
-      console.error('Error updating comment:', error);
-      Alert.alert('Error', 'Failed to update comment. Please try again.');
+      console.error('Error updating note:', error);
+      Alert.alert('Error', 'Failed to update note. Please try again.');
     }
   };
 
-  const handleDeleteComment = async (commentId: string) => {
-    Alert.alert('Delete Comment', 'Are you sure you want to delete this comment?', [
+  const handleDeleteNote = async (noteId: string) => {
+    Alert.alert('Delete Note', 'Are you sure you want to delete this note?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -118,69 +118,69 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({
         onPress: async () => {
           try {
             const commentsManager = CommentsManager.getInstance();
-            await commentsManager.deleteComment(commentId);
+            await commentsManager.deleteComment(noteId);
             if (isVisible) {
-              await loadComments();
+              await loadNotes();
             } else {
-              await loadCommentsCount();
+              await loadNotesCount();
             }
           } catch (error) {
-            console.error('Error deleting comment:', error);
-            Alert.alert('Error', 'Failed to delete comment. Please try again.');
+            console.error('Error deleting note:', error);
+            Alert.alert('Error', 'Failed to delete note. Please try again.');
           }
         },
       },
     ]);
   };
 
-  const handleEditPress = (comment: FrameComment) => {
-    setEditingComment(comment);
+  const handleEditPress = (note: FrameComment) => {
+    setEditingNote(note);
     setShowAddModal(true);
   };
 
   const handleCloseModal = () => {
     setShowAddModal(false);
-    setEditingComment(null);
+    setEditingNote(null);
   };
 
-  const renderCommentItem = ({ item }: { item: FrameComment }) => (
+  const renderNoteItem = ({ item }: { item: FrameComment }) => (
     <CommentItem
       comment={item}
       onEdit={() => handleEditPress(item)}
-      onDelete={() => handleDeleteComment(item.id)}
+      onDelete={() => handleDeleteNote(item.id)}
       isDark={isDark}
     />
   );
 
   const renderEmptyState = () => (
     <View className="items-center justify-center py-8">
-      <MaterialIcons name="comment" size={48} color={isDark ? '#6B7280' : '#9CA3AF'} />
+      <MaterialIcons name="note" size={48} color={isDark ? '#6B7280' : '#9CA3AF'} />
       <Text className={`mt-2 text-center ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-        No comments yet
+        No notes yet
       </Text>
       <Text className={`mt-1 text-center text-sm ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-        Be the first to add a comment!
+        Add your first note for this frame!
       </Text>
     </View>
   );
 
   return (
     <>
-      {/* Comments Toggle Button */}
+      {/* Notes Toggle Button */}
       <TouchableOpacity
         onPress={onToggleVisibility}
         className={`flex-row items-center justify-between p-3 ${
           isDark ? 'bg-gray-800' : 'bg-gray-100'
         } border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
         <View className="flex-row items-center">
-          <MaterialIcons name="comment" size={20} color={isDark ? '#9CA3AF' : '#6B7280'} />
+          <MaterialIcons name="note" size={20} color={isDark ? '#9CA3AF' : '#6B7280'} />
           <Text className={`ml-2 font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-            Comments
+            Notes
           </Text>
-          {commentsCount > 0 && (
+          {notesCount > 0 && (
             <View
               className={`ml-2 rounded-full px-2 py-1 ${isDark ? 'bg-blue-600' : 'bg-blue-500'}`}>
-              <Text className="text-xs font-bold text-white">{commentsCount}</Text>
+              <Text className="text-xs font-bold text-white">{notesCount}</Text>
             </View>
           )}
         </View>
@@ -191,49 +191,49 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({
         />
       </TouchableOpacity>
 
-      {/* Comments List */}
+      {/* Notes List */}
       {isVisible && (
         <View
           className={`${isDark ? 'bg-gray-900' : 'bg-white'} border-t ${
             isDark ? 'border-gray-700' : 'border-gray-200'
           }`}>
-          {/* Add Comment Button */}
-          <View className="border-b border-gray-200 p-3 dark:border-gray-700">
-            <TouchableOpacity
-              onPress={() => setShowAddModal(true)}
-              className={`flex-row items-center justify-center rounded-lg p-3 ${
-                isDark ? 'bg-blue-600' : 'bg-blue-500'
-              }`}>
-              <MaterialIcons name="add" size={20} color="white" />
-              <Text className="ml-2 font-medium text-white">Add Comment</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Comments List */}
+          {/* Notes List */}
           <View style={{ maxHeight: 300 }}>
             <FlatList
-              data={comments}
-              renderItem={renderCommentItem}
+              data={notes}
+              renderItem={renderNoteItem}
               keyExtractor={(item) => item.id}
               ListEmptyComponent={renderEmptyState}
               contentContainerStyle={{ paddingBottom: 16 }}
               showsVerticalScrollIndicator={false}
             />
           </View>
+
+          {/* Add Note Button */}
+          <View className="border-t border-gray-200 p-3 dark:border-gray-700">
+            <TouchableOpacity
+              onPress={() => setShowAddModal(true)}
+              className={`flex-row items-center justify-center rounded-lg p-3 ${
+                isDark ? 'bg-blue-600' : 'bg-blue-500'
+              }`}>
+              <MaterialIcons name="add" size={20} color="white" />
+              <Text className="ml-2 font-medium text-white">Add Note</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
-      {/* Add/Edit Comment Modal */}
+      {/* Add/Edit Note Modal */}
       <AddCommentModal
         visible={showAddModal}
         onClose={handleCloseModal}
         onSubmit={
-          editingComment
-            ? (text: string) => handleEditComment(editingComment.id, text)
-            : handleAddComment
+          editingNote
+            ? (text: string) => handleEditNote(editingNote.id, text)
+            : handleAddNote
         }
-        initialText={editingComment?.comment || ''}
-        title={editingComment ? 'Edit Comment' : 'Add Comment'}
+        initialText={editingNote?.comment || ''}
+        title={editingNote ? 'Edit Note' : 'Add Note'}
         isDark={isDark}
       />
     </>

@@ -80,7 +80,7 @@ export function ContinueReading({ lastReadProgress, onPress, isDark }: ContinueR
         </View>
       </TouchableOpacity>
 
-      <Text className={`mb-3 mt-6 text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+      <Text className={`mb-0 mt-6 text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
         Downloaded Collections
       </Text>
     </View>

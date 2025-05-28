@@ -157,15 +157,6 @@ export default function ReadScreen() {
     <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
-      <View
-        className={`p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} border-b ${
-          isDark ? 'border-gray-700' : 'border-gray-200'
-        }`}>
-        <Text className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-          My Collections
-        </Text>
-      </View>
-
       <FlatList
         data={collections}
         renderItem={({ item }) => (

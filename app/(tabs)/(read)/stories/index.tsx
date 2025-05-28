@@ -15,7 +15,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { CollectionsManager, Collection, Story as CollectionStory } from '../../../../src/core/CollectionsManager';
+import {
+  CollectionsManager,
+  Collection,
+  Story as CollectionStory,
+} from '../../../../src/core/CollectionsManager';
 import { StoryManager, UserProgress } from '../../../../src/core/storyManager';
 
 export default function StoriesScreen() {
@@ -50,19 +54,22 @@ export default function StoriesScreen() {
     }
   }, []);
 
-  const loadStories = useCallback(async (collectionId: string) => {
-    try {
-      const collectionsManager = CollectionsManager.getInstance();
-      await collectionsManager.initialize();
-      const collectionStories = await collectionsManager.getCollectionStories(collectionId);
-      setStories(collectionStories);
+  const loadStories = useCallback(
+    async (collectionId: string) => {
+      try {
+        const collectionsManager = CollectionsManager.getInstance();
+        await collectionsManager.initialize();
+        const collectionStories = await collectionsManager.getCollectionStories(collectionId);
+        setStories(collectionStories);
 
-      // Load progress after stories are loaded
-      await loadProgress(collectionId, collectionStories);
-    } catch (error) {
-      console.error('Error loading stories:', error);
-    }
-  }, [loadProgress]);
+        // Load progress after stories are loaded
+        await loadProgress(collectionId, collectionStories);
+      } catch (error) {
+        console.error('Error loading stories:', error);
+      }
+    },
+    [loadProgress]
+  );
 
   const loadCollections = async () => {
     try {
@@ -72,7 +79,7 @@ export default function StoriesScreen() {
 
       // Get downloaded collections
       const downloadedCollections = await collectionsManager.getLocalCollections();
-      const downloaded = downloadedCollections.filter(c => c.isDownloaded);
+      const downloaded = downloadedCollections.filter((c) => c.isDownloaded);
 
       setCollections(downloaded);
 
@@ -81,7 +88,7 @@ export default function StoriesScreen() {
 
         // Check if a specific collection was requested via query parameter
         if (collectionId && typeof collectionId === 'string') {
-          const requestedCollection = downloaded.find(c => c.id === collectionId);
+          const requestedCollection = downloaded.find((c) => c.id === collectionId);
           if (requestedCollection) {
             selectedCollection = requestedCollection;
           }
@@ -94,7 +101,7 @@ export default function StoriesScreen() {
           if (allProgress.length > 0) {
             // Find the most recently viewed collection
             const recentProgress = allProgress.sort((a, b) => b.timestamp - a.timestamp)[0];
-            const recentCollection = downloaded.find(c => c.id === recentProgress.collectionId);
+            const recentCollection = downloaded.find((c) => c.id === recentProgress.collectionId);
             if (recentCollection) {
               selectedCollection = recentCollection;
             }
@@ -143,7 +150,7 @@ export default function StoriesScreen() {
     return Math.round((progress.frameNumber / progress.totalFrames) * 100);
   };
 
-    const toggleStoryFavorite = async (story: CollectionStory) => {
+  const toggleStoryFavorite = async (story: CollectionStory) => {
     if (!currentCollection) return;
 
     try {
@@ -166,12 +173,16 @@ export default function StoriesScreen() {
           styles.storyCard,
           isDark ? { backgroundColor: '#1F2937' } : { backgroundColor: '#fff' },
         ]}
-        onPress={() => router.push(`/story/${encodeURIComponent(currentCollection?.id || '')}/${item.storyNumber}/1`)}>
-
+        onPress={() =>
+          router.push(
+            `/story/${encodeURIComponent(currentCollection?.id || '')}/${item.storyNumber}/1`
+          )
+        }>
         {/* Story Content */}
         <View style={styles.storyInfo}>
           <View style={styles.storyHeader}>
-            <Text style={[styles.storyNumber, isDark ? { color: '#9CA3AF' } : { color: '#6B7280' }]}>
+            <Text
+              style={[styles.storyNumber, isDark ? { color: '#9CA3AF' } : { color: '#6B7280' }]}>
               Story {item.storyNumber}
             </Text>
             <TouchableOpacity
@@ -183,7 +194,7 @@ export default function StoriesScreen() {
               <MaterialIcons
                 name={item.isFavorite ? 'favorite' : 'favorite-border'}
                 size={20}
-                color={item.isFavorite ? '#EF4444' : (isDark ? '#9CA3AF' : '#6B7280')}
+                color={item.isFavorite ? '#EF4444' : isDark ? '#9CA3AF' : '#6B7280'}
               />
             </TouchableOpacity>
           </View>
@@ -196,22 +207,17 @@ export default function StoriesScreen() {
           {progressPercent > 0 && (
             <View style={styles.progressContainer}>
               <View style={styles.progressBar}>
-                <View
-                  style={[styles.progressFill, { width: `${progressPercent}%` }]}
-                />
+                <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
               </View>
-              <Text style={[styles.progressText, isDark ? { color: '#9CA3AF' } : { color: '#6B7280' }]}>
+              <Text
+                style={[styles.progressText, isDark ? { color: '#9CA3AF' } : { color: '#6B7280' }]}>
                 {progressPercent}%
               </Text>
             </View>
           )}
         </View>
 
-        <MaterialIcons
-          name="chevron-right"
-          size={24}
-          color={isDark ? '#9CA3AF' : '#6B7280'}
-        />
+        <MaterialIcons name="chevron-right" size={24} color={isDark ? '#9CA3AF' : '#6B7280'} />
       </TouchableOpacity>
     );
   };
@@ -289,8 +295,8 @@ export default function StoriesScreen() {
           styles.header,
           isDark ? { backgroundColor: '#1F2937' } : { backgroundColor: '#3B82F6' },
         ]}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <FontAwesome name="arrow-left" size={20} color="#fff" />
+        <Pressable onPress={() => router.push('/(tabs)/(read)')} style={styles.backButton}>
+          <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
         </Pressable>
 
         <TouchableOpacity
@@ -312,12 +318,9 @@ export default function StoriesScreen() {
         contentContainerStyle={styles.storiesList}
         ListEmptyComponent={
           <View style={styles.centerContent}>
-            <MaterialIcons
-              name="library-books"
-              size={48}
-              color={isDark ? '#4B5563' : '#9CA3AF'}
-            />
-            <Text style={{ color: isDark ? '#9CA3AF' : '#4B5563', marginTop: 16, textAlign: 'center' }}>
+            <MaterialIcons name="library-books" size={48} color={isDark ? '#4B5563' : '#9CA3AF'} />
+            <Text
+              style={{ color: isDark ? '#9CA3AF' : '#4B5563', marginTop: 16, textAlign: 'center' }}>
               No stories found in this collection
             </Text>
             <TouchableOpacity

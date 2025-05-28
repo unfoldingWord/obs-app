@@ -1,8 +1,8 @@
 import { MaterialIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useObsImage } from 'hooks/useObsImage';
 import React, { useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   Text,
@@ -21,7 +21,7 @@ import {
 } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { CommentsSection } from '../../../../../../src/components/CommentsSection';
+import { NotesSection } from '../../../../../../src/components/CommentsSection';
 import {
   CollectionsManager,
   Collection,
@@ -280,11 +280,16 @@ export default function StoryFrameScreen() {
 
   const getFontSizeClass = () => {
     switch (fontSize) {
-      case 'small': return 'text-base';
-      case 'medium': return 'text-lg';
-      case 'large': return 'text-xl';
-      case 'xlarge': return 'text-2xl';
-      default: return 'text-lg';
+      case 'small':
+        return 'text-base';
+      case 'medium':
+        return 'text-lg';
+      case 'large':
+        return 'text-xl';
+      case 'xlarge':
+        return 'text-2xl';
+      default:
+        return 'text-lg';
     }
   };
 
@@ -395,7 +400,9 @@ export default function StoryFrameScreen() {
           </Text>
 
           <View className="flex-row">
-            <TouchableOpacity onPress={() => setShowFontSizeMenu(!showFontSizeMenu)} className="p-2">
+            <TouchableOpacity
+              onPress={() => setShowFontSizeMenu(!showFontSizeMenu)}
+              className="p-2">
               <MaterialIcons name="text-fields" size={24} color={isDark ? '#FFFFFF' : '#000000'} />
             </TouchableOpacity>
             <TouchableOpacity onPress={toggleFavorite} className="p-2">
@@ -414,34 +421,39 @@ export default function StoryFrameScreen() {
         {/* Font Size Menu */}
         {showFontSizeMenu && (
           <View
-            className={`absolute top-16 right-4 z-50 rounded-lg p-2 shadow-lg ${
+            className={`absolute right-4 top-16 z-50 rounded-lg p-2 shadow-lg ${
               isDark ? 'bg-gray-800' : 'bg-white'
-            } border ${isDark ? 'border-gray-700' : 'border-gray-200'}`}
-          >
+            } border ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
             {(['small', 'medium', 'large', 'xlarge'] as const).map((size) => (
               <TouchableOpacity
                 key={size}
                 onPress={() => changeFontSize(size)}
-                className={`flex-row items-center p-3 rounded ${
+                className={`flex-row items-center rounded p-3 ${
                   fontSize === size ? (isDark ? 'bg-blue-600' : 'bg-blue-100') : ''
-                }`}
-              >
+                }`}>
                 <MaterialIcons
                   name="text-fields"
                   size={size === 'small' ? 16 : size === 'medium' ? 20 : size === 'large' ? 24 : 28}
                   color={
                     fontSize === size
-                      ? isDark ? '#FFFFFF' : '#1F2937'
-                      : isDark ? '#9CA3AF' : '#6B7280'
+                      ? isDark
+                        ? '#FFFFFF'
+                        : '#1F2937'
+                      : isDark
+                        ? '#9CA3AF'
+                        : '#6B7280'
                   }
                 />
                 <Text
                   className={`ml-2 capitalize ${
                     fontSize === size
-                      ? isDark ? 'text-white' : 'text-gray-900'
-                      : isDark ? 'text-gray-300' : 'text-gray-700'
-                  }`}
-                >
+                      ? isDark
+                        ? 'text-white'
+                        : 'text-gray-900'
+                      : isDark
+                        ? 'text-gray-300'
+                        : 'text-gray-700'
+                  }`}>
                   {size === 'xlarge' ? 'Extra Large' : size}
                 </Text>
               </TouchableOpacity>
@@ -493,10 +505,10 @@ export default function StoryFrameScreen() {
                   )}
                 </View>
 
-                              <Text
-                className={`${getFontSizeClass()} leading-relaxed ${isDark ? 'text-white' : 'text-gray-800'}`}>
-                {currentFrame.text}
-              </Text>
+                <Text
+                  className={`${getFontSizeClass()} leading-relaxed ${isDark ? 'text-white' : 'text-gray-800'}`}>
+                  {currentFrame.text}
+                </Text>
 
                 {/* Display markers if any */}
                 {markers.length > 0 && (
@@ -546,9 +558,9 @@ export default function StoryFrameScreen() {
               </View>
             </ScrollView>
 
-            {/* Comments Section */}
+            {/* Notes Section */}
             {currentFrame && (
-              <CommentsSection
+              <NotesSection
                 collectionId={collectionId as string}
                 storyNumber={parseInt(storyNumber as string, 10)}
                 frameNumber={currentFrameNumber}
