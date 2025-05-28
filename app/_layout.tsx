@@ -1,23 +1,46 @@
 import 'reflect-metadata';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useColorScheme, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { enableScreens } from 'react-native-screens';
 import '../global.css';
 import { useDrizzleStudio } from 'expo-drizzle-studio-plugin';
 import * as SQLite from 'expo-sqlite';
+import { DatabaseManager } from '../src/core/DatabaseManager';
+import { DataMigration } from '../src/db/migration';
 
 // Enable react-native-screens
 enableScreens();
 
-const db = SQLite.openDatabaseSync('collections.db');
+// Use the new unified database
+const db = SQLite.openDatabaseSync('app.db');
 
 export default function RootLayout() {
   useDrizzleStudio(db);
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+
+  useEffect(() => {
+    const initializeApp = async () => {
+      try {
+        // Initialize the new unified database
+        const databaseManager = DatabaseManager.getInstance();
+        await databaseManager.initialize();
+
+        // Run migration from legacy databases if they exist
+        const migration = new DataMigration();
+        await migration.migrateFromLegacyDatabases();
+
+        console.log('App database initialized and migration completed');
+      } catch (error) {
+        console.error('Failed to initialize app database:', error);
+      }
+    };
+
+    initializeApp();
+  }, []);
 
   return (
     <GestureHandlerRootView className="flex-1">

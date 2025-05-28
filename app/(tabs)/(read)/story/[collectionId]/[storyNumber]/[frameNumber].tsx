@@ -117,7 +117,6 @@ export default function StoryFrameScreen() {
         collectionId as string,
         parseInt(storyNumber as string, 10)
       );
-      console.log('Story data:', storyData);
 
       if (!storyData) {
         setError(`Story not found: ${storyNumber}`);
@@ -127,13 +126,10 @@ export default function StoryFrameScreen() {
 
       setStory(storyData);
 
-      // Get story frames
-      console.log('Getting story frames for:', collectionId, parseInt(storyNumber as string, 10));
       const storyFrames = await storyManager.getStoryFrames(
         collectionId as string,
         parseInt(storyNumber as string, 10)
       );
-      console.log('Story frames:', storyFrames);
 
       if (!storyFrames || storyFrames.length === 0) {
         setError('No frames found for this story');
@@ -143,10 +139,6 @@ export default function StoryFrameScreen() {
 
       setFrames(storyFrames);
       setTotalFrames(storyFrames.length);
-
-      // Set current frame using the local storyFrames variable
-      console.log('Setting current frame to:', currentFrameNumber);
-      navigateToFrame(currentFrameNumber, storyFrames);
 
       setError(null);
     } catch (err) {
@@ -177,14 +169,11 @@ export default function StoryFrameScreen() {
     const frameArray = framesToUse || frames;
     if (!frameArray || frameArray.length === 0) return;
 
-    console.log('Navigating to frame:', frameNum, 'from frames:', frameArray.length);
-
     // Ensure frame number is within bounds
     const safeFrameNumber = Math.max(1, Math.min(frameNum, frameArray.length));
 
     // Find the frame with matching frameNumber
     const frame = frameArray.find((f) => f.frameNumber === safeFrameNumber);
-    console.log('Found frame:', frame);
     if (!frame) return;
 
     // Set current frame

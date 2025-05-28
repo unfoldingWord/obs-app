@@ -1,8 +1,5 @@
-import * as SQLite from 'expo-sqlite';
 import JSZip from 'jszip';
-// Language and LanguageItem seem unused in this file, consider removing if not needed elsewhere via this export
-// import { Language, LanguageItem } from 'types/index';
-
+import { DatabaseManager } from './DatabaseManager';
 import { ImageManager } from './imageManager';
 import { LanguagesManager } from './LanguagesManager';
 import { warn } from './utils';
@@ -28,7 +25,6 @@ export interface Story {
   collectionId: string;
   storyNumber: number; // e.g., 1, 2, 3 derived from filename like "01.md"
   title: string;
-  rawContentMd?: string | null; // Optional: Store full markdown of the story
   isFavorite: boolean;
   metadata?: Record<string, any>;
 }
@@ -73,12 +69,12 @@ export interface SearchResult {
 
 export class CollectionsManager {
   private static instance: CollectionsManager;
-  private db!: SQLite.SQLiteDatabase; // Definite assignment assertion
-  private collections: Map<string, Collection> = new Map();
+  private databaseManager: DatabaseManager;
   private imagesManager: ImageManager;
   private initialized: boolean = false;
 
   private constructor() {
+    this.databaseManager = DatabaseManager.getInstance();
     this.imagesManager = ImageManager.getInstance();
   }
 
@@ -91,66 +87,86 @@ export class CollectionsManager {
 
   async initialize(): Promise<void> {
     if (!this.initialized) {
-      this.db = await SQLite.openDatabaseAsync('collections.db'); // Changed DB name to avoid conflicts during migration
-      await this.db.execAsync('PRAGMA foreign_keys = OFF;'); // Enable foreign key enforcement
-      await this.createTables();
-      await this.loadCollections();
+      await this.databaseManager.initialize();
       this.initialized = true;
     }
   }
 
-  // V2 Table Creation
-  private async createTables(): Promise<void> {
-    await this.db.execAsync(`
-      PRAGMA journal_mode = WAL;
-      CREATE TABLE IF NOT EXISTS collections (
-        id TEXT PRIMARY KEY,
-        owner TEXT NOT NULL,
-        language TEXT NOT NULL,
-        displayName TEXT NOT NULL,
-        version TEXT NOT NULL,
-        imageSetId TEXT NOT NULL,
-        lastUpdated TEXT NOT NULL,
-        isDownloaded INTEGER NOT NULL,
-        metadata TEXT
-      );
-
-      CREATE TABLE IF NOT EXISTS stories (
-        collection_id TEXT NOT NULL,
-        story_number INTEGER NOT NULL,
-        title TEXT NOT NULL,
-        raw_content_md TEXT,
-        is_favorite INTEGER NOT NULL DEFAULT 0,
-        metadata TEXT,
-        PRIMARY KEY (collection_id, story_number),
-        FOREIGN KEY (collection_id) REFERENCES collections(id) ON DELETE CASCADE
-      );
-
-      CREATE TABLE IF NOT EXISTS frames (
-        collection_id TEXT NOT NULL,
-        story_number INTEGER NOT NULL,
-        frame_number INTEGER NOT NULL,
-        image_url TEXT NOT NULL,
-        text TEXT NOT NULL,
-        is_favorite INTEGER NOT NULL DEFAULT 0,
-        metadata TEXT,
-        PRIMARY KEY (collection_id, story_number, frame_number),
-        FOREIGN KEY (collection_id, story_number) REFERENCES stories(collection_id, story_number) ON DELETE CASCADE
-      );
-
-      CREATE TABLE IF NOT EXISTS collection_files (
-        collection_id TEXT NOT NULL,
-        filename TEXT NOT NULL,
-        content TEXT NOT NULL,
-        PRIMARY KEY (collection_id, filename),
-        FOREIGN KEY (collection_id) REFERENCES collections(id) ON DELETE CASCADE
-      );
-    `);
+  // Conversion helpers
+  private convertDbToCollection(dbCollection: any): Collection {
+    return {
+      id: dbCollection.id,
+      owner: dbCollection.owner,
+      language: dbCollection.language,
+      displayName: dbCollection.displayName,
+      version: dbCollection.version,
+      imageSetId: dbCollection.imageSetId,
+      lastUpdated: new Date(dbCollection.lastUpdated),
+      isDownloaded: dbCollection.isDownloaded,
+      metadata: dbCollection.metadata
+    };
   }
 
-  // Remote Operations
+  private convertCollectionToDb(collection: Collection) {
+    return {
+      id: collection.id,
+      owner: collection.owner,
+      language: collection.language,
+      displayName: collection.displayName,
+      version: collection.version,
+      imageSetId: collection.imageSetId,
+      lastUpdated: collection.lastUpdated.toISOString(),
+      isDownloaded: collection.isDownloaded,
+      metadata: collection.metadata
+    };
+  }
+
+  private convertDbToStory(dbStory: any): Story {
+    return {
+      collectionId: dbStory.collection_id,
+      storyNumber: dbStory.story_number,
+      title: dbStory.title,
+      isFavorite: dbStory.is_favorite,
+      metadata: dbStory.metadata
+    };
+  }
+
+  private convertStoryToDb(story: Story) {
+    return {
+      collection_id: story.collectionId,
+      story_number: story.storyNumber,
+      title: story.title,
+      is_favorite: story.isFavorite,
+      metadata: story.metadata
+    };
+  }
+
+  private convertDbToFrame(dbFrame: any): Frame {
+    return {
+      collectionId: dbFrame.collection_id,
+      storyNumber: dbFrame.story_number,
+      frameNumber: dbFrame.frame_number,
+      imageUrl: dbFrame.image_url,
+      text: dbFrame.text,
+      isFavorite: dbFrame.is_favorite,
+      metadata: dbFrame.metadata
+    };
+  }
+
+  private convertFrameToDb(frame: Frame) {
+    return {
+      collection_id: frame.collectionId,
+      story_number: frame.storyNumber,
+      frame_number: frame.frameNumber,
+      image_url: frame.imageUrl,
+      text: frame.text,
+      is_favorite: frame.isFavorite,
+      metadata: frame.metadata
+    };
+  }
+
+  // Remote Operations (keeping existing implementation)
   async getRemoteLanguages(): Promise<any[]> {
-    // Replaced LanguageItem with any as it's not defined
     try {
       const response = await fetch(
         'https://git.door43.org/api/v1/catalog/list/languages?subject=Open Bible Stories&stage=prod'
@@ -194,271 +210,143 @@ export class CollectionsManager {
     }
   }
 
-  async downloadRemoteCollection(collection: Collection, languageData?: any): Promise<void> {
-    if (!this.initialized) await this.initialize();
-    try {
-      const [owner, repoName] = collection.id.split('/');
-      const zipballUrl = `https://git.door43.org/${owner}/${repoName}/archive/${collection.version}.zip`;
-      const response = await fetch(zipballUrl);
-
-      if (!response.ok) {
-        throw new Error(`Failed to download collection ${collection.id}: ${response.status}`);
-      }
-
-      const zipData = await response.arrayBuffer();
-
-      await this.processAndStoreZip(collection, zipData); // Use V2 processor
-
-      if (collection.metadata?.thumbnail) {
-        await this.downloadThumbnail(collection);
-      }
-
-      await this.markAsDownloaded(collection.id, true);
-
-      // Save language data to languages database
-      await this.saveLanguageData(collection.language, languageData);
-    } catch (error) {
-      warn(
-        `Error downloading collection ${collection.id}: ${error instanceof Error ? error.message : String(error)}`
-      );
-      throw error;
-    }
-  }
-
-  // Local Operations
+  // Local Collection Operations using DatabaseManager
   async getLocalCollections(): Promise<Collection[]> {
     if (!this.initialized) await this.initialize();
-    return Array.from(this.collections.values()).sort((a, b) =>
-      a.displayName.localeCompare(b.displayName)
-    );
+    const dbCollections = await this.databaseManager.getAllCollections();
+    return dbCollections.map(col => this.convertDbToCollection(col));
   }
 
   async getLocalCollectionsByLanguage(language: string): Promise<Collection[]> {
     if (!this.initialized) await this.initialize();
-    return Array.from(this.collections.values())
-      .filter((c) => c.language === language)
-      .sort((a, b) => a.displayName.localeCompare(b.displayName));
+    const dbCollections = await this.databaseManager.getCollectionsByLanguage(language);
+    return dbCollections.map(col => this.convertDbToCollection(col));
   }
 
   async getLocalLanguages(): Promise<string[]> {
     if (!this.initialized) await this.initialize();
-    const languages = new Set<string>();
-    this.collections.forEach((c) => {
-      if (c.isDownloaded) {
-        languages.add(c.language);
-      }
-    });
+    const collections = await this.databaseManager.getAllCollections();
+    const languages = new Set(collections.map(c => c.language));
     return Array.from(languages).sort();
   }
 
   async getCollectionById(id: string): Promise<Collection | null> {
     if (!this.initialized) await this.initialize();
-    return this.collections.get(id) || null;
+    const dbCollection = await this.databaseManager.getCollection(id);
+    return dbCollection ? this.convertDbToCollection(dbCollection) : null;
   }
 
-  // V2 Story/Frame Methods
+  // Story Operations
   async getCollectionStories(collectionId: string): Promise<Story[]> {
     if (!this.initialized) await this.initialize();
-    try {
-      const rows = await this.db.getAllAsync<any>( // any for row type
-        'SELECT * FROM stories WHERE collection_id = ? ORDER BY story_number ASC',
-        collectionId
-      );
-      return rows.map(
-        (row): Story => ({
-          collectionId: String(row.collection_id),
-          storyNumber: Number(row.story_number),
-          title: String(row.title),
-          rawContentMd: row.raw_content_md ? String(row.raw_content_md) : null,
-          isFavorite: Boolean(row.is_favorite),
-          metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
-        })
-      );
-    } catch (error) {
-      warn(
-        `Error getting stories for collection ${collectionId}: ${error instanceof Error ? error.message : String(error)}`
-      );
-      return [];
-    }
+    const dbStories = await this.databaseManager.getStoriesByCollection(collectionId);
+    return dbStories.map(story => this.convertDbToStory(story));
   }
 
   async getStory(collectionId: string, storyNumber: number): Promise<Story | null> {
     if (!this.initialized) await this.initialize();
-    try {
-      const row = await this.db.getFirstAsync<any>(
-        'SELECT * FROM stories WHERE collection_id = ? AND story_number = ?',
-        collectionId,
-        storyNumber
-      );
-      if (!row) return null;
-      return {
-        collectionId: String(row.collection_id),
-        storyNumber: Number(row.story_number),
-        title: String(row.title),
-        rawContentMd: row.raw_content_md ? String(row.raw_content_md) : null,
-        isFavorite: Boolean(row.is_favorite),
-        metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
-      };
-    } catch (error) {
-      warn(
-        `Error getting story ${storyNumber} for collection ${collectionId}: ${error instanceof Error ? error.message : String(error)}`
-      );
-      return null;
-    }
+    const dbStory = await this.databaseManager.getStory(collectionId, storyNumber);
+    return dbStory ? this.convertDbToStory(dbStory) : null;
   }
 
+  // Frame Operations
   async getStoryFrames(collectionId: string, storyNumber: number): Promise<Frame[]> {
     if (!this.initialized) await this.initialize();
-    try {
-      const rows = await this.db.getAllAsync<any>(
-        'SELECT * FROM frames WHERE collection_id = ? AND story_number = ? ORDER BY frame_number ASC',
-        collectionId,
-        storyNumber
-      );
-      return rows.map(
-        (row): Frame => ({
-          collectionId: String(row.collection_id),
-          storyNumber: Number(row.story_number),
-          frameNumber: Number(row.frame_number),
-          imageUrl: String(row.image_url),
-          text: String(row.text),
-          isFavorite: Boolean(row.is_favorite),
-          metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
-        })
-      );
-    } catch (error) {
-      warn(
-        `Error getting frames for story ${storyNumber} in collection ${collectionId}: ${error instanceof Error ? error.message : String(error)}`
-      );
-      return [];
-    }
+    const dbFrames = await this.databaseManager.getFramesByStory(collectionId, storyNumber);
+    return dbFrames.map(frame => this.convertDbToFrame(frame));
   }
 
-  async getFrame(
-    collectionId: string,
-    storyNumber: number,
-    frameNumber: number
-  ): Promise<Frame | null> {
+  async getFrame(collectionId: string, storyNumber: number, frameNumber: number): Promise<Frame | null> {
     if (!this.initialized) await this.initialize();
-    try {
-      const row = await this.db.getFirstAsync<any>(
-        'SELECT * FROM frames WHERE collection_id = ? AND story_number = ? AND frame_number = ?',
-        collectionId,
-        storyNumber,
-        frameNumber
-      );
-      if (!row) return null;
-      return {
-        collectionId: String(row.collection_id),
-        storyNumber: Number(row.story_number),
-        frameNumber: Number(row.frame_number),
-        imageUrl: String(row.image_url),
-        text: String(row.text),
-        isFavorite: Boolean(row.is_favorite),
-        metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
-      };
-    } catch (error) {
-      warn(
-        `Error getting frame ${frameNumber} for story ${storyNumber}, collection ${collectionId}: ${error instanceof Error ? error.message : String(error)}`
-      );
-      return null;
-    }
+    const dbFrame = await this.databaseManager.getFrame(collectionId, storyNumber, frameNumber);
+    return dbFrame ? this.convertDbToFrame(dbFrame) : null;
   }
 
-  // Favorites Management V2
+  // Favorite Operations
   async toggleStoryFavorite(collectionId: string, storyNumber: number): Promise<void> {
     if (!this.initialized) await this.initialize();
-    try {
-      await this.db.runAsync(
-        'UPDATE stories SET is_favorite = CASE WHEN is_favorite = 0 THEN 1 ELSE 0 END WHERE collection_id = ? AND story_number = ?',
-        collectionId,
-        storyNumber
-      );
-    } catch (error) {
-      warn(
-        `Error toggling favorite for story ${storyNumber}: ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
+    await this.databaseManager.toggleStoryFavorite(collectionId, storyNumber);
   }
 
-  async toggleFrameFavorite(
-    collectionId: string,
-    storyNumber: number,
-    frameNumber: number
-  ): Promise<void> {
+  async toggleFrameFavorite(collectionId: string, storyNumber: number, frameNumber: number): Promise<void> {
     if (!this.initialized) await this.initialize();
-    try {
-      // First check current state
-      const currentFrame = await this.getFrame(collectionId, storyNumber, frameNumber);
-      console.log(`Toggling favorite for frame ${frameNumber} (story ${storyNumber}), current state: ${currentFrame?.isFavorite}`);
-
-      await this.db.runAsync(
-        'UPDATE frames SET is_favorite = CASE WHEN is_favorite = 0 THEN 1 ELSE 0 END WHERE collection_id = ? AND story_number = ? AND frame_number = ?',
-        collectionId,
-        storyNumber,
-        frameNumber
-      );
-
-      // Verify the change
-      const updatedFrame = await this.getFrame(collectionId, storyNumber, frameNumber);
-      console.log(`Frame favorite toggled, new state: ${updatedFrame?.isFavorite}`);
-    } catch (error) {
-      warn(
-        `Error toggling favorite for frame ${frameNumber} (story ${storyNumber}): ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
+    await this.databaseManager.toggleFrameFavorite(collectionId, storyNumber, frameNumber);
   }
 
   async getFavoriteStories(): Promise<Story[]> {
     if (!this.initialized) await this.initialize();
-    try {
-      const rows = await this.db.getAllAsync<any>(
-        'SELECT * FROM stories WHERE is_favorite = 1 ORDER BY collection_id ASC, story_number ASC'
-      );
-      return rows.map(
-        (row): Story => ({
-          collectionId: String(row.collection_id),
-          storyNumber: Number(row.story_number),
-          title: String(row.title),
-          rawContentMd: row.raw_content_md ? String(row.raw_content_md) : null,
-          isFavorite: true,
-          metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
-        })
-      );
-    } catch (error) {
-      warn(
-        `Error getting favorite stories: ${error instanceof Error ? error.message : String(error)}`
-      );
-      return [];
-    }
+    const dbStories = await this.databaseManager.getFavoriteStories();
+    return dbStories.map(story => this.convertDbToStory(story));
   }
 
   async getFavoriteFrames(): Promise<Frame[]> {
     if (!this.initialized) await this.initialize();
+    const dbFrames = await this.databaseManager.getFavoriteFrames();
+    return dbFrames.map(frame => this.convertDbToFrame(frame));
+  }
+
+  // Search Operations
+  async searchContent(query: string, collectionId?: string): Promise<SearchResult[]> {
+    if (!this.initialized) await this.initialize();
+
+    const dbFrames = await this.databaseManager.searchFrameText(query, collectionId);
+    const results: SearchResult[] = [];
+
+    for (const dbFrame of dbFrames) {
+      const frame = this.convertDbToFrame(dbFrame);
+      const story = await this.getStory(frame.collectionId, frame.storyNumber);
+      const collection = await this.getCollectionById(frame.collectionId);
+
+      if (story && collection) {
+        results.push({
+          id: `${frame.collectionId}_${frame.storyNumber}_${frame.frameNumber}`,
+          collectionId: frame.collectionId,
+          collectionName: collection.displayName,
+          storyNumber: frame.storyNumber,
+          storyTitle: story.title,
+          frameNumber: frame.frameNumber,
+          text: frame.text,
+          highlightedText: this.highlightSearchTerm(frame.text, query)
+        });
+      }
+    }
+
+    return results;
+  }
+
+  private highlightSearchTerm(text: string, term: string): string {
+    const regex = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    return text.replace(regex, '<mark>$1</mark>');
+  }
+
+  // Delete Operations
+  async deleteCollection(id: string): Promise<void> {
+    if (!this.initialized) await this.initialize();
+
     try {
-      const rows = await this.db.getAllAsync<any>(
-        'SELECT * FROM frames WHERE is_favorite = 1 ORDER BY collection_id ASC, story_number ASC, frame_number ASC'
-      );
-      return rows.map(
-        (row): Frame => ({
-          collectionId: String(row.collection_id),
-          storyNumber: Number(row.story_number),
-          frameNumber: Number(row.frame_number),
-          imageUrl: String(row.image_url),
-          text: String(row.text),
-          isFavorite: true,
-          metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
-        })
-      );
+      // Clean up user data first
+      await this.cleanupUserDataForCollection(id);
+
+      // Delete from unified database
+      await this.databaseManager.deleteCollection(id);
+
+      // Clean up thumbnails
+      await this.deleteCollectionThumbnail(id);
+
+      warn(`✅ Collection ${id} and all associated data deleted successfully`);
     } catch (error) {
-      warn(
-        `Error getting favorite frames: ${error instanceof Error ? error.message : String(error)}`
-      );
-      return [];
+      warn(`❌ Error deleting collection ${id}: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
     }
   }
 
-  // Thumbnail Management (remains largely the same)
+  // Keep existing methods for compatibility but delegate to DatabaseManager
+  async markAsDownloaded(id: string, downloaded: boolean): Promise<void> {
+    if (!this.initialized) await this.initialize();
+    await this.databaseManager.markCollectionAsDownloaded(id, downloaded);
+  }
+
+  // Thumbnail Management Methods
   async getCollectionThumbnail(id: string): Promise<string | null> {
     if (!this.initialized) await this.initialize();
     return this.imagesManager.getCollectionThumbnail(id);
@@ -469,108 +357,13 @@ export class CollectionsManager {
     await this.imagesManager.saveCollectionThumbnail(id, imageData);
   }
 
-  async deleteCollectionThumbnail(id: string): Promise<void> {
+  private async deleteCollectionThumbnail(id: string): Promise<void> {
     if (!this.initialized) await this.initialize();
     await this.imagesManager.deleteCollectionThumbnail(id);
   }
 
-    // Search functionality
-  async searchContent(query: string, collectionId?: string): Promise<SearchResult[]> {
-    if (!this.initialized) await this.initialize();
+  // Keep remaining methods that don't directly interact with database...
 
-    const searchQuery = `%${query.toLowerCase()}%`;
-    const sql = `
-      SELECT
-        f.collection_id,
-        f.story_number,
-        f.frame_number,
-        f.text,
-        s.title as story_title,
-        c.displayName as collection_name
-      FROM frames f
-      JOIN stories s ON f.collection_id = s.collection_id AND f.story_number = s.story_number
-      JOIN collections c ON f.collection_id = c.id
-      WHERE LOWER(f.text) LIKE ?
-      ${collectionId ? 'AND f.collection_id = ?' : ''}
-      ORDER BY f.collection_id, f.story_number, f.frame_number
-      LIMIT 100
-    `;
-
-    const params = collectionId ? [searchQuery, collectionId] : [searchQuery];
-    const results = await this.db.getAllAsync<any>(sql, params);
-
-    return results.map((row: any) => ({
-      id: `${row.collection_id}-${row.story_number}-${row.frame_number}`,
-      collectionId: row.collection_id,
-      collectionName: row.collection_name,
-      storyNumber: row.story_number,
-      storyTitle: row.story_title,
-      frameNumber: row.frame_number,
-      text: row.text,
-      // Highlight matching text
-      highlightedText: this.highlightSearchTerm(row.text, query)
-    }));
-  }
-
-  private highlightSearchTerm(text: string, term: string): string {
-    const regex = new RegExp(`(${term})`, 'gi');
-    return text.replace(regex, '<mark>$1</mark>');
-  }
-
-  async deleteCollection(id: string): Promise<void> {
-    if (!this.initialized) {
-      await this.initialize();
-    }
-
-    // Ensure this.db is the initialized one with foreign_keys = ON
-    if (!this.db) {
-      // This case should ideally not be hit if initialize() works correctly and is always called.
-      // If it is hit, it means we are re-opening the DB, and MUST set foreign_keys = ON.
-      warn(
-        `Database connection was not ready in deleteCollection for ${id}. Re-opening and configuring.`
-      );
-      this.db = await SQLite.openDatabaseAsync('collections.db');
-      await this.db.execAsync('PRAGMA foreign_keys = ON;'); // Crucial for this connection
-    }
-
-    try {
-      // Clean up all user data associated with this collection
-      await this.cleanupUserDataForCollection(id);
-
-      // Explicitly delete from dependent tables first.
-      // This ensures data is removed even if ON DELETE CASCADE isn't active for some reason.
-      await this.db.runAsync('DELETE FROM frames WHERE collection_id = ?', id);
-      await this.db.runAsync('DELETE FROM stories WHERE collection_id = ?', id);
-      await this.db.runAsync('DELETE FROM collection_files WHERE collection_id = ?', id);
-
-      // Then delete from the main collections table
-      await this.db.runAsync('DELETE FROM collections WHERE id = ?', id);
-
-      // Get the language of the deleted collection before removing it from cache
-      const deletedCollection = this.collections.get(id);
-      const languageCode = deletedCollection?.language;
-
-      this.collections.delete(id); // Clear from in-memory cache
-      await this.imagesManager.deleteCollectionThumbnail(id); // Delete associated thumbnail image
-
-      // Check if this was the last collection in this language
-      if (languageCode) {
-        await this.updateLanguageCollectionStatus(languageCode);
-      }
-
-      warn(`Collection ${id} deleted successfully with all associated user data.`);
-    } catch (error) {
-      warn(
-        `Error deleting collection ${id}: ${error instanceof Error ? error.message : String(error)}`
-      );
-      // Consider re-throwing or handling more robustly if deletion is critical
-    }
-  }
-
-  /**
-   * Clean up all user data associated with a collection
-   * This includes reading progress, markers, recently viewed, and comments
-   */
   private async cleanupUserDataForCollection(collectionId: string): Promise<void> {
     try {
       // Import managers dynamically to avoid circular dependencies
@@ -692,7 +485,7 @@ export class CollectionsManager {
     }
   }
 
-      private async cleanupComments(commentsManager: any, collectionId: string): Promise<void> {
+  private async cleanupComments(commentsManager: any, collectionId: string): Promise<void> {
     try {
       // Use the CommentsManager's efficient bulk delete method
       await commentsManager.initialize();
@@ -700,79 +493,6 @@ export class CollectionsManager {
       warn(`Removed ${deletedCount} comments for collection ${collectionId}`);
     } catch (error) {
       warn(`Error cleaning up comments: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-
-  // Private helper methods
-  private async loadCollections(): Promise<void> {
-    try {
-      const rows = await this.db.getAllAsync<any>('SELECT * FROM collections'); // any for row type
-      this.collections.clear();
-      rows.forEach((row) => {
-        const collection: Collection = {
-          id: String(row.id),
-          owner: String(row.owner),
-          language: String(row.language),
-          displayName: String(row.displayName),
-          version: String(row.version),
-          imageSetId: String(row.imageSetId),
-          lastUpdated: new Date(row.lastUpdated),
-          isDownloaded: Boolean(row.isDownloaded),
-          metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
-        };
-        this.collections.set(collection.id, collection);
-      });
-      warn(`Loaded ${this.collections.size} collections from DB.`);
-    } catch (error) {
-      warn(
-        `Error loading collections from DB: ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
-  }
-
-  private async saveCollectionToDB(collection: Collection): Promise<void> {
-    try {
-      await this.db.runAsync(
-        `INSERT OR REPLACE INTO collections (
-          id, owner, language, displayName, version, imageSetId,
-          lastUpdated, isDownloaded, metadata
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        collection.id,
-        collection.owner,
-        collection.language,
-        collection.displayName,
-        collection.version,
-        collection.imageSetId,
-        collection.lastUpdated.toISOString(),
-        collection.isDownloaded ? 1 : 0,
-        collection.metadata ? JSON.stringify(collection.metadata) : null
-      );
-      this.collections.set(collection.id, collection); // Update in-memory cache
-    } catch (error) {
-      warn(
-        `Error saving collection ${collection.id} to DB: ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
-  }
-
-  private async markAsDownloaded(id: string, downloaded: boolean): Promise<void> {
-    const collection = this.collections.get(id);
-    if (collection) {
-      collection.isDownloaded = downloaded;
-      collection.lastUpdated = new Date(); // Update lastUpdated timestamp on download status change
-      await this.saveCollectionToDB(collection);
-    } else {
-      warn(`Attempted to mark collection ${id} as downloaded, but it was not found in memory.`);
-      const tempCollection = await this.getCollectionById(id);
-      if (tempCollection) {
-        tempCollection.isDownloaded = downloaded;
-        tempCollection.lastUpdated = new Date();
-        await this.saveCollectionToDB(tempCollection);
-      } else {
-        warn(
-          `Attempted to mark non-existent collection ${id} as downloaded, after failing to find in memory or DB.`
-        );
-      }
     }
   }
 
@@ -794,13 +514,12 @@ export class CollectionsManager {
     };
   }
 
-  // V2 ZIP Processing
+  // ZIP Processing and Storage
   private async processAndStoreZip(collection: Collection, zipData: ArrayBuffer): Promise<void> {
     try {
-      // Ensure the collection record exists in the DB before processing its contents.
-      // This is crucial for foreign key constraints if PRAGMA foreign_keys = ON.
-      // The subsequent saveCollectionToDB at the end will update it (e.g., isDownloaded status).
-      await this.saveCollectionToDB(collection);
+      // Save the collection record first
+      const dbCollectionData = this.convertCollectionToDb(collection);
+      await this.databaseManager.saveCollection(dbCollectionData);
 
       const zip = new JSZip();
       const loadedZip = await zip.loadAsync(zipData);
@@ -813,27 +532,7 @@ export class CollectionsManager {
       for (const [fullPath, zipEntry] of filesToProcess) {
         if (zipEntry.dir) continue;
 
-        /**
-         * Content is a markdown string that contains one story and should have the following structure
-         * A title on the first line
-         * Multiple frames which consist of an image link and text, the frame ends when the next frame starts (a new image link found) or a footer is found, or the end of the file is found.
-         * A footer, that indicates the Bible source references used for the story.
-         *
-         * Example:
-         * # 1. La Creación
-         *
-         * ![OBS Image](https://cdn.door43.org/obs/jpg/360px/obs-en-01-01.jpg)
-
-         * Así es como Dios hizo todas las cosas en el principio. Él creó el universo y todas las cosas que hay ahí en seis días. Después de que Dios creó la tierra, estaba oscura y vacía, porque aún no había formado nada en ella. Pero el Espíritu de Dios estaba ahí sobre el agua.
-         *
-         * ![OBS Image](https://cdn.door43.org/obs/jpg/360px/obs-en-01-02.jpg)
-
-         * Entonces Dios dijo: "¡Qué haya luz!" Y hubo luz. Dios vio que la luz era buena y la llamó "día". La separó de la oscuridad, a la cual llamó "noche". Dios creó la luz en el primer día de la creación.
-         *
-         * _Una historia bíblica de: Génesis 1-2_
-         */
         const content = await zipEntry.async('string');
-
         const storyMatch = fullPath.match(storyFileRegex);
 
         if (storyMatch) {
@@ -854,14 +553,13 @@ export class CollectionsManager {
 
           const title = titleFromContent || storyMatch[1] || `Story ${storyNumber}`;
 
-          const story: Story = {
+          const storyData = this.convertStoryToDb({
             collectionId: collection.id,
             storyNumber,
             title,
-            rawContentMd: content,
             isFavorite: false,
-          };
-          await this.saveStoryToDB(story);
+          });
+          await this.databaseManager.saveStory(storyData);
 
           let frameNumber = 0;
           let match;
@@ -877,32 +575,18 @@ export class CollectionsManager {
               continue;
             }
 
-            const frame: Frame = {
+            const frameData = this.convertFrameToDb({
               collectionId: collection.id,
               storyNumber,
               frameNumber,
               imageUrl,
               text: frameText,
               isFavorite: false,
-            };
-            await this.saveFrameToDB(frame);
-          }
-        } else {
-          const zipRootFolder =
-            filesToProcess.find((f) => f[1].dir && f[0].endsWith('/'))?.[0] || '';
-          const relativePath = fullPath.startsWith(zipRootFolder)
-            ? fullPath.substring(zipRootFolder.length)
-            : fullPath;
-
-          if (relativePath) {
-            await this.saveFileToDB(collection.id, relativePath, content);
+            });
+            await this.databaseManager.saveFrame(frameData);
           }
         }
       }
-
-      collection.isDownloaded = true;
-      collection.lastUpdated = new Date();
-      await this.saveCollectionToDB(collection);
 
       warn(`Processed and stored files from zip for collection ${collection.id}`);
     } catch (error) {
@@ -910,64 +594,6 @@ export class CollectionsManager {
         `Error processing ZIP for collection ${collection.id}: ${error instanceof Error ? error.message : String(error)}`
       );
       throw error;
-    }
-  }
-
-  private async saveFileToDB(
-    collectionId: string,
-    filename: string,
-    content: string
-  ): Promise<void> {
-    try {
-      await this.db.runAsync(
-        'INSERT OR REPLACE INTO collection_files (collection_id, filename, content) VALUES (?, ?, ?)',
-        collectionId,
-        filename,
-        content
-      );
-    } catch (error) {
-      warn(
-        `Error saving file ${filename} for collection ${collectionId}: ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
-  }
-
-  // V2 Save Story
-  private async saveStoryToDB(story: Story): Promise<void> {
-    try {
-      await this.db.runAsync(
-        'INSERT OR REPLACE INTO stories (collection_id, story_number, title, raw_content_md, is_favorite, metadata) VALUES (?, ?, ?, ?, ?, ?)',
-        story.collectionId,
-        story.storyNumber,
-        story.title,
-        story.rawContentMd === undefined ? null : story.rawContentMd,
-        story.isFavorite ? 1 : 0,
-        story.metadata ? JSON.stringify(story.metadata) : null
-      );
-    } catch (error) {
-      warn(
-        `Error saving story ${story.storyNumber} for collection ${story.collectionId}: ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
-  }
-
-  // V2 Save Frame
-  private async saveFrameToDB(frame: Frame): Promise<void> {
-    try {
-      await this.db.runAsync(
-        'INSERT OR REPLACE INTO frames (collection_id, story_number, frame_number, image_url, text, is_favorite, metadata) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        frame.collectionId,
-        frame.storyNumber,
-        frame.frameNumber,
-        frame.imageUrl,
-        frame.text,
-        frame.isFavorite ? 1 : 0,
-        frame.metadata ? JSON.stringify(frame.metadata) : null
-      );
-    } catch (error) {
-      warn(
-        `Error saving frame ${frame.frameNumber} for story ${frame.storyNumber}, collection ${frame.collectionId}: ${error instanceof Error ? error.message : String(error)}`
-      );
     }
   }
 
@@ -981,7 +607,7 @@ export class CollectionsManager {
         return;
       }
       const blob = await response.blob();
-      const reader = new FileReader(); // FileReader is a Web API, ensure environment supports it or use platform-specific alternative
+      const reader = new FileReader();
 
       const base64Promise = new Promise<string>((resolve, reject) => {
         reader.onloadend = () => {
@@ -1024,8 +650,8 @@ export class CollectionsManager {
         });
       }
 
-      // Mark this language as having collections
-      await languagesManager.markLanguageAsHavingCollections(languageCode);
+      // Note: We no longer need to mark language as having collections
+      // since this is determined by querying the collections table
     } catch (error) {
       warn(
         `Error saving language data for ${languageCode}: ${error instanceof Error ? error.message : String(error)}`
@@ -1034,28 +660,36 @@ export class CollectionsManager {
     }
   }
 
-  private async updateLanguageCollectionStatus(languageCode: string): Promise<void> {
+  // Download Operations
+  async downloadRemoteCollection(collection: Collection, languageData?: any): Promise<void> {
+    if (!this.initialized) await this.initialize();
     try {
-      const languagesManager = LanguagesManager.getInstance();
-      await languagesManager.initialize();
+      // Save language data FIRST to satisfy foreign key constraints
+      await this.saveLanguageData(collection.language, languageData);
 
-      // Check if there are any remaining downloaded collections in this language
-      const collectionsInLanguage = Array.from(this.collections.values())
-        .filter(collection => collection.language === languageCode && collection.isDownloaded);
+      const [owner, repoName] = collection.id.split('/');
+      const zipballUrl = `https://git.door43.org/${owner}/${repoName}/archive/${collection.version}.zip`;
+      const response = await fetch(zipballUrl);
 
-      if (collectionsInLanguage.length === 0) {
-        // No more collections in this language, mark as not having collections
-        await languagesManager.markLanguageAsNotHavingCollections(languageCode);
-        warn(`Language ${languageCode} marked as not having collections (no downloaded collections remaining)`);
-      } else {
-        // Still has collections, ensure it's marked as having collections
-        await languagesManager.markLanguageAsHavingCollections(languageCode);
+      if (!response.ok) {
+        throw new Error(`Failed to download collection ${collection.id}: ${response.status}`);
       }
+
+      const zipData = await response.arrayBuffer();
+
+      await this.processAndStoreZip(collection, zipData);
+
+      if (collection.metadata?.thumbnail) {
+        await this.downloadThumbnail(collection);
+      }
+
+      await this.markAsDownloaded(collection.id, true);
     } catch (error) {
       warn(
-        `Error updating language collection status for ${languageCode}: ${error instanceof Error ? error.message : String(error)}`
+        `Error downloading collection ${collection.id}: ${error instanceof Error ? error.message : String(error)}`
       );
-      // Don't throw error here as language status update is not critical
+      throw error;
     }
   }
 }
+

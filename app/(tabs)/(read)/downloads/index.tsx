@@ -71,7 +71,6 @@ export default function DownloadsScreen() {
       }
 
       const data: Language[] = await response.json().then((res) => res.data);
-      console.log({ data });
       setLanguages(data);
       setError(null);
     } catch (err) {

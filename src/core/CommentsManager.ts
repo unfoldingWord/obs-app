@@ -1,4 +1,4 @@
-import * as SQLite from 'expo-sqlite';
+import { DatabaseManager } from './DatabaseManager';
 import { warn } from './utils';
 
 export interface FrameComment {
@@ -13,10 +13,12 @@ export interface FrameComment {
 
 export class CommentsManager {
   private static instance: CommentsManager;
-  private db!: SQLite.SQLiteDatabase;
+  private databaseManager: DatabaseManager;
   private initialized: boolean = false;
 
-  private constructor() {}
+  private constructor() {
+    this.databaseManager = DatabaseManager.getInstance();
+  }
 
   static getInstance(): CommentsManager {
     if (!CommentsManager.instance) {
@@ -27,28 +29,38 @@ export class CommentsManager {
 
   async initialize(): Promise<void> {
     if (!this.initialized) {
-      this.db = await SQLite.openDatabaseAsync('comments.db');
-      await this.createTables();
+      await this.databaseManager.initialize();
       this.initialized = true;
     }
   }
 
-  private async createTables(): Promise<void> {
-    await this.db.execAsync(`
-      PRAGMA journal_mode = WAL;
-      CREATE TABLE IF NOT EXISTS frame_comments (
-        id TEXT PRIMARY KEY,
-        collection_id TEXT NOT NULL,
-        story_number INTEGER NOT NULL,
-        frame_number INTEGER NOT NULL,
-        comment TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      );
+  // Conversion helpers
+  private convertDbToComment(dbComment: any): FrameComment {
+    return {
+      id: dbComment.id,
+      collectionId: dbComment.collection_id,
+      storyNumber: dbComment.story_number,
+      frameNumber: dbComment.frame_number,
+      comment: dbComment.comment,
+      createdAt: new Date(dbComment.created_at),
+      updatedAt: new Date(dbComment.updated_at)
+    };
+  }
 
-      CREATE INDEX IF NOT EXISTS idx_frame_comments_frame
-      ON frame_comments(collection_id, story_number, frame_number);
-    `);
+  private convertCommentToDb(comment: Partial<FrameComment> & {
+    collectionId: string;
+    storyNumber: number;
+    frameNumber: number;
+    comment: string;
+  }) {
+    return {
+      collection_id: comment.collectionId,
+      story_number: comment.storyNumber,
+      frame_number: comment.frameNumber,
+      comment: comment.comment,
+      created_at: comment.createdAt?.toISOString(),
+      updated_at: comment.updatedAt?.toISOString()
+    };
   }
 
   async addComment(
@@ -59,22 +71,17 @@ export class CommentsManager {
   ): Promise<string> {
     if (!this.initialized) await this.initialize();
 
-    const id = `comment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const now = new Date().toISOString();
-
     try {
-      await this.db.runAsync(
-        `INSERT INTO frame_comments
-         (id, collection_id, story_number, frame_number, comment, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [id, collectionId, storyNumber, frameNumber, comment, now, now]
-      );
+      const id = await this.databaseManager.addComment({
+        collection_id: collectionId,
+        story_number: storyNumber,
+        frame_number: frameNumber,
+        comment: comment
+      });
 
       return id;
     } catch (error) {
-      warn(
-        `Error adding comment: ${error instanceof Error ? error.message : String(error)}`
-      );
+      warn(`Error adding comment: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   }
@@ -87,26 +94,14 @@ export class CommentsManager {
     if (!this.initialized) await this.initialize();
 
     try {
-      const results = await this.db.getAllAsync<any>(
-        `SELECT * FROM frame_comments
-         WHERE collection_id = ? AND story_number = ? AND frame_number = ?
-         ORDER BY created_at DESC`,
-        [collectionId, storyNumber, frameNumber]
+      const dbComments = await this.databaseManager.getFrameComments(
+        collectionId,
+        storyNumber,
+        frameNumber
       );
-
-      return results.map((row: any) => ({
-        id: row.id,
-        collectionId: row.collection_id,
-        storyNumber: row.story_number,
-        frameNumber: row.frame_number,
-        comment: row.comment,
-        createdAt: new Date(row.created_at),
-        updatedAt: new Date(row.updated_at)
-      }));
+      return dbComments.map(comment => this.convertDbToComment(comment));
     } catch (error) {
-      warn(
-        `Error getting frame comments: ${error instanceof Error ? error.message : String(error)}`
-      );
+      warn(`Error getting frame comments: ${error instanceof Error ? error.message : String(error)}`);
       return [];
     }
   }
@@ -114,17 +109,10 @@ export class CommentsManager {
   async updateComment(commentId: string, newComment: string): Promise<void> {
     if (!this.initialized) await this.initialize();
 
-    const now = new Date().toISOString();
-
     try {
-      await this.db.runAsync(
-        'UPDATE frame_comments SET comment = ?, updated_at = ? WHERE id = ?',
-        [newComment, now, commentId]
-      );
+      await this.databaseManager.updateComment(commentId, newComment);
     } catch (error) {
-      warn(
-        `Error updating comment: ${error instanceof Error ? error.message : String(error)}`
-      );
+      warn(`Error updating comment: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   }
@@ -133,11 +121,9 @@ export class CommentsManager {
     if (!this.initialized) await this.initialize();
 
     try {
-      await this.db.runAsync('DELETE FROM frame_comments WHERE id = ?', [commentId]);
+      await this.databaseManager.deleteComment(commentId);
     } catch (error) {
-      warn(
-        `Error deleting comment: ${error instanceof Error ? error.message : String(error)}`
-      );
+      warn(`Error deleting comment: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   }
@@ -146,23 +132,10 @@ export class CommentsManager {
     if (!this.initialized) await this.initialize();
 
     try {
-      const results = await this.db.getAllAsync<any>(
-        'SELECT * FROM frame_comments ORDER BY created_at DESC'
-      );
-
-      return results.map((row: any) => ({
-        id: row.id,
-        collectionId: row.collection_id,
-        storyNumber: row.story_number,
-        frameNumber: row.frame_number,
-        comment: row.comment,
-        createdAt: new Date(row.created_at),
-        updatedAt: new Date(row.updated_at)
-      }));
+      const dbComments = await this.databaseManager.getAllComments();
+      return dbComments.map(comment => this.convertDbToComment(comment));
     } catch (error) {
-      warn(
-        `Error getting all comments: ${error instanceof Error ? error.message : String(error)}`
-      );
+      warn(`Error getting all comments: ${error instanceof Error ? error.message : String(error)}`);
       return [];
     }
   }
@@ -175,17 +148,9 @@ export class CommentsManager {
     if (!this.initialized) await this.initialize();
 
     try {
-      const result = await this.db.getFirstAsync<any>(
-        `SELECT COUNT(*) as count FROM frame_comments
-         WHERE collection_id = ? AND story_number = ? AND frame_number = ?`,
-        [collectionId, storyNumber, frameNumber]
-      );
-
-      return result?.count || 0;
+      return await this.databaseManager.getCommentsCount(collectionId, storyNumber, frameNumber);
     } catch (error) {
-      warn(
-        `Error getting comments count: ${error instanceof Error ? error.message : String(error)}`
-      );
+      warn(`Error getting comments count: ${error instanceof Error ? error.message : String(error)}`);
       return 0;
     }
   }
@@ -194,17 +159,75 @@ export class CommentsManager {
     if (!this.initialized) await this.initialize();
 
     try {
-      const result = await this.db.runAsync(
-        'DELETE FROM frame_comments WHERE collection_id = ?',
-        [collectionId]
-      );
-
-      return result.changes || 0;
+      return await this.databaseManager.deleteCommentsForCollection(collectionId);
     } catch (error) {
-      warn(
-        `Error deleting comments for collection: ${error instanceof Error ? error.message : String(error)}`
+      warn(`Error deleting comments for collection: ${error instanceof Error ? error.message : String(error)}`);
+      return 0;
+    }
+  }
+
+  // Additional helper methods for backwards compatibility
+  async getComment(commentId: string): Promise<FrameComment | null> {
+    if (!this.initialized) await this.initialize();
+
+    try {
+      const allComments = await this.getAllComments();
+      return allComments.find(comment => comment.id === commentId) || null;
+    } catch (error) {
+      warn(`Error getting comment by ID: ${error instanceof Error ? error.message : String(error)}`);
+      return null;
+    }
+  }
+
+  async hasComments(
+    collectionId: string,
+    storyNumber: number,
+    frameNumber: number
+  ): Promise<boolean> {
+    if (!this.initialized) await this.initialize();
+
+    try {
+      const count = await this.getCommentsCount(collectionId, storyNumber, frameNumber);
+      return count > 0;
+    } catch (error) {
+      warn(`Error checking if frame has comments: ${error instanceof Error ? error.message : String(error)}`);
+      return false;
+    }
+  }
+
+  // Statistics and utilities
+  async getCommentStatistics(): Promise<{
+    totalComments: number;
+    uniqueFrames: number;
+    uniqueStories: number;
+    uniqueCollections: number;
+  }> {
+    if (!this.initialized) await this.initialize();
+
+    try {
+      const allComments = await this.getAllComments();
+      const uniqueFrames = new Set(
+        allComments.map(c => `${c.collectionId}_${c.storyNumber}_${c.frameNumber}`)
       );
-      throw error;
+      const uniqueStories = new Set(
+        allComments.map(c => `${c.collectionId}_${c.storyNumber}`)
+      );
+      const uniqueCollections = new Set(allComments.map(c => c.collectionId));
+
+      return {
+        totalComments: allComments.length,
+        uniqueFrames: uniqueFrames.size,
+        uniqueStories: uniqueStories.size,
+        uniqueCollections: uniqueCollections.size
+      };
+    } catch (error) {
+      warn(`Error getting comment statistics: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        totalComments: 0,
+        uniqueFrames: 0,
+        uniqueStories: 0,
+        uniqueCollections: 0
+      };
     }
   }
 }
