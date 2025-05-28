@@ -51,3 +51,5 @@ export const QualityBadge: React.FC<QualityBadgeProps> = ({ verified }) => {
     </View>
   );
 };
+
+export default QualityBadge;

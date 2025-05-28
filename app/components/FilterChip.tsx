@@ -73,3 +73,5 @@ export const FilterChip: React.FC<FilterChipProps> = ({
     </TouchableOpacity>
   );
 };
+
+export default FilterChip;

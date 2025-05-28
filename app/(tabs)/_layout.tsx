@@ -57,17 +57,6 @@ export default function TabLayout() {
           headerShown: false,
         }}
       />
-      <Tabs.Screen
-        name="(files)"
-        options={{
-          title: 'Files',
-          tabBarIcon: ({ color, size }: TabBarIconProps) => (
-            <MaterialIcons name="folder" size={size} color={color} />
-          ),
-          headerShown: false,
-          href: null,
-        }}
-      />
     </Tabs>
   );
 }

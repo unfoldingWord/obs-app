@@ -83,3 +83,5 @@ const formatSize = (bytes: number) => {
   }
   return `${size.toFixed(1)} ${units[unitIndex]}`;
 };
+
+export default ProgressBar;

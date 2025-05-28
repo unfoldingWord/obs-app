@@ -4,9 +4,13 @@ import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { useColorScheme, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { enableScreens } from 'react-native-screens';
 import '../global.css';
 import { useDrizzleStudio } from 'expo-drizzle-studio-plugin';
 import * as SQLite from 'expo-sqlite';
+
+// Enable react-native-screens
+enableScreens();
 
 const db = SQLite.openDatabaseSync('collections.db');
 

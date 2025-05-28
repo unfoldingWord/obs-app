@@ -1,8 +1,10 @@
 {
   "expo": {
-    "name": "obs-app",
+    "name": "Open Bible Stories",
+    "description": "Discover 50 beautifully illustrated Bible stories in multiple languages. Open Bible Stories is a free, open-source app that brings timeless biblical narratives to life with stunning artwork and engaging storytelling. Download stories for offline reading, track your progress, save favorites, and explore content in dozens of languages. Perfect for personal study, family devotions, or sharing faith stories worldwide. Created by unfoldingWord in collaboration with global translation organizations.",
     "slug": "obs-app",
     "version": "1.0.0",
+    "owner": "unfoldingword",
     "web": {
       "favicon": "./assets/favicon.png"
     },
@@ -11,7 +13,8 @@
     },
     "plugins": [
       "expo-router",
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-system-ui"
     ],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -31,7 +34,8 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.abelpz.obsapp"
     }
   }
 }

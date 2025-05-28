@@ -58,3 +58,5 @@ export const OwnerCard: React.FC<OwnerCardProps> = ({
     </TouchableOpacity>
   );
 };
+
+export default OwnerCard;

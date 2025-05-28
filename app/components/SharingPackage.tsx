@@ -110,3 +110,5 @@ export const SharingPackage: React.FC<SharingPackageProps> = ({
     </TouchableOpacity>
   );
 };
+
+export default SharingPackage;

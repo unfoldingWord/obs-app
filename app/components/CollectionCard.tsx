@@ -97,3 +97,5 @@ export const CollectionCard: React.FC<CollectionCardProps> = ({
     </TouchableOpacity>
   );
 };
+
+export default CollectionCard;

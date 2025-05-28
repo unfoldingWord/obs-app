@@ -56,3 +56,5 @@ export const LanguageCard: React.FC<LanguageCardProps> = ({
     </TouchableOpacity>
   );
 };
+
+export default LanguageCard;
