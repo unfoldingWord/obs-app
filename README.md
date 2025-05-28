@@ -144,9 +144,12 @@ npm run format
 
 ### Building APKs
 
+#### Cross-Platform Compatibility ✨
+All build scripts are designed to work seamlessly across **Windows**, **macOS**, and **Linux** without any modifications.
+
 #### Debug Build (Development)
 ```bash
-# Build debug APK
+# Build debug APK (works on all platforms)
 npm run build:android:debug
 
 # Install debug APK on connected device
@@ -158,10 +161,10 @@ The debug APK will be located at:
 
 #### Release Build (Production)
 ```bash
-# Clean previous builds
+# Clean previous builds (works on all platforms)
 npm run build:android:clean
 
-# Build release APK
+# Build release APK (works on all platforms)
 npm run build:android:release
 
 # Install release APK on connected device
@@ -175,6 +178,22 @@ The release APK will be located at:
 
 If you prefer to use Gradle directly:
 
+**On Windows:**
+```bash
+# Navigate to android directory
+cd android
+
+# Debug build
+gradlew.bat assembleDebug
+
+# Release build
+gradlew.bat assembleRelease
+
+# Clean build
+gradlew.bat clean
+```
+
+**On macOS/Linux:**
 ```bash
 # Navigate to android directory
 cd android
@@ -187,8 +206,10 @@ cd android
 
 # Clean build
 ./gradlew clean
+```
 
-# Install on device via ADB
+**Install on device via ADB (all platforms):**
+```bash
 adb install app/build/outputs/apk/debug/app-debug.apk
 ```
 

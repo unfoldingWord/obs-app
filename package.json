@@ -9,9 +9,9 @@
     "lint": "eslint \"**/*.{js,jsx,ts,tsx}\" && prettier -c \"**/*.{js,jsx,ts,tsx,json}\"",
     "format": "eslint \"**/*.{js,jsx,ts,tsx}\" --fix && prettier \"**/*.{js,jsx,ts,tsx,json}\" --write",
     "web": "expo start --web",
-    "build:android:debug": "cd android && ./gradlew assembleDebug",
-    "build:android:release": "cd android && ./gradlew assembleRelease",
-    "build:android:clean": "cd android && ./gradlew clean",
+    "build:android:debug": "cd android && node ../scripts/gradlew.js assembleDebug",
+    "build:android:release": "cd android && node ../scripts/gradlew.js assembleRelease",
+    "build:android:clean": "cd android && node ../scripts/gradlew.js clean",
     "install:android:debug": "adb install android/app/build/outputs/apk/debug/app-debug.apk",
     "install:android:release": "adb install android/app/build/outputs/apk/release/app-release.apk"
   },
@@ -40,7 +40,8 @@
     "react-native-reanimated": "3.16.2",
     "react-native-safe-area-context": "4.12.0",
     "react-native-screens": "^4.11.0",
-    "reflect-metadata": "^0.2.2"
+    "reflect-metadata": "^0.2.2",
+    "expo-splash-screen": "~0.29.24"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
@@ -48,6 +49,7 @@
     "@types/react-native": "^0.73.0",
     "@typescript-eslint/eslint-plugin": "^7.7.0",
     "@typescript-eslint/parser": "^7.7.0",
+    "cross-env": "^7.0.3",
     "eslint": "^8.57.0",
     "eslint-config-universe": "^12.0.1",
     "prettier": "^3.2.5",
