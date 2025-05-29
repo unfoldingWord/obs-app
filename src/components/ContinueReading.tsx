@@ -46,7 +46,7 @@ export function ContinueReading({ lastReadProgress, onPress, isDark }: ContinueR
 
   return (
     <View className="mb-4">
-      <Text className={`mb-3 text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+      <Text className={`mb-6 text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
         Continue Reading
       </Text>
       <TouchableOpacity
@@ -60,7 +60,7 @@ export function ContinueReading({ lastReadProgress, onPress, isDark }: ContinueR
           <Text className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
             Frame {lastReadProgress.frameNumber} of {lastReadProgress.totalFrames}
           </Text>
-          <Text className={`mt-1 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+          <Text className={`mb-2 mt-1 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
             {collection?.displayName || lastReadProgress.collectionId}
           </Text>
 

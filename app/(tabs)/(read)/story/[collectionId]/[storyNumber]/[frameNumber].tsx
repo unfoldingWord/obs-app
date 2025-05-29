@@ -23,6 +23,7 @@ import {
   Frame,
 } from '../../../../../../src/core/CollectionsManager';
 import { StoryManager, UserMarker } from '../../../../../../src/core/storyManager';
+import { useObsImage } from '../../../../../../src/hooks/useObsImage';
 
 export default function StoryFrameScreen() {
   const { collectionId: encodedCollectionId, storyNumber, frameNumber } = useLocalSearchParams();
@@ -45,6 +46,14 @@ export default function StoryFrameScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+
+  // Get the image using the offline-first hook
+  const imageSource = useObsImage({
+    reference: {
+      story: parseInt(storyNumber as string, 10),
+      frame: currentFrameNumber,
+    },
+  });
 
   useEffect(() => {
     loadStoryData();
@@ -525,7 +534,7 @@ export default function StoryFrameScreen() {
             <ScrollView className="flex-1">
               <View className="relative">
                 <Image
-                  source={{ uri: currentFrame.imageUrl }}
+                  source={imageSource}
                   style={{ width: '100%', height: 200 }}
                   resizeMode="cover"
                 />
