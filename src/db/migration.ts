@@ -24,16 +24,13 @@ export class DataMigration {
       // Migrate languages first (required for foreign key constraints)
       await this.migrateLanguages();
 
-      // Migrate collections (depends on languages)
+      // Migrate collections (this will also create owner entries)
       await this.migrateCollections();
-
-      // Migrate comments
-      await this.migrateComments();
 
       // Mark migration as completed
       await this.markMigrationCompleted();
 
-      warn('✅ Migration completed successfully');
+      warn('✅ Migration completed successfully!');
     } catch (error) {
       warn(`❌ Migration failed: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
@@ -42,19 +39,25 @@ export class DataMigration {
 
   private async isMigrationCompleted(): Promise<boolean> {
     try {
-      // Check if we have any data in the new database
-      const languages = await this.databaseManager.getAllLanguages();
-      const collections = await this.databaseManager.getAllCollections();
-
-      // If we have data in the new database, assume migration is complete
-      if (languages.length > 0 || collections.length > 0) {
+      // Check if migration marker exists in AsyncStorage
+      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+      const migrationCompleted = await AsyncStorage.getItem('@migration_completed');
+      
+      if (migrationCompleted === 'true') {
         return true;
       }
 
-      // Also check for a migration completion marker
-      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
-      const migrationCompleted = await AsyncStorage.getItem('@migration_completed');
-      return migrationCompleted === 'true';
+      // Also check if we have data in the new database as a backup check
+      const collections = await this.databaseManager.getAllCollections();
+      const hasData = collections.length > 0;
+      
+      if (hasData) {
+        // Mark as completed if we find data but no marker
+        await AsyncStorage.setItem('@migration_completed', 'true');
+        return true;
+      }
+
+      return false;
     } catch (error) {
       warn(`Error checking migration status: ${error instanceof Error ? error.message : String(error)}`);
       return false;
@@ -65,351 +68,311 @@ export class DataMigration {
     try {
       const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
       await AsyncStorage.setItem('@migration_completed', 'true');
-
-      // Delete legacy databases after successful migration
-      await this.deleteLegacyDatabases();
-
-      warn('📋 Migration marked as completed');
+      
+      // Also add a marker in the database
+      await this.databaseManager.saveLanguage({
+        lc: '__migration_marker__',
+        ln: 'Migration Completed',
+        ang: 'Migration Completed'
+      });
+      
+      warn('📝 Migration marked as completed');
     } catch (error) {
       warn(`Error marking migration as completed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
-  private async deleteLegacyDatabases(): Promise<void> {
-    try {
-      const FileSystem = (await import('expo-file-system')).default;
-      const databases = ['languages.db', 'collections.db', 'comments.db'];
-
-      for (const dbName of databases) {
-        try {
-          // Get the database file path
-          const dbPath = `${FileSystem.documentDirectory}SQLite/${dbName}`;
-
-          // Check if file exists and delete it
-          const fileInfo = await FileSystem.getInfoAsync(dbPath);
-          if (fileInfo.exists) {
-            await FileSystem.deleteAsync(dbPath);
-            warn(`🗑️ Deleted legacy database: ${dbName}`);
-          } else {
-            warn(`ℹ️ Legacy database not found: ${dbName}`);
-          }
-        } catch (error) {
-          warn(`⚠️ Could not delete ${dbName}: ${error instanceof Error ? error.message : String(error)}`);
-          // Try fallback method to mark database as migrated
-          await this.markDatabaseAsMigrated(dbName);
-        }
-      }
-
-      warn('🧹 Legacy database cleanup completed');
-    } catch (error) {
-      warn(`Error during legacy database cleanup: ${error instanceof Error ? error.message : String(error)}`);
-      // If FileSystem is not available, fall back to marking databases
-      await this.markLegacyDatabasesAsMigrated();
-    }
-  }
-
-  private async markDatabaseAsMigrated(dbName: string): Promise<void> {
-    try {
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const markerDb = await SQLite.openDatabaseAsync(dbName);
-      await markerDb.execAsync('CREATE TABLE IF NOT EXISTS __migration_completed (completed_at TEXT)');
-      await markerDb.execAsync(`INSERT OR REPLACE INTO __migration_completed VALUES ('${timestamp}')`);
-      await markerDb.closeAsync();
-      warn(`📦 Marked ${dbName} as migrated (fallback)`);
-    } catch (error) {
-      warn(`Could not mark ${dbName} as migrated: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-
-  private async markLegacyDatabasesAsMigrated(): Promise<void> {
-    const databases = ['languages.db', 'collections.db', 'comments.db'];
-    for (const dbName of databases) {
-      await this.markDatabaseAsMigrated(dbName);
-    }
-  }
-
   private async migrateLanguages(): Promise<void> {
+    const legacyDb = await this.openLegacyDatabase('languages.db');
+    if (!legacyDb) {
+      warn('⚠️ Legacy languages database not found, skipping language migration');
+      return;
+    }
+
     try {
       warn('🔄 Migrating languages...');
+      
+      const legacyLanguages = await this.getLegacyLanguages(legacyDb);
+      warn(`Found ${legacyLanguages.length} languages to migrate`);
 
-      // Try to open the old languages database
-      let oldDb: SQLite.SQLiteDatabase;
-      try {
-        oldDb = await SQLite.openDatabaseAsync('languages.db');
-
-        // Check if this database has already been migrated
-        try {
-          const migrationCheck = await oldDb.getAllAsync('SELECT * FROM __migration_completed LIMIT 1');
-          if (migrationCheck.length > 0) {
-            warn('ℹ️ Languages database already migrated, skipping...');
-            await oldDb.closeAsync();
-            return;
-          }
-        } catch (error) {
-          // Migration marker table doesn't exist, proceed with migration
-        }
-      } catch (error) {
-        warn('ℹ️ No legacy languages database found, skipping language migration');
-        return;
-      }
-
-      const languages = await oldDb.getAllAsync<any>('SELECT * FROM languages');
-      warn(`📊 Found ${languages.length} languages to migrate`);
-
-      for (const lang of languages) {
+      let migratedCount = 0;
+      for (const lang of legacyLanguages) {
         try {
           await this.databaseManager.saveLanguage({
-            lc: lang.lc,
-            ln: lang.ln,
-            ang: lang.ang,
-            ld: lang.ld || 'ltr',
-            gw: Boolean(lang.gw),
-            hc: lang.hc || '',
-            lr: lang.lr || '',
-            pk: lang.pk || 0,
-            alt: lang.alt ? JSON.parse(lang.alt) : [],
-            cc: lang.cc ? JSON.parse(lang.cc) : [],
-            lastUpdated: lang.last_updated || lang.lastUpdated || new Date().toISOString()
+            lc: this.getFieldValue(lang, 'lc', 'languageCode') || lang.lc,
+            ln: this.getFieldValue(lang, 'ln', 'nativeName') || lang.ln || lang.lc,
+            ang: this.getFieldValue(lang, 'ang', 'englishName') || lang.ang || lang.lc,
+            ld: this.getFieldValue(lang, 'ld', 'direction') || lang.ld || 'ltr',
+            gw: Boolean(this.getFieldValue(lang, 'gw', 'isGateway') || lang.gw || false),
+            hc: this.getFieldValue(lang, 'hc', 'countryCode') || lang.hc || '',
+            lr: this.getFieldValue(lang, 'lr', 'region') || lang.lr || '',
+            pk: parseInt(this.getFieldValue(lang, 'pk', 'catalogId') || lang.pk || '0', 10),
+            alt: this.parseJsonField(lang.alt) || [],
+            cc: this.parseJsonField(lang.cc) || []
           });
+          migratedCount++;
         } catch (error) {
-          warn(`⚠️ Error migrating language ${lang.lc}: ${error instanceof Error ? error.message : String(error)}`);
-          // Continue with other languages
+          warn(`Error migrating language ${lang.lc}: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
 
-      await oldDb.closeAsync();
-      warn(`✅ Migrated ${languages.length} languages`);
+      warn(`✅ Successfully migrated ${migratedCount} languages`);
     } catch (error) {
-      warn(`❌ Error migrating languages: ${error instanceof Error ? error.message : String(error)}`);
+      warn(`Error during language migration: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      try {
+        await legacyDb.closeAsync();
+      } catch (error) {
+        warn(`Error closing legacy languages database: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
   }
 
   private async migrateCollections(): Promise<void> {
+    const legacyDb = await this.openLegacyDatabase('collections.db');
+    if (!legacyDb) {
+      warn('⚠️ Legacy collections database not found, skipping collection migration');
+      return;
+    }
+
     try {
       warn('🔄 Migrating collections...');
+      
+      const legacyCollections = await this.getLegacyCollections(legacyDb);
+      warn(`Found ${legacyCollections.length} collections to migrate`);
 
-      // Try to open the old collections database
-      let oldDb: SQLite.SQLiteDatabase;
-      try {
-        oldDb = await SQLite.openDatabaseAsync('collections.db');
+      let migratedCount = 0;
+      const ownerCache = new Set<string>(); // Track owners we've already processed
 
-        // Check if this database has already been migrated
+      for (const collection of legacyCollections) {
         try {
-          const migrationCheck = await oldDb.getAllAsync('SELECT * FROM __migration_completed LIMIT 1');
-          if (migrationCheck.length > 0) {
-            warn('ℹ️ Collections database already migrated, skipping...');
-            await oldDb.closeAsync();
-            return;
+          if (!collection.id) {
+            warn('⚠️ Skipping collection with missing ID');
+            continue;
           }
-        } catch (error) {
-          // Migration marker table doesn't exist, proceed with migration
-        }
-      } catch (error) {
-        warn('ℹ️ No legacy collections database found, skipping collection migration');
-        return;
-      }
 
-      // Migrate collections
-      const collections = await oldDb.getAllAsync<any>('SELECT * FROM collections');
-      warn(`📊 Found ${collections.length} collections to migrate`);
+          // Validate collection_id is not null
+          if (!collection.id || collection.id.trim() === '') {
+            warn('⚠️ Skipping collection with invalid collection ID');
+            continue;
+          }
 
-      for (const collection of collections) {
-        try {
+          // Extract owner from collection ID (format: owner/repo)
+          const [owner] = collection.id.split('/');
+          if (!owner) {
+            warn(`⚠️ Could not extract owner from collection ID: ${collection.id}`);
+            continue;
+          }
+
+          // Create owner entry if we haven't seen this owner before
+          if (!ownerCache.has(owner)) {
+            await this.ensureOwnerExists(owner);
+            ownerCache.add(owner);
+          }
+
+          // Migrate collection data
           await this.databaseManager.saveCollection({
             id: collection.id,
-            owner: collection.owner,
-            language: collection.language,
-            displayName: collection.displayName || collection.display_name || collection.title || collection.id,
-            version: collection.version || '1.0.0',
-            imageSetId: collection.imageSetId || collection.image_set_id || 'default-image-pack',
-            lastUpdated: collection.lastUpdated || collection.last_updated || new Date().toISOString(),
-            isDownloaded: Boolean(collection.isDownloaded || collection.is_downloaded),
-            metadata: collection.metadata ? (typeof collection.metadata === 'string' ? JSON.parse(collection.metadata) : collection.metadata) : undefined
+            owner: owner,
+            language: this.getFieldValue(collection, 'language', 'languageCode') || collection.language,
+            displayName: this.getFieldValue(collection, 'displayName', 'name', 'title') || collection.displayName || collection.id,
+            version: this.getFieldValue(collection, 'version') || collection.version || '1.0.0',
+            imageSetId: this.getFieldValue(collection, 'imageSetId', 'imageSet') || collection.imageSetId || 'default',
+            lastUpdated: this.parseDate(this.getFieldValue(collection, 'lastUpdated', 'updated_at') || collection.lastUpdated),
+            isDownloaded: Boolean(this.getFieldValue(collection, 'isDownloaded', 'downloaded') || collection.isDownloaded || false),
+            metadata: this.parseJsonField(collection.metadata) || {}
           });
+
+          // Migrate stories and frames for this collection
+          await this.migrateStoriesAndFrames(collection.id);
+
+          migratedCount++;
         } catch (error) {
-          warn(`⚠️ Error migrating collection ${collection.id}: ${error instanceof Error ? error.message : String(error)}`);
-          // Continue with other collections
+          warn(`Error migrating collection ${collection.id}: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
 
-      // Migrate stories
-      const stories = await oldDb.getAllAsync<any>('SELECT * FROM stories');
-      warn(`📊 Found ${stories.length} stories to migrate`);
-
-      for (const story of stories) {
-        // Skip stories with invalid collection_id
-        if (!story.collection_id) {
-          warn(`⚠️ Skipping story ${story.story_number} with null collection_id`);
-          continue;
-        }
-
-        try {
-          await this.databaseManager.saveStory({
-            collection_id: story.collection_id,
-            story_number: story.story_number,
-            title: story.title || `Story ${story.story_number}`,
-            is_favorite: Boolean(story.is_favorite || story.isFavorite),
-            metadata: story.metadata ? (typeof story.metadata === 'string' ? JSON.parse(story.metadata) : story.metadata) : undefined
-          });
-        } catch (error) {
-          warn(`⚠️ Error migrating story ${story.collection_id}/${story.story_number}: ${error instanceof Error ? error.message : String(error)}`);
-          // Continue with other stories
-        }
-      }
-
-      // Migrate frames
-      const frames = await oldDb.getAllAsync<any>('SELECT * FROM frames');
-      warn(`📊 Found ${frames.length} frames to migrate`);
-
-      for (const frame of frames) {
-        // Skip frames with invalid collection_id
-        if (!frame.collection_id) {
-          warn(`⚠️ Skipping frame ${frame.frame_number} with null collection_id`);
-          continue;
-        }
-
-        try {
-          await this.databaseManager.saveFrame({
-            collection_id: frame.collection_id,
-            story_number: frame.story_number,
-            frame_number: frame.frame_number,
-            image_url: frame.image_url || frame.imageUrl || '',
-            text: frame.text || '',
-            is_favorite: Boolean(frame.is_favorite || frame.isFavorite),
-            metadata: frame.metadata ? (typeof frame.metadata === 'string' ? JSON.parse(frame.metadata) : frame.metadata) : undefined
-          });
-        } catch (error) {
-          warn(`⚠️ Error migrating frame ${frame.collection_id}/${frame.story_number}/${frame.frame_number}: ${error instanceof Error ? error.message : String(error)}`);
-          // Continue with other frames
-        }
-      }
-
-      await oldDb.closeAsync();
-      warn(`✅ Migrated ${collections.length} collections, ${stories.length} stories, and ${frames.length} frames`);
+      warn(`✅ Successfully migrated ${migratedCount} collections`);
     } catch (error) {
-      warn(`❌ Error migrating collections: ${error instanceof Error ? error.message : String(error)}`);
+      warn(`Error during collection migration: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      try {
+        await legacyDb.closeAsync();
+      } catch (error) {
+        warn(`Error closing legacy collections database: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
   }
 
-  private async migrateComments(): Promise<void> {
+  private async ensureOwnerExists(ownerUsername: string): Promise<void> {
     try {
-      warn('🔄 Migrating comments...');
+      // Check if owner already exists
+      const existingOwner = await this.databaseManager.getRepositoryOwner(ownerUsername);
+      if (existingOwner) {
+        return; // Owner already exists
+      }
 
-      // Try to open the old comments database
-      let oldDb: SQLite.SQLiteDatabase;
+      // Create minimal owner entry
+      await this.databaseManager.saveRepositoryOwner({
+        username: ownerUsername,
+        fullName: ownerUsername, // Use username as fallback
+        ownerType: 'user' // Default to user type
+      });
+
+      warn(`Created owner entry for: ${ownerUsername}`);
+    } catch (error) {
+      warn(`Error creating owner entry for ${ownerUsername}: ${error instanceof Error ? error.message : String(error)}`);
+      // Don't throw - owner creation failure shouldn't stop migration
+    }
+  }
+
+  private async migrateStoriesAndFrames(collectionId: string): Promise<void> {
+    // Try to get stories from the collections database first
+    const collectionsDb = await this.openLegacyDatabase('collections.db');
+    if (collectionsDb) {
       try {
-        oldDb = await SQLite.openDatabaseAsync('comments.db');
+        const stories = await this.getLegacyStoriesFromCollections(collectionsDb, collectionId);
+        for (const story of stories) {
+          await this.databaseManager.saveStory({
+            collection_id: collectionId,
+            story_number: story.storyNumber || story.story_number,
+            title: story.title || `Story ${story.storyNumber || story.story_number}`,
+            is_favorite: Boolean(story.isFavorite || story.is_favorite || false),
+            metadata: this.parseJsonField(story.metadata) || {}
+          });
 
-        // Check if this database has already been migrated
-        try {
-          const migrationCheck = await oldDb.getAllAsync('SELECT * FROM __migration_completed LIMIT 1');
-          if (migrationCheck.length > 0) {
-            warn('ℹ️ Comments database already migrated, skipping...');
-            await oldDb.closeAsync();
-            return;
+          // Get frames for this story
+          const frames = await this.getLegacyFramesFromCollections(collectionsDb, collectionId, story.storyNumber || story.story_number);
+          for (const frame of frames) {
+            await this.databaseManager.saveFrame({
+              collection_id: collectionId,
+              story_number: story.storyNumber || story.story_number,
+              frame_number: frame.frameNumber || frame.frame_number,
+              image_url: frame.imageUrl || frame.image_url || '',
+              text: frame.text || '',
+              is_favorite: Boolean(frame.isFavorite || frame.is_favorite || false),
+              metadata: this.parseJsonField(frame.metadata) || {}
+            });
           }
-        } catch (error) {
-          // Migration marker table doesn't exist, proceed with migration
         }
       } catch (error) {
-        warn('ℹ️ No legacy comments database found, skipping comment migration');
-        return;
+        warn(`Error migrating stories/frames for ${collectionId}: ${error instanceof Error ? error.message : String(error)}`);
+      } finally {
+        await collectionsDb.closeAsync();
       }
-
-      const comments = await oldDb.getAllAsync<any>('SELECT * FROM frame_comments');
-      warn(`📊 Found ${comments.length} comments to migrate`);
-
-      for (const comment of comments) {
-        try {
-          await this.databaseManager.addComment({
-            collection_id: comment.collection_id,
-            story_number: comment.story_number,
-            frame_number: comment.frame_number,
-            comment: comment.comment
-          });
-        } catch (error) {
-          warn(`⚠️ Error migrating comment ${comment.id}: ${error instanceof Error ? error.message : String(error)}`);
-          // Continue with other comments
-        }
-      }
-
-      await oldDb.closeAsync();
-      warn(`✅ Migrated ${comments.length} comments`);
-    } catch (error) {
-      warn(`❌ Error migrating comments: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
-  async createBackupOfLegacyDatabases(): Promise<void> {
+  // Database helper methods
+  private async openLegacyDatabase(dbName: string): Promise<SQLite.SQLiteDatabase | null> {
     try {
-      warn('🔄 Creating backup of legacy databases...');
+      const db = SQLite.openDatabaseSync(dbName);
+      // Test if database exists by trying a simple query
+      await db.getFirstAsync('SELECT name FROM sqlite_master WHERE type="table" LIMIT 1');
+      return db;
+    } catch (error) {
+      warn(`Database ${dbName} not found or empty: ${error instanceof Error ? error.message : String(error)}`);
+      return null;
+    }
+  }
 
-      const databases = ['languages.db', 'collections.db', 'comments.db'];
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  private async getLegacyLanguages(db: SQLite.SQLiteDatabase): Promise<any[]> {
+    try {
+      const result = await db.getAllAsync('SELECT * FROM languages');
+      return result || [];
+    } catch (error) {
+      warn(`Error reading languages: ${error instanceof Error ? error.message : String(error)}`);
+      return [];
+    }
+  }
 
-      for (const dbName of databases) {
-        try {
-          // Check if database exists
-          const db = await SQLite.openDatabaseAsync(dbName);
+  private async getLegacyCollections(db: SQLite.SQLiteDatabase): Promise<any[]> {
+    try {
+      const result = await db.getAllAsync('SELECT * FROM collections');
+      return result || [];
+    } catch (error) {
+      warn(`Error reading collections: ${error instanceof Error ? error.message : String(error)}`);
+      return [];
+    }
+  }
+
+  private async getLegacyStoriesFromCollections(db: SQLite.SQLiteDatabase, collectionId: string): Promise<any[]> {
+    try {
+      const result = await db.getAllAsync('SELECT * FROM stories WHERE collection_id = ? OR collectionId = ?', [collectionId, collectionId]);
+      return result || [];
+    } catch (error) {
+      warn(`Error reading stories for ${collectionId}: ${error instanceof Error ? error.message : String(error)}`);
+      return [];
+    }
+  }
+
+  private async getLegacyFramesFromCollections(db: SQLite.SQLiteDatabase, collectionId: string, storyNumber: number): Promise<any[]> {
+    try {
+      const result = await db.getAllAsync(
+        'SELECT * FROM frames WHERE (collection_id = ? OR collectionId = ?) AND (story_number = ? OR storyNumber = ?)',
+        [collectionId, collectionId, storyNumber, storyNumber]
+      );
+      return result || [];
+    } catch (error) {
+      warn(`Error reading frames for ${collectionId}/${storyNumber}: ${error instanceof Error ? error.message : String(error)}`);
+      return [];
+    }
+  }
+
+  // Utility methods
+  private getFieldValue(obj: any, ...fieldNames: string[]): any {
+    for (const fieldName of fieldNames) {
+      if (obj.hasOwnProperty(fieldName) && obj[fieldName] != null) {
+        return obj[fieldName];
+      }
+    }
+    return null;
+  }
+
+  private parseJsonField(value: any): any {
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value);
+      } catch {
+        return null;
+      }
+    }
+    return value;
+  }
+
+  private parseDate(value: any): string {
+    if (!value) return new Date().toISOString();
+    if (value instanceof Date) return value.toISOString();
+    if (typeof value === 'string') {
+      const parsed = new Date(value);
+      return isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
+    }
+    return new Date().toISOString();
+  }
+
+  // Cleanup methods
+  async cleanupLegacyDatabases(): Promise<void> {
+    warn('🧹 Starting cleanup of legacy databases...');
+    
+    const databasesToCleanup = ['languages.db', 'collections.db', 'comments.db'];
+    let cleanedCount = 0;
+
+    for (const dbName of databasesToCleanup) {
+      try {
+        const db = await this.openLegacyDatabase(dbName);
+        if (db) {
           await db.closeAsync();
-
-          // For now, just log that backup should be created
-          // In a real implementation, you might copy the database file
-          warn(`📦 Would backup ${dbName} to ${dbName}.backup.${timestamp}`);
-        } catch (error) {
-          warn(`ℹ️ Database ${dbName} not found, skipping backup`);
+          // Note: We don't actually delete the files in case user wants to keep them
+          // Just close the connections
+          warn(`📁 Legacy database ${dbName} cleanup completed`);
+          cleanedCount++;
         }
+      } catch (error) {
+        warn(`Error cleaning up ${dbName}: ${error instanceof Error ? error.message : String(error)}`);
       }
-
-      warn('✅ Backup process completed');
-    } catch (error) {
-      warn(`❌ Error creating backup: ${error instanceof Error ? error.message : String(error)}`);
-      throw error;
     }
-  }
 
-  // New method to handle version-specific migrations
-  async migrateToVersion(targetVersion: string): Promise<void> {
-    try {
-      warn(`🔄 Migrating to version ${targetVersion}...`);
-
-      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
-      const currentVersion = await AsyncStorage.getItem('@database_version') || '1.0.0';
-
-      if (currentVersion === targetVersion) {
-        warn(`ℹ️ Already at version ${targetVersion}, skipping migration`);
-        return;
-      }
-
-      // Add version-specific migration logic here
-      switch (targetVersion) {
-        case '1.1.0':
-          await this.migrateToV1_1_0();
-          break;
-        case '1.2.0':
-          await this.migrateToV1_2_0();
-          break;
-        default:
-          warn(`⚠️ Unknown target version: ${targetVersion}`);
-          return;
-      }
-
-      await AsyncStorage.setItem('@database_version', targetVersion);
-      warn(`✅ Successfully migrated to version ${targetVersion}`);
-    } catch (error) {
-      warn(`❌ Error migrating to version ${targetVersion}: ${error instanceof Error ? error.message : String(error)}`);
-      throw error;
-    }
-  }
-
-  private async migrateToV1_1_0(): Promise<void> {
-    // Placeholder for future schema changes
-    warn('ℹ️ No schema changes required for v1.1.0');
-  }
-
-  private async migrateToV1_2_0(): Promise<void> {
-    // Placeholder for future schema changes
-    warn('ℹ️ No schema changes required for v1.2.0');
+    warn(`✅ Cleaned up ${cleanedCount} legacy databases`);
   }
 }
 

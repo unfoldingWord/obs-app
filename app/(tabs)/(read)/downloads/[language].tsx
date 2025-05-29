@@ -1,6 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -17,7 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CollectionInfoModal } from '../../../../src/components/CollectionInfoModal';
 import {
   CollectionsManager,
-  Collection as CoreCollection,
+  Collection,
 } from '../../../../src/core/CollectionsManager';
 import { hashStringToNumber } from '../../../../src/core/hashStringToNumber';
 import { SearchBar } from '../../../components/SearchBar';
@@ -35,18 +35,6 @@ interface Language {
   pk: number;
 }
 
-interface Collection {
-  id: string;
-  title: string;
-  owner: string;
-  language: string;
-  version: string;
-  thumbnailUrl: string;
-  localThumbnailUrl?: string | null;
-  downloaded: boolean;
-  coreCollection: CoreCollection;
-}
-
 export default function LanguageScreen() {
   const params = useLocalSearchParams();
   const [loading, setLoading] = useState(true);
@@ -55,7 +43,7 @@ export default function LanguageScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [collectionsManager, setCollectionsManager] = useState<CollectionsManager | null>(null);
-  const [selectedCollection, setSelectedCollection] = useState<CoreCollection | null>(null);
+  const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const router = useRouter();
   const colorScheme = useColorScheme();
@@ -102,42 +90,22 @@ export default function LanguageScreen() {
         language.lc
       );
 
-      const [remoteCollections, localCollections] = await Promise.all([
+      const [remoteCollectionsWithOwners, localCollections] = await Promise.all([
         remoteCollectionsPromise,
         localCollectionsPromise,
       ]);
 
+      // Extract just the collections from the remote collections with owner data
+      const remoteCollections = remoteCollectionsWithOwners.map(({ collection }) => collection);
+
       const localCollectionIds = new Set(localCollections.map((lc) => lc.id));
 
-      const allCollectionsData: CoreCollection[] = [
+      const allCollections: Collection[] = [
         ...localCollections,
         ...remoteCollections.filter((rc) => !localCollectionIds.has(rc.id)),
       ];
 
-      const collectionsPromises = allCollectionsData.map(async (coreCollection: CoreCollection) => {
-        const localThumbnailUrl = await collectionsManager.getCollectionThumbnail(
-          coreCollection.id
-        );
-        const storyNumber = hashStringToNumber(coreCollection.id); // Keep for default thumbnail if needed
-
-        return {
-          id: coreCollection.id,
-          title: coreCollection.displayName || coreCollection.id,
-          owner: coreCollection.owner || 'unknown',
-          language: coreCollection.language,
-          version: coreCollection.version,
-          thumbnailUrl:
-            coreCollection.metadata?.thumbnail ||
-            `https://cdn.door43.org/obs/jpg/360px/obs-en-${String(storyNumber).padStart(2, '0')}-01.jpg`,
-          localThumbnailUrl,
-          downloaded: coreCollection.isDownloaded || false,
-          coreCollection, // Store original
-        };
-      });
-
-      const mappedCollections = await Promise.all(collectionsPromises);
-
-      setCollections(mappedCollections);
+      setCollections(allCollections);
       setError(null);
     } catch (err) {
       console.error(err);
@@ -148,7 +116,7 @@ export default function LanguageScreen() {
   };
 
   const handleSelectCollection = (collection: Collection) => {
-    if (collection.downloaded) {
+    if (collection.isDownloaded) {
       // Navigate to stories screen for downloaded collections
       router.push(`/stories?collectionId=${encodeURIComponent(collection.id)}`);
     } else {
@@ -161,8 +129,10 @@ export default function LanguageScreen() {
     if (!collectionsManager) return;
     try {
       setDownloadingId(collection.id);
-      // Pass the language data to the download method
-      await collectionsManager.downloadRemoteCollection(collection.coreCollection, language);
+      
+      // Use the standard download method which now uses embedded owner data
+      await collectionsManager.downloadRemoteCollection(collection, language);
+      
       await loadCollections(); // Refresh the list
     } catch (err) {
       console.error('Download failed:', err);
@@ -178,7 +148,7 @@ export default function LanguageScreen() {
 
   const handleDeleteCollection = async (collection: Collection) => {
     if (!collectionsManager) return;
-    Alert.alert('Delete Collection', `Are you sure you want to delete ${collection.title}?`, [
+    Alert.alert('Delete Collection', `Are you sure you want to delete ${collection.displayName}?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -204,7 +174,7 @@ export default function LanguageScreen() {
   };
 
   const handleShowInfo = (collection: Collection) => {
-    setSelectedCollection(collection.coreCollection);
+    setSelectedCollection(collection);
     setShowInfoModal(true);
   };
 
@@ -220,81 +190,83 @@ export default function LanguageScreen() {
   const filteredCollections = collections.filter((item) => {
     const q = searchQuery.toLowerCase();
     return (
-      item.title.toLowerCase().includes(q) ||
+      item.displayName.toLowerCase().includes(q) ||
       item.id.toLowerCase().includes(q) ||
-      item.owner.toLowerCase().includes(q)
+      item.owner.username.toLowerCase().includes(q)
     );
   });
 
-  const downloadedCollections = filteredCollections.filter((c) => c.downloaded);
-  const notDownloadedCollections = filteredCollections.filter((c) => !c.downloaded);
+  const downloadedCollections = filteredCollections.filter((c) => c.isDownloaded);
+  const notDownloadedCollections = filteredCollections.filter((c) => !c.isDownloaded);
 
-  const renderCollectionItem = ({ item }: { item: Collection }) => (
-    <TouchableOpacity
-      key={item.id}
-      onPress={() => handleSelectCollection(item)}
-      className={`m-2 flex-row items-center rounded-lg p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-sm`}>
-      <Image
-        source={{ uri: item.localThumbnailUrl || item.thumbnailUrl }}
-        style={{ width: 64, height: 64, borderRadius: 8, marginRight: 16 }}
-        resizeMode="cover"
-      />
-      <View style={{ flex: 1 }}>
-        <Text className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-          {item.title}
-        </Text>
-        <Text className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-          ID: {item.id}
-        </Text>
-        <Text className={`mt-1 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-          Owner: {item.owner}
-        </Text>
-      </View>
+  const renderCollectionItem = ({ item }: { item: Collection }) => {
+    const storyNumber = hashStringToNumber(item.id);
+    const fallbackImageUrl = `https://cdn.door43.org/obs/jpg/360px/obs-en-${String(storyNumber).padStart(2, '0')}-01.jpg`;
+    
+    return (
       <TouchableOpacity
-        onPress={(e) => {
-          e.stopPropagation();
-          handleShowInfo(item);
-        }}
-        className={`mr-2 rounded-full p-2 ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
-        <MaterialIcons name="info" size={16} color={isDark ? '#9CA3AF' : '#6B7280'} />
+        key={item.id}
+        onPress={() => handleSelectCollection(item)}
+        className={`m-2 flex-row items-center rounded-lg p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-sm`}>
+        <Image
+          source={{ uri: item.metadata?.thumbnail || fallbackImageUrl }}
+          style={{ width: 64, height: 64, borderRadius: 8, marginRight: 16 }}
+          resizeMode="cover"
+        />
+        <View style={{ flex: 1 }}>
+          <Text className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            {item.displayName}
+          </Text>
+          <Text className={`mt-1 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+            {item.owner.fullName || item.owner.username}
+          </Text>
+        </View>
+        <TouchableOpacity
+          onPress={(e) => {
+            e.stopPropagation();
+            handleShowInfo(item);
+          }}
+          className={`mr-2 rounded-full p-2 ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
+          <MaterialIcons name="info" size={16} color={isDark ? '#9CA3AF' : '#6B7280'} />
+        </TouchableOpacity>
+        {!item.isDownloaded ? (
+          <TouchableOpacity
+            onPress={(e) => {
+              e.stopPropagation();
+              handleDownload(item);
+            }}
+            className={`mr-2 rounded-full p-2 ${isDark ? 'bg-blue-700' : 'bg-blue-500'}`}
+            disabled={downloadingId === item.id}>
+            {downloadingId === item.id ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <MaterialIcons name="file-download" size={16} color="#FFFFFF" />
+            )}
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            onPress={(e) => {
+              e.stopPropagation();
+              handleDeleteCollection(item);
+            }}
+            className={`mr-2 rounded-full p-2 ${isDark ? 'bg-red-700' : 'bg-red-500'}`}
+            disabled={downloadingId === item.id}>
+            {downloadingId === item.id ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <MaterialIcons name="delete" size={16} color="#FFFFFF" />
+            )}
+          </TouchableOpacity>
+        )}
+        <MaterialIcons
+          name="chevron-right"
+          size={24}
+          color={isDark ? '#60A5FA' : '#3B82F6'}
+          style={{ marginLeft: 8 }}
+        />
       </TouchableOpacity>
-      {!item.downloaded ? (
-        <TouchableOpacity
-          onPress={(e) => {
-            e.stopPropagation();
-            handleDownload(item);
-          }}
-          className={`mr-2 rounded-full p-2 ${isDark ? 'bg-blue-700' : 'bg-blue-500'}`}
-          disabled={downloadingId === item.id}>
-          {downloadingId === item.id ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <MaterialIcons name="file-download" size={16} color="#FFFFFF" />
-          )}
-        </TouchableOpacity>
-      ) : (
-        <TouchableOpacity
-          onPress={(e) => {
-            e.stopPropagation();
-            handleDeleteCollection(item);
-          }}
-          className={`mr-2 rounded-full p-2 ${isDark ? 'bg-red-700' : 'bg-red-500'}`}
-          disabled={downloadingId === item.id}>
-          {downloadingId === item.id ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <MaterialIcons name="delete" size={16} color="#FFFFFF" />
-          )}
-        </TouchableOpacity>
-      )}
-      <MaterialIcons
-        name="chevron-right"
-        size={24}
-        color={isDark ? '#60A5FA' : '#3B82F6'}
-        style={{ marginLeft: 8 }}
-      />
-    </TouchableOpacity>
-  );
+    );
+  };
 
   const renderSection = (title: string, data: Collection[]) =>
     data.length > 0 && (

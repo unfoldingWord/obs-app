@@ -34,7 +34,7 @@ export function ContinueReading({ lastReadProgress, onPress, isDark }: ContinueR
         setStory(storyData);
 
         // Fetch collection details
-        const collectionData = await collectionsManager.getCollectionById(lastReadProgress.collectionId);
+        const collectionData = await collectionsManager.getCollection(lastReadProgress.collectionId);
         setCollection(collectionData);
       } catch (error) {
         console.error('Error loading story data for continue reading:', error);

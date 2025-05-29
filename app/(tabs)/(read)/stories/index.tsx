@@ -254,7 +254,7 @@ export default function StoriesScreen() {
                 styles.collectionLanguage,
                 isDark ? { color: '#9CA3AF' } : { color: '#6B7280' },
               ]}>
-              {collection.language} • {collection.owner}
+              {collection.language}
             </Text>
           </View>
         </TouchableOpacity>

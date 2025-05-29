@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Switch, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
 import { Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { CollectionsManager } from '../src/core/CollectionsManager';
 
 export default function SettingsScreen() {
   const [darkMode, setDarkMode] = useState(false);
   const [autoDownload, setAutoDownload] = useState(true);
   const [highQualityImages, setHighQualityImages] = useState(false);
   const [storageUsage, setStorageUsage] = useState('0 MB');
+  const [isCleaningOwners, setIsCleaningOwners] = useState(false);
 
   // In a real app, these would be loaded from the SettingsManager
   useEffect(() => {
@@ -28,6 +30,38 @@ export default function SettingsScreen() {
             // In a real app, this would call the cache clearing function
             Alert.alert('Cache cleared');
             setStorageUsage('0 MB');
+          }
+        }
+      ]
+    );
+  };
+
+  const cleanupOrphanedOwners = async () => {
+    Alert.alert(
+      'Clean Up Owner Records',
+      'This will remove owner records that are no longer associated with any collections. This is safe and can help reduce database size.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clean Up',
+          onPress: async () => {
+            try {
+              setIsCleaningOwners(true);
+              const collectionsManager = CollectionsManager.getInstance();
+              await collectionsManager.initialize();
+              const removedCount = await collectionsManager.cleanupOrphanedOwners();
+              
+              if (removedCount > 0) {
+                Alert.alert('Success', `Cleaned up ${removedCount} orphaned owner records.`);
+              } else {
+                Alert.alert('No Cleanup Needed', 'No orphaned owner records were found.');
+              }
+            } catch (error) {
+              console.error('Error cleaning up orphaned owners:', error);
+              Alert.alert('Error', 'Failed to clean up owner records. Please try again.');
+            } finally {
+              setIsCleaningOwners(false);
+            }
           }
         }
       ]
@@ -94,6 +128,21 @@ export default function SettingsScreen() {
         <TouchableOpacity style={styles.button} onPress={clearCache}>
           <Ionicons name="trash" size={18} color="#fff" />
           <Text style={styles.buttonText}>Clear Image Cache</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.button, styles.maintenanceButton]} 
+          onPress={cleanupOrphanedOwners}
+          disabled={isCleaningOwners}
+        >
+          <Ionicons 
+            name={isCleaningOwners ? "hourglass" : "construct"} 
+            size={18} 
+            color="#fff" 
+          />
+          <Text style={styles.buttonText}>
+            {isCleaningOwners ? 'Cleaning...' : 'Clean Up Owner Records'}
+          </Text>
         </TouchableOpacity>
 
         <Link href="/storage" asChild>
@@ -217,5 +266,8 @@ const styles = StyleSheet.create({
   versionText: {
     fontSize: 14,
     color: '#888',
+  },
+  maintenanceButton: {
+    backgroundColor: '#4a90e2',
   },
 });

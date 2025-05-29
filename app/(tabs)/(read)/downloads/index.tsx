@@ -109,7 +109,7 @@ export default function DownloadsScreen() {
       lr: language.lr || '',
       pk: language.pk.toString(),
       alt: JSON.stringify(language.alt || []),
-      cc: JSON.stringify(language.cc || [])
+      cc: JSON.stringify(language.cc || []),
     });
 
     router.push(`/downloads/${language.lc}?${languageParams.toString()}`);

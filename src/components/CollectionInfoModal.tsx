@@ -89,7 +89,7 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
             {collection.displayName}
           </Text>
           <Text className={`text-gray-600 mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            {collection.owner}
+            {collection.owner.fullName || collection.owner.username}
           </Text>
 
           <View className="mt-4 space-y-2">

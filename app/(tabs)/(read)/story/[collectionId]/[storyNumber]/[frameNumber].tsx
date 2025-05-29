@@ -1,7 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import { useObsImage } from 'hooks/useObsImage';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -13,12 +12,7 @@ import {
   useColorScheme,
   ScrollView,
 } from 'react-native';
-import {
-  GestureHandlerRootView,
-  PanGestureHandler,
-  State,
-  Directions,
-} from 'react-native-gesture-handler';
+import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { NotesSection } from '../../../../../../src/components/CommentsSection';
@@ -40,12 +34,6 @@ export default function StoryFrameScreen() {
   const [currentFrame, setCurrentFrame] = useState<Frame | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [totalFrames, setTotalFrames] = useState(0);
-  const image = useObsImage({
-    reference: {
-      story: parseInt(storyNumber as string, 10),
-      frame: parseInt(frameNumber as string, 10),
-    },
-  });
   const [currentFrameNumber, setCurrentFrameNumber] = useState(
     frameNumber ? parseInt(frameNumber as string, 10) : 1
   );
@@ -53,6 +41,7 @@ export default function StoryFrameScreen() {
   const [showComments, setShowComments] = useState(false);
   const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large' | 'xlarge'>('medium');
   const [showFontSizeMenu, setShowFontSizeMenu] = useState(false);
+  const [allStories, setAllStories] = useState<Story[]>([]);
   const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -68,11 +57,11 @@ export default function StoryFrameScreen() {
       const frameNum = parseInt(frameNumber as string, 10);
       setCurrentFrameNumber(frameNum);
 
-      if (story && collection) {
+      if (story && collection && frames.length > 0) {
         navigateToFrame(frameNum);
       }
     }
-  }, [frameNumber]);
+  }, [frameNumber, frames]);
 
   // Effect to save reading progress whenever frame changes
   useEffect(() => {
@@ -91,45 +80,52 @@ export default function StoryFrameScreen() {
 
     try {
       setLoading(true);
+      setError(null);
       console.log('Loading story data:', { collectionId, storyNumber, frameNumber });
 
       const collectionsManager = CollectionsManager.getInstance();
-      const storyManager = StoryManager.getInstance();
-
       await collectionsManager.initialize();
-      await storyManager.initialize();
 
       // Get collection details
       console.log('Getting collection details for:', collectionId);
-      const collectionDetails = await collectionsManager.getCollectionById(collectionId as string);
+      const collectionDetails = await collectionsManager.getCollection(collectionId as string);
       console.log('Collection details:', collectionDetails);
-      setCollection(collectionDetails);
 
       if (!collectionDetails) {
         setError(`Collection not found: ${collectionId}`);
         setLoading(false);
         return;
       }
+      setCollection(collectionDetails);
 
-      // Get story details
+      // Get all stories in the collection
+      console.log('Getting all stories for collection:', collectionId);
+      const allStoriesData = await collectionsManager.getCollectionStories(collectionId as string);
+      console.log('All stories:', allStoriesData);
+      setAllStories(allStoriesData.sort((a, b) => a.storyNumber - b.storyNumber));
+
+      // Get story details using CollectionsManager
       console.log('Getting story details for:', collectionId, parseInt(storyNumber as string, 10));
-      const storyData = await storyManager.getStory(
+      const storyData = await collectionsManager.getStory(
         collectionId as string,
         parseInt(storyNumber as string, 10)
       );
+      console.log('Story data:', storyData);
 
       if (!storyData) {
         setError(`Story not found: ${storyNumber}`);
         setLoading(false);
         return;
       }
-
       setStory(storyData);
 
-      const storyFrames = await storyManager.getStoryFrames(
+      // Get story frames using CollectionsManager
+      console.log('Getting story frames for:', collectionId, parseInt(storyNumber as string, 10));
+      const storyFrames = await collectionsManager.getStoryFrames(
         collectionId as string,
         parseInt(storyNumber as string, 10)
       );
+      console.log('Story frames:', storyFrames);
 
       if (!storyFrames || storyFrames.length === 0) {
         setError('No frames found for this story');
@@ -140,10 +136,30 @@ export default function StoryFrameScreen() {
       setFrames(storyFrames);
       setTotalFrames(storyFrames.length);
 
+      // Set the current frame based on frameNumber
+      const frameNum = frameNumber ? parseInt(frameNumber as string, 10) : 1;
+      console.log('Looking for frame number:', frameNum);
+      console.log(
+        'Available frames:',
+        storyFrames.map((f) => ({ frameNumber: f.frameNumber, text: f.text.substring(0, 50) }))
+      );
+
+      const initialFrame = storyFrames.find((f) => f.frameNumber === frameNum) || storyFrames[0];
+      console.log('Initial frame:', initialFrame);
+
+      if (initialFrame) {
+        setCurrentFrame(initialFrame);
+        setCurrentFrameNumber(initialFrame.frameNumber);
+      } else {
+        setError(`Frame ${frameNum} not found`);
+        setLoading(false);
+        return;
+      }
+
       setError(null);
     } catch (err) {
       console.error('Error loading story:', err);
-      setError('Failed to load story');
+      setError(`Failed to load story: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setLoading(false);
     }
@@ -206,8 +222,8 @@ export default function StoryFrameScreen() {
     if (!collectionId || !storyNumber || !currentFrameNumber) return;
 
     try {
-      const storyManager = StoryManager.getInstance();
-      await storyManager.toggleFrameFavorite(
+      const collectionsManager = CollectionsManager.getInstance();
+      await collectionsManager.toggleFrameFavorite(
         collectionId as string,
         parseInt(storyNumber as string, 10),
         currentFrameNumber
@@ -215,7 +231,7 @@ export default function StoryFrameScreen() {
 
       // Reload the frame to get updated favorite status
       if (currentFrame) {
-        const updatedFrame = await storyManager.getFrame(
+        const updatedFrame = await collectionsManager.getFrame(
           collectionId as string,
           parseInt(storyNumber as string, 10),
           currentFrameNumber
@@ -282,15 +298,65 @@ export default function StoryFrameScreen() {
     }
   };
 
+  const getNextStory = (): Story | null => {
+    if (!allStories || !storyNumber) return null;
+
+    const currentStoryNum = parseInt(storyNumber as string, 10);
+    const currentIndex = allStories.findIndex((story) => story.storyNumber === currentStoryNum);
+
+    if (currentIndex === -1 || currentIndex === allStories.length - 1) {
+      return null; // No next story
+    }
+
+    return allStories[currentIndex + 1];
+  };
+
+  const getPreviousStory = (): Story | null => {
+    if (!allStories || !storyNumber) return null;
+
+    const currentStoryNum = parseInt(storyNumber as string, 10);
+    const currentIndex = allStories.findIndex((story) => story.storyNumber === currentStoryNum);
+
+    if (currentIndex === -1 || currentIndex === 0) {
+      return null; // No previous story
+    }
+
+    return allStories[currentIndex - 1];
+  };
+
   const goToNextFrame = () => {
     if (currentFrameNumber < totalFrames) {
       navigateToFrame(currentFrameNumber + 1);
+    } else {
+      // On last frame, try to go to next story
+      const nextStory = getNextStory();
+      if (nextStory) {
+        router.push(`/story/${encodeURIComponent(collectionId)}/${nextStory.storyNumber}/1`);
+      }
     }
   };
 
-  const goToPreviousFrame = () => {
+  const goToPreviousFrame = async () => {
     if (currentFrameNumber > 1) {
       navigateToFrame(currentFrameNumber - 1);
+    } else {
+      // On first frame, try to go to previous story's last frame
+      const previousStory = getPreviousStory();
+      if (previousStory) {
+        try {
+          const collectionsManager = CollectionsManager.getInstance();
+          const previousStoryFrames = await collectionsManager.getStoryFrames(
+            collectionId as string,
+            previousStory.storyNumber
+          );
+          const lastFrameNumber = previousStoryFrames.length;
+          router.push(
+            `/story/${encodeURIComponent(collectionId)}/${previousStory.storyNumber}/${lastFrameNumber}`
+          );
+        } catch (error) {
+          console.error('Error loading previous story frames:', error);
+        }
+      }
     }
   };
 
@@ -458,7 +524,11 @@ export default function StoryFrameScreen() {
           <View style={{ flex: 1 }} onTouchStart={() => setShowFontSizeMenu(false)}>
             <ScrollView className="flex-1">
               <View className="relative">
-                <Image source={image} style={{ width: '100%', height: 200 }} resizeMode="cover" />
+                <Image
+                  source={{ uri: currentFrame.imageUrl }}
+                  style={{ width: '100%', height: 200 }}
+                  resizeMode="cover"
+                />
 
                 {/* Markers indicator */}
                 {markers.length > 0 && (
@@ -567,20 +637,34 @@ export default function StoryFrameScreen() {
           } border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
           <TouchableOpacity
             onPress={goToPreviousFrame}
-            disabled={currentFrameNumber <= 1}
+            disabled={currentFrameNumber <= 1 && !getPreviousStory()}
             className={`rounded-full p-3 ${
-              currentFrameNumber <= 1
+              currentFrameNumber <= 1 && !getPreviousStory()
                 ? isDark
                   ? 'bg-gray-700'
                   : 'bg-gray-200'
-                : isDark
-                  ? 'bg-blue-900'
-                  : 'bg-blue-500'
+                : currentFrameNumber <= 1 && getPreviousStory()
+                  ? isDark
+                    ? 'bg-blue-700'
+                    : 'bg-blue-700'
+                  : isDark
+                    ? 'bg-blue-900'
+                    : 'bg-blue-500'
             }`}>
             <MaterialIcons
-              name="chevron-left"
+              name={
+                currentFrameNumber <= 1 && getPreviousStory()
+                  ? 'keyboard-double-arrow-left'
+                  : 'chevron-left'
+              }
               size={24}
-              color={currentFrameNumber <= 1 ? (isDark ? '#4B5563' : '#9CA3AF') : '#FFFFFF'}
+              color={
+                currentFrameNumber <= 1 && !getPreviousStory()
+                  ? isDark
+                    ? '#4B5563'
+                    : '#9CA3AF'
+                  : '#FFFFFF'
+              }
             />
           </TouchableOpacity>
 
@@ -605,21 +689,33 @@ export default function StoryFrameScreen() {
 
           <TouchableOpacity
             onPress={goToNextFrame}
-            disabled={currentFrameNumber >= totalFrames}
+            disabled={currentFrameNumber >= totalFrames && !getNextStory()}
             className={`rounded-full p-3 ${
-              currentFrameNumber >= totalFrames
+              currentFrameNumber >= totalFrames && !getNextStory()
                 ? isDark
                   ? 'bg-gray-700'
                   : 'bg-gray-200'
-                : isDark
-                  ? 'bg-blue-900'
-                  : 'bg-blue-500'
+                : currentFrameNumber >= totalFrames && getNextStory()
+                  ? isDark
+                    ? 'bg-blue-700'
+                    : 'bg-blue-700'
+                  : isDark
+                    ? 'bg-blue-900'
+                    : 'bg-blue-500'
             }`}>
             <MaterialIcons
-              name="chevron-right"
+              name={
+                currentFrameNumber >= totalFrames && getNextStory()
+                  ? 'keyboard-double-arrow-right'
+                  : 'chevron-right'
+              }
               size={24}
               color={
-                currentFrameNumber >= totalFrames ? (isDark ? '#4B5563' : '#9CA3AF') : '#FFFFFF'
+                currentFrameNumber >= totalFrames && !getNextStory()
+                  ? isDark
+                    ? '#4B5563'
+                    : '#9CA3AF'
+                  : '#FFFFFF'
               }
             />
           </TouchableOpacity>

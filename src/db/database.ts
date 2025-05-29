@@ -30,10 +30,28 @@ export const initializeDatabase = async () => {
         last_updated TEXT NOT NULL DEFAULT (datetime('now'))
       );
 
+      -- Repository Owners Table
+      CREATE TABLE IF NOT EXISTS repository_owners (
+        username TEXT PRIMARY KEY,
+        full_name TEXT,
+        email TEXT,
+        avatar_url TEXT,
+        description TEXT,
+        website TEXT,
+        location TEXT,
+        visibility TEXT NOT NULL DEFAULT 'public',
+        owner_type TEXT NOT NULL DEFAULT 'user',
+        repository_languages TEXT NOT NULL DEFAULT '[]',
+        repository_subjects TEXT NOT NULL DEFAULT '[]',
+        social_links TEXT,
+        metadata TEXT,
+        last_updated TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+
       -- Collections Table
       CREATE TABLE IF NOT EXISTS collections (
         id TEXT PRIMARY KEY,
-        owner TEXT NOT NULL,
+        owner TEXT NOT NULL REFERENCES repository_owners(username) ON DELETE CASCADE,
         language TEXT NOT NULL REFERENCES languages(lc) ON DELETE CASCADE,
         display_name TEXT NOT NULL,
         version TEXT NOT NULL,
@@ -80,6 +98,9 @@ export const initializeDatabase = async () => {
       -- Create Indexes
       CREATE INDEX IF NOT EXISTS idx_languages_gw ON languages(gw);
       CREATE INDEX IF NOT EXISTS idx_languages_lr ON languages(lr);
+      CREATE INDEX IF NOT EXISTS idx_owners_type ON repository_owners(owner_type);
+      CREATE INDEX IF NOT EXISTS idx_owners_visibility ON repository_owners(visibility);
+      CREATE INDEX IF NOT EXISTS idx_collections_owner ON collections(owner);
       CREATE INDEX IF NOT EXISTS idx_collections_language ON collections(language);
       CREATE INDEX IF NOT EXISTS idx_collections_downloaded ON collections(is_downloaded);
       CREATE INDEX IF NOT EXISTS idx_stories_favorite ON stories(is_favorite);

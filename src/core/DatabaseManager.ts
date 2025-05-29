@@ -1,13 +1,16 @@
-import { eq, and, desc, asc, like, count, or } from 'drizzle-orm';
+import { eq, and, desc, asc, like, count, or, isNotNull, ne } from 'drizzle-orm';
 import database, { initializeDatabase } from '../db/database';
 import {
   languages,
+  repositoryOwners,
   collections,
   stories,
   frames,
   frameComments,
   type Language,
   type NewLanguage,
+  type RepositoryOwner,
+  type NewRepositoryOwner,
   type Collection,
   type NewCollection,
   type Story,
@@ -163,6 +166,106 @@ export class DatabaseManager {
     return { total, withCollections, gatewayLanguages, rtlLanguages };
   }
 
+  // Repository Owner Operations
+  async saveRepositoryOwner(ownerData: NewRepositoryOwner): Promise<void> {
+    await this.initialize();
+    await database
+      .insert(repositoryOwners)
+      .values(ownerData)
+      .onConflictDoUpdate({
+        target: repositoryOwners.username,
+        set: {
+          ...ownerData,
+          lastUpdated: new Date().toISOString()
+        }
+      });
+  }
+
+  async getRepositoryOwner(username: string): Promise<RepositoryOwner | null> {
+    await this.initialize();
+    const result = await database
+      .select()
+      .from(repositoryOwners)
+      .where(eq(repositoryOwners.username, username))
+      .limit(1);
+    return result[0] || null;
+  }
+
+  async getAllRepositoryOwners(): Promise<RepositoryOwner[]> {
+    await this.initialize();
+    return await database
+      .select()
+      .from(repositoryOwners)
+      .orderBy(asc(repositoryOwners.username));
+  }
+
+  async getRepositoryOwnersByType(ownerType: 'user' | 'organization'): Promise<RepositoryOwner[]> {
+    await this.initialize();
+    return await database
+      .select()
+      .from(repositoryOwners)
+      .where(eq(repositoryOwners.ownerType, ownerType))
+      .orderBy(asc(repositoryOwners.username));
+  }
+
+  async searchRepositoryOwners(query: string): Promise<RepositoryOwner[]> {
+    await this.initialize();
+    const searchTerm = `%${query.toLowerCase()}%`;
+    return await database
+      .select()
+      .from(repositoryOwners)
+      .where(
+        or(
+          like(repositoryOwners.username, searchTerm),
+          like(repositoryOwners.fullName, searchTerm),
+          like(repositoryOwners.description, searchTerm)
+        )
+      )
+      .orderBy(asc(repositoryOwners.username));
+  }
+
+  async deleteRepositoryOwner(username: string): Promise<void> {
+    await this.initialize();
+    await database
+      .delete(repositoryOwners)
+      .where(eq(repositoryOwners.username, username));
+  }
+
+  async getRepositoryOwnerStats(): Promise<{
+    total: number;
+    users: number;
+    organizations: number;
+    withWebsite: number;
+  }> {
+    await this.initialize();
+
+    const totalResult = await database.select({ count: count() }).from(repositoryOwners);
+    const total = totalResult[0]?.count || 0;
+
+    const usersResult = await database
+      .select({ count: count() })
+      .from(repositoryOwners)
+      .where(eq(repositoryOwners.ownerType, 'user'));
+    const users = usersResult[0]?.count || 0;
+
+    const orgsResult = await database
+      .select({ count: count() })
+      .from(repositoryOwners)
+      .where(eq(repositoryOwners.ownerType, 'organization'));
+    const organizations = orgsResult[0]?.count || 0;
+
+    const withWebsiteResult = await database
+      .select({ count: count() })
+      .from(repositoryOwners)
+      .where(and(
+        isNotNull(repositoryOwners.website),
+        ne(repositoryOwners.website, '')
+      ));
+    const withWebsite = withWebsiteResult[0]?.count || 0;
+
+    return { total, users, organizations, withWebsite };
+  }
+
   // Collection Operations
   async saveCollection(collectionData: NewCollection): Promise<void> {
     await this.initialize();
@@ -202,6 +305,15 @@ export class DatabaseManager {
       .select()
       .from(collections)
       .where(eq(collections.language, languageCode))
+      .orderBy(asc(collections.displayName));
+  }
+
+  async getCollectionsByOwner(ownerUsername: string): Promise<Collection[]> {
+    await this.initialize();
+    return await database
+      .select()
+      .from(collections)
+      .where(eq(collections.owner, ownerUsername))
       .orderBy(asc(collections.displayName));
   }
 

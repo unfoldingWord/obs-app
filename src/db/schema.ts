@@ -31,12 +31,63 @@ export const languages = sqliteTable(
   })
 );
 
+// Repository Owners Table
+export const repositoryOwners = sqliteTable(
+  'repository_owners',
+  {
+    username: text('username').primaryKey(), // Owner username/organization name
+    fullName: text('full_name'), // Full display name
+    email: text('email'), // Contact email
+    avatarUrl: text('avatar_url'), // Profile avatar URL
+    description: text('description'), // Owner/organization description
+    website: text('website'), // Website URL
+    location: text('location'), // Geographic location
+    visibility: text('visibility').notNull().default('public'), // public/private
+    ownerType: text('owner_type').notNull().default('user'), // user/organization
+    repositoryLanguages: text('repository_languages', { mode: 'json' })
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'`), // Languages used in repos
+    repositorySubjects: text('repository_subjects', { mode: 'json' })
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'`), // Subjects/topics
+    socialLinks: text('social_links', { mode: 'json' })
+      .$type<{
+        twitter?: string;
+        github?: string;
+        linkedin?: string;
+        facebook?: string;
+        mastodon?: string;
+      }>(), // Social media links
+    metadata: text('metadata', { mode: 'json' })
+      .$type<{
+        bio?: string;
+        company?: string;
+        hireable?: boolean;
+        publicRepos?: number;
+        publicGists?: number;
+        followers?: number;
+        following?: number;
+        createdAt?: string;
+        updatedAt?: string;
+      }>(), // Additional metadata from API
+    lastUpdated: text('last_updated')
+      .notNull()
+      .default(sql`(datetime('now'))`),
+  },
+  (table) => ({
+    ownerTypeIdx: index('idx_owners_type').on(table.ownerType),
+    visibilityIdx: index('idx_owners_visibility').on(table.visibility),
+  })
+);
+
 // Collections Table
 export const collections = sqliteTable(
   'collections',
   {
     id: text('id').primaryKey(), // Format: "owner/repository-name"
-    owner: text('owner').notNull(),
+    owner: text('owner').notNull().references(() => repositoryOwners.username, { onDelete: 'cascade' }),
     language: text('language')
       .notNull()
       .references(() => languages.lc, { onDelete: 'cascade' }),
@@ -47,13 +98,32 @@ export const collections = sqliteTable(
       .notNull()
       .default(sql`(datetime('now'))`),
     isDownloaded: integer('is_downloaded', { mode: 'boolean' }).notNull().default(false),
-    metadata: text('metadata', { mode: 'json' }).$type<{
-      description?: string;
-      targetAudience?: string;
-      thumbnail?: string;
-    }>(),
+    metadata: text('metadata', { mode: 'json' })
+      .$type<{
+        description?: string;
+        targetAudience?: string;
+        thumbnail?: string;
+        checking?: {
+          checkingEntity?: string[];
+          checkingLevel?: string;
+        };
+        publisher?: string;
+        rights?: string;
+        subject?: string;
+        contributor?: string[];
+        creator?: string;
+        issued?: string;
+        modified?: string;
+        relation?: string[];
+        source?: Array<{
+          identifier: string;
+          language: string;
+          version: string;
+        }>;
+      }>(),
   },
   (table) => ({
+    ownerIdx: index('idx_collections_owner').on(table.owner),
     languageIdx: index('idx_collections_language').on(table.language),
     isDownloadedIdx: index('idx_collections_downloaded').on(table.isDownloaded),
   })
@@ -125,6 +195,9 @@ export const frameComments = sqliteTable(
 // Export types
 export type Language = typeof languages.$inferSelect;
 export type NewLanguage = typeof languages.$inferInsert;
+
+export type RepositoryOwner = typeof repositoryOwners.$inferSelect;
+export type NewRepositoryOwner = typeof repositoryOwners.$inferInsert;
 
 export type Collection = typeof collections.$inferSelect;
 export type NewCollection = typeof collections.$inferInsert;

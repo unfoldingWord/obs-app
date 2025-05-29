@@ -40,6 +40,11 @@ export default function SearchScreen() {
     }
   };
 
+  const handleClear = () => {
+    setSearchQuery('');
+    setResults([]);
+  };
+
   const renderResult = ({ item }: { item: SearchResult }) => (
     <TouchableOpacity
       onPress={() => router.push(`/story/${encodeURIComponent(item.collectionId)}/${item.storyNumber}/${item.frameNumber}`)}
@@ -67,16 +72,29 @@ export default function SearchScreen() {
           Search Stories
         </Text>
         <View className="flex-row mt-4">
-          <TextInput
-            className={`flex-1 p-3 rounded-lg ${
-              isDark ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-900'
-            }`}
-            placeholder="Search for text in stories..."
-            placeholderTextColor={isDark ? '#9CA3AF' : '#6B7280'}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            onSubmitEditing={handleSearch}
-          />
+          <View className="flex-1 relative">
+            <TextInput
+              className={`p-3 rounded-lg pr-10 ${
+                isDark ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-900'
+              }`}
+              placeholder="Search for text in stories..."
+              placeholderTextColor={isDark ? '#9CA3AF' : '#6B7280'}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              onSubmitEditing={handleSearch}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity
+                onPress={handleClear}
+                className="absolute right-2 top-3 p-1">
+                <MaterialIcons
+                  name="clear"
+                  size={20}
+                  color={isDark ? '#9CA3AF' : '#6B7280'}
+                />
+              </TouchableOpacity>
+            )}
+          </View>
           <TouchableOpacity
             onPress={handleSearch}
             className={`ml-2 p-3 rounded-lg ${isDark ? 'bg-blue-600' : 'bg-blue-500'}`}>

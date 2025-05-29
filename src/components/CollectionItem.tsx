@@ -81,11 +81,8 @@ export function CollectionItem({
           <Text className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
             {item.displayName}
           </Text>
-          <Text className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            ID: {item.id}
-          </Text>
           <Text className={`mt-1 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-            Owner: {item.owner}
+            {item.owner.fullName || item.owner.username}
           </Text>
         </View>
         <TouchableOpacity
