@@ -22,6 +22,7 @@ import {
   Story,
   Frame,
 } from '../../../../../../src/core/CollectionsManager';
+import { UnifiedLanguagesManager } from '../../../../../../src/core/UnifiedLanguagesManager';
 import { StoryManager, UserMarker } from '../../../../../../src/core/storyManager';
 import { useObsImage } from '../../../../../../src/hooks/useObsImage';
 
@@ -43,6 +44,7 @@ export default function StoryFrameScreen() {
   const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large' | 'xlarge'>('medium');
   const [showFontSizeMenu, setShowFontSizeMenu] = useState(false);
   const [allStories, setAllStories] = useState<Story[]>([]);
+  const [isRTL, setIsRTL] = useState(false);
   const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -112,6 +114,14 @@ export default function StoryFrameScreen() {
       const allStoriesData = await collectionsManager.getCollectionStories(collectionId as string);
       console.log('All stories:', allStoriesData);
       setAllStories(allStoriesData.sort((a, b) => a.storyNumber - b.storyNumber));
+
+      // Get language direction
+      console.log('Getting language direction for:', collectionDetails.language);
+      const languagesManager = UnifiedLanguagesManager.getInstance();
+      await languagesManager.initialize();
+      const languageData = await languagesManager.getLanguage(collectionDetails.language);
+      console.log('Language data:', languageData);
+      setIsRTL(languageData?.ld === 'rtl');
 
       // Get story details using CollectionsManager
       console.log('Getting story details for:', collectionId, parseInt(storyNumber as string, 10));
@@ -377,11 +387,23 @@ export default function StoryFrameScreen() {
       const swipeThreshold = 50; // Minimum distance for a swipe
 
       if (translationX > swipeThreshold) {
-        // Swipe right - go to previous frame
-        goToPreviousFrame();
+        // Swipe right
+        if (isRTL) {
+          // In RTL, swipe right goes to next
+          goToNextFrame();
+        } else {
+          // In LTR, swipe right goes to previous
+          goToPreviousFrame();
+        }
       } else if (translationX < -swipeThreshold) {
-        // Swipe left - go to next frame
-        goToNextFrame();
+        // Swipe left
+        if (isRTL) {
+          // In RTL, swipe left goes to previous
+          goToPreviousFrame();
+        } else {
+          // In LTR, swipe left goes to next
+          goToNextFrame();
+        }
       }
     }
   };
@@ -448,22 +470,27 @@ export default function StoryFrameScreen() {
         <View
           className={`flex-row items-center justify-between px-4 py-3 ${
             isDark ? 'bg-gray-800' : 'bg-white'
-          } border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+          } border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}
+          style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}>
           <TouchableOpacity
             onPress={() => router.push(`/stories?collection=${encodeURIComponent(collectionId)}`)}
             className="p-2">
-            <MaterialIcons name="arrow-back" size={24} color={isDark ? '#FFFFFF' : '#000000'} />
+            <MaterialIcons
+              name={isRTL ? 'arrow-forward' : 'arrow-back'}
+              size={24}
+              color={isDark ? '#FFFFFF' : '#000000'}
+            />
           </TouchableOpacity>
 
           <Text
             className={`flex-1 text-center text-lg font-semibold ${
               isDark ? 'text-white' : 'text-gray-900'
             }`}
-            numberOfLines={1}>
+            style={{ textAlign: isRTL ? 'right' : 'left', paddingHorizontal: 16 }}>
             {story?.title || `Story ${storyNumber}`}
           </Text>
 
-          <View className="flex-row">
+          <View className="flex-row" style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}>
             <TouchableOpacity
               onPress={() => setShowFontSizeMenu(!showFontSizeMenu)}
               className="p-2">
@@ -541,20 +568,23 @@ export default function StoryFrameScreen() {
 
                 {/* Markers indicator */}
                 {markers.length > 0 && (
-                  <View className="absolute right-2 top-2">
+                  <View className={`absolute top-2 ${isRTL ? 'left-2' : 'right-2'}`}>
                     <View
                       className={`flex-row items-center rounded-full px-2 py-1 ${
                         isDark ? 'bg-black/50' : 'bg-white/80'
-                      }`}>
+                      }`}
+                      style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}>
                       <MaterialIcons
                         name="bookmark"
                         size={16}
                         color={isDark ? '#FFD700' : '#F59E0B'}
                       />
                       <Text
-                        className={`ml-1 text-xs font-medium ${
-                          isDark ? 'text-white' : 'text-gray-900'
-                        }`}>
+                        className={`text-xs font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}
+                        style={{
+                          marginLeft: isRTL ? 0 : 4,
+                          marginRight: isRTL ? 4 : 0,
+                        }}>
                         {markers.length}
                       </Text>
                     </View>
@@ -563,9 +593,12 @@ export default function StoryFrameScreen() {
               </View>
 
               <View className="p-4">
-                <View className="mb-2 flex-row items-center justify-between">
+                <View
+                  className="mb-2 flex-row items-center justify-between"
+                  style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}>
                   <Text
-                    className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                    className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
+                    style={{ textAlign: isRTL ? 'right' : 'left' }}>
                     Frame {currentFrameNumber} of {totalFrames}
                   </Text>
                   {currentFrame?.isFavorite && (
@@ -574,7 +607,8 @@ export default function StoryFrameScreen() {
                 </View>
 
                 <Text
-                  className={`${getFontSizeClass()} leading-relaxed ${isDark ? 'text-white' : 'text-gray-800'}`}>
+                  className={`${getFontSizeClass()} leading-relaxed ${isDark ? 'text-white' : 'text-gray-800'}`}
+                  style={{ textAlign: isRTL ? 'right' : 'left' }}>
                   {currentFrame.text}
                 </Text>
 
@@ -582,21 +616,31 @@ export default function StoryFrameScreen() {
                 {markers.length > 0 && (
                   <View className="mt-4">
                     <Text
-                      className={`mb-2 text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                      className={`mb-2 text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
+                      style={{ textAlign: isRTL ? 'right' : 'left' }}>
                       Bookmarks ({markers.length})
                     </Text>
                     {markers.map((marker) => (
                       <View
                         key={marker.id}
                         className={`mb-2 rounded-lg p-3 ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
-                        <View className="flex-row items-center justify-between">
-                          <View className="flex-1 flex-row items-center">
+                        <View
+                          className="flex-row items-center justify-between"
+                          style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+                          <View
+                            className="flex-1 flex-row items-center"
+                            style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}>
                             <View
                               className="mr-2 h-3 w-3 rounded-full"
-                              style={{ backgroundColor: marker.color || '#FFD700' }}
+                              style={{
+                                backgroundColor: marker.color || '#FFD700',
+                                marginRight: isRTL ? 0 : 8,
+                                marginLeft: isRTL ? 8 : 0,
+                              }}
                             />
                             <Text
-                              className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                              className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}
+                              style={{ textAlign: isRTL ? 'right' : 'left' }}>
                               {new Date(marker.timestamp).toLocaleDateString()}
                             </Text>
                           </View>
@@ -615,7 +659,8 @@ export default function StoryFrameScreen() {
                         </View>
                         {marker.note && (
                           <Text
-                            className={`mt-1 text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                            className={`mt-1 text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}
+                            style={{ textAlign: isRTL ? 'right' : 'left' }}>
                             {marker.note}
                           </Text>
                         )}
@@ -643,7 +688,9 @@ export default function StoryFrameScreen() {
         <View
           className={`flex-row items-center justify-between p-4 ${
             isDark ? 'bg-gray-800' : 'bg-white'
-          } border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+          } border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}
+          style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+          {/* Previous Button */}
           <TouchableOpacity
             onPress={goToPreviousFrame}
             disabled={currentFrameNumber <= 1 && !getPreviousStory()}
@@ -663,8 +710,12 @@ export default function StoryFrameScreen() {
             <MaterialIcons
               name={
                 currentFrameNumber <= 1 && getPreviousStory()
-                  ? 'keyboard-double-arrow-left'
-                  : 'chevron-left'
+                  ? isRTL
+                    ? 'keyboard-double-arrow-right'
+                    : 'keyboard-double-arrow-left'
+                  : isRTL
+                    ? 'keyboard-arrow-right'
+                    : 'keyboard-arrow-left'
               }
               size={24}
               color={
@@ -677,8 +728,8 @@ export default function StoryFrameScreen() {
             />
           </TouchableOpacity>
 
-          <View className="flex-row">
-            {/* Frame indicators */}
+          {/* Frame indicators */}
+          <View className="flex-row" style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}>
             {[...Array(totalFrames)].map((_, index) => (
               <TouchableOpacity
                 key={index}
@@ -696,6 +747,7 @@ export default function StoryFrameScreen() {
             ))}
           </View>
 
+          {/* Next Button */}
           <TouchableOpacity
             onPress={goToNextFrame}
             disabled={currentFrameNumber >= totalFrames && !getNextStory()}
@@ -715,8 +767,12 @@ export default function StoryFrameScreen() {
             <MaterialIcons
               name={
                 currentFrameNumber >= totalFrames && getNextStory()
-                  ? 'keyboard-double-arrow-right'
-                  : 'chevron-right'
+                  ? isRTL
+                    ? 'keyboard-double-arrow-left'
+                    : 'keyboard-double-arrow-right'
+                  : isRTL
+                    ? 'keyboard-arrow-left'
+                    : 'keyboard-arrow-right'
               }
               size={24}
               color={

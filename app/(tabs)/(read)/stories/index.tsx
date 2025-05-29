@@ -21,6 +21,8 @@ import {
   Story as CollectionStory,
 } from '../../../../src/core/CollectionsManager';
 import { StoryManager, UserProgress } from '../../../../src/core/storyManager';
+import { UnifiedLanguagesManager } from '../../../../src/core/UnifiedLanguagesManager';
+import { useObsImage } from '../../../../src/hooks/useObsImage';
 
 export default function StoriesScreen() {
   const [currentCollection, setCurrentCollection] = useState<Collection | null>(null);
@@ -29,6 +31,7 @@ export default function StoriesScreen() {
   const [loading, setLoading] = useState(true);
   const [showCollectionSelector, setShowCollectionSelector] = useState(false);
   const [progressMap, setProgressMap] = useState<Map<number, UserProgress>>(new Map());
+  const [isRTL, setIsRTL] = useState(false);
 
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -51,6 +54,18 @@ export default function StoriesScreen() {
       setProgressMap(progressMap);
     } catch (error) {
       console.error('Error loading progress:', error);
+    }
+  }, []);
+
+  const detectLanguageDirection = useCallback(async (collection: Collection) => {
+    try {
+      const languagesManager = UnifiedLanguagesManager.getInstance();
+      await languagesManager.initialize();
+      const languageData = await languagesManager.getLanguage(collection.language);
+      setIsRTL(languageData?.ld === 'rtl');
+    } catch (error) {
+      console.error('Error detecting language direction:', error);
+      setIsRTL(false);
     }
   }, []);
 
@@ -127,8 +142,9 @@ export default function StoriesScreen() {
   useEffect(() => {
     if (currentCollection) {
       loadStories(currentCollection.id);
+      detectLanguageDirection(currentCollection);
     }
-  }, [currentCollection, loadStories]);
+  }, [currentCollection, loadStories, detectLanguageDirection]);
 
   // Refresh data when screen comes into focus
   useFocusEffect(
@@ -164,6 +180,31 @@ export default function StoriesScreen() {
     }
   };
 
+  const StoryThumbnail = ({ storyNumber }: { storyNumber: number }) => {
+    const thumbnailImage = useObsImage({
+      reference: {
+        story: storyNumber,
+        frame: 1, // Always use the first frame for thumbnail
+      },
+    });
+
+    return (
+      <View style={[
+        styles.thumbnailContainer,
+        { 
+          marginRight: isRTL ? 0 : 16,
+          marginLeft: isRTL ? 16 : 0
+        }
+      ]}>
+        <Image
+          source={thumbnailImage}
+          style={styles.thumbnail}
+          resizeMode="cover"
+        />
+      </View>
+    );
+  };
+
   const renderStoryItem = ({ item }: { item: CollectionStory }) => {
     const progressPercent = getProgressPercentage(item.storyNumber);
 
@@ -172,17 +213,26 @@ export default function StoriesScreen() {
         style={[
           styles.storyCard,
           isDark ? { backgroundColor: '#1F2937' } : { backgroundColor: '#fff' },
+          { flexDirection: isRTL ? 'row-reverse' : 'row' }
         ]}
         onPress={() =>
           router.push(
             `/story/${encodeURIComponent(currentCollection?.id || '')}/${item.storyNumber}/1`
           )
         }>
+        
+        {/* Story Thumbnail */}
+        <StoryThumbnail storyNumber={item.storyNumber} />
+
         {/* Story Content */}
         <View style={styles.storyInfo}>
-          <View style={styles.storyHeader}>
+          <View style={[styles.storyHeader, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
             <Text
-              style={[styles.storyNumber, isDark ? { color: '#9CA3AF' } : { color: '#6B7280' }]}>
+              style={[
+                styles.storyNumber, 
+                isDark ? { color: '#9CA3AF' } : { color: '#6B7280' },
+                { textAlign: isRTL ? 'right' : 'left' }
+              ]}>
               Story {item.storyNumber}
             </Text>
             <TouchableOpacity
@@ -199,25 +249,39 @@ export default function StoriesScreen() {
             </TouchableOpacity>
           </View>
 
-          <Text style={[styles.storyTitle, isDark ? { color: '#fff' } : { color: '#000' }]}>
+          <Text style={[
+            styles.storyTitle, 
+            isDark ? { color: '#fff' } : { color: '#000' },
+            { textAlign: isRTL ? 'right' : 'left' }
+          ]}>
             {item.title}
           </Text>
 
           {/* Progress Bar */}
           {progressPercent > 0 && (
-            <View style={styles.progressContainer}>
-              <View style={styles.progressBar}>
+            <View style={[styles.progressContainer, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+              <View style={[
+                styles.progressBar, 
+                { flexDirection: isRTL ? 'row-reverse' : 'row' }
+              ]}>
                 <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
               </View>
               <Text
-                style={[styles.progressText, isDark ? { color: '#9CA3AF' } : { color: '#6B7280' }]}>
+                style={[
+                  styles.progressText, 
+                  isDark ? { color: '#9CA3AF' } : { color: '#6B7280' },
+                  { 
+                    textAlign: isRTL ? 'left' : 'right',
+                    marginLeft: isRTL ? 0 : 8,
+                    marginRight: isRTL ? 8 : 0
+                  }
+                ]}>
                 {progressPercent}%
               </Text>
             </View>
           )}
         </View>
 
-        <MaterialIcons name="chevron-right" size={24} color={isDark ? '#9CA3AF' : '#6B7280'} />
       </TouchableOpacity>
     );
   };
@@ -228,7 +292,11 @@ export default function StoriesScreen() {
         styles.collectionSelector,
         isDark ? { backgroundColor: '#374151' } : { backgroundColor: '#fff' },
       ]}>
-      <Text style={[styles.selectorTitle, isDark ? { color: '#fff' } : { color: '#000' }]}>
+      <Text style={[
+        styles.selectorTitle, 
+        isDark ? { color: '#fff' } : { color: '#000' },
+        { textAlign: isRTL ? 'right' : 'left' }
+      ]}>
         Select Collection
       </Text>
       {collections.map((collection) => (
@@ -246,6 +314,7 @@ export default function StoriesScreen() {
                 styles.collectionOptionText,
                 isDark ? { color: '#fff' } : { color: '#000' },
                 currentCollection?.id === collection.id && { fontWeight: 'bold' },
+                { textAlign: isRTL ? 'right' : 'left' }
               ]}>
               {collection.displayName}
             </Text>
@@ -253,6 +322,7 @@ export default function StoriesScreen() {
               style={[
                 styles.collectionLanguage,
                 isDark ? { color: '#9CA3AF' } : { color: '#6B7280' },
+                { textAlign: isRTL ? 'right' : 'left' }
               ]}>
               {collection.language}
             </Text>
@@ -294,15 +364,20 @@ export default function StoriesScreen() {
         style={[
           styles.header,
           isDark ? { backgroundColor: '#1F2937' } : { backgroundColor: '#3B82F6' },
+          { flexDirection: isRTL ? 'row-reverse' : 'row' }
         ]}>
         <Pressable onPress={() => router.push('/(tabs)/(read)')} style={styles.backButton}>
-          <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
+          <MaterialIcons 
+            name={isRTL ? "arrow-forward" : "arrow-back"} 
+            size={24} 
+            color="#FFFFFF" 
+          />
         </Pressable>
 
         <TouchableOpacity
-          style={styles.collectionSelectorButton}
+          style={[styles.collectionSelectorButton, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}
           onPress={() => setShowCollectionSelector(true)}>
-          <Text style={styles.headerTitle} numberOfLines={1}>
+          <Text style={[styles.headerTitle, { textAlign: isRTL ? 'right' : 'left' }]} numberOfLines={1}>
             {currentCollection?.displayName || 'Select Collection'}
           </Text>
           <MaterialIcons name="arrow-drop-down" size={24} color="#fff" />
@@ -320,7 +395,11 @@ export default function StoriesScreen() {
           <View style={styles.centerContent}>
             <MaterialIcons name="library-books" size={48} color={isDark ? '#4B5563' : '#9CA3AF'} />
             <Text
-              style={{ color: isDark ? '#9CA3AF' : '#4B5563', marginTop: 16, textAlign: 'center' }}>
+              style={{ 
+                color: isDark ? '#9CA3AF' : '#4B5563', 
+                marginTop: 16, 
+                textAlign: 'center' 
+              }}>
               No stories found in this collection
             </Text>
             <TouchableOpacity
@@ -329,7 +408,7 @@ export default function StoriesScreen() {
                 isDark ? { backgroundColor: '#1E40AF' } : { backgroundColor: '#3B82F6' },
               ]}
               onPress={() => router.push('/downloads')}>
-              <Text style={{ color: '#fff' }}>Download Collections</Text>
+              <Text style={{ color: '#fff', textAlign: 'center' }}>Download Collections</Text>
             </TouchableOpacity>
           </View>
         }
@@ -465,5 +544,15 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 6,
+  },
+  thumbnailContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 8,
+  },
+  thumbnail: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 8,
   },
 });
