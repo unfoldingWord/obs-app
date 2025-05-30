@@ -10,6 +10,7 @@ import {
   StatusBar,
   useColorScheme,
   Alert,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -141,93 +142,136 @@ export default function ReadScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
+      <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
         <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={isDark ? '#60A5FA' : '#3B82F6'} />
-          <Text className={`mt-4 text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            Loading...
-          </Text>
+          <ActivityIndicator size="large" color={isDark ? '#FFFFFF' : '#000000'} />
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
+    <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
-      <FlatList
-        data={collections}
-        renderItem={({ item }) => (
-          <CollectionItem
-            item={item}
-            onPress={handleSelectCollection}
-            onCollectionDeleted={refreshData}
-            isDark={isDark}
-          />
-        )}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: 16 }}
-        ListHeaderComponent={
-          <>
-            {collections.length > 0 && lastReadProgress ? (
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        {/* Hero Section */}
+        <View className="relative">
+          {lastReadProgress ? (
+            <View className="px-6 pb-6 pt-8">
+              <View className="mb-6 flex-row items-center">
+                <MaterialIcons name="history" size={28} color={isDark ? '#FFFFFF' : '#000000'} />
+                <View
+                  className={`ml-3 flex-row items-center rounded-full px-3 py-1 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                  <MaterialIcons name="schedule" size={16} color={isDark ? '#9CA3AF' : '#6B7280'} />
+                  <Text
+                    className={`ml-2 text-sm font-medium ${isDark ? 'text-white' : 'text-black'}`}>
+                    {new Date(lastReadProgress.timestamp).toLocaleDateString()}
+                  </Text>
+                </View>
+              </View>
               <ContinueReading
                 lastReadProgress={lastReadProgress}
                 onPress={handleContinueReading}
                 isDark={isDark}
               />
-            ) : (
-              // Show prominent download CTA when no reading progress
-              <View className="mb-6">
-                <Text
-                  className={`mb-4 text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  Get Started
-                </Text>
-                <TouchableOpacity
-                  onPress={() => router.push('/downloads')}
-                  className={`rounded-lg p-6 ${isDark ? 'bg-blue-900' : 'bg-blue-600'} shadow-lg`}>
-                  <View className="items-center">
-                    <MaterialIcons name="library-add" size={48} color="white" className="mb-2" />
-                    <Text className="text-center text-xl font-bold text-white">
-                      Download Your First Collection
-                    </Text>
-                    <Text className="mt-2 text-center text-sm text-blue-100">
-                      Choose from Bible stories in different languages
-                    </Text>
-                  </View>
-                </TouchableOpacity>
+            </View>
+          ) : (
+            <View className="px-6 pb-8 pt-12">
+              <View className="mb-8 flex-row items-center justify-center">
+                <MaterialIcons
+                  name="auto-stories"
+                  size={48}
+                  color={isDark ? '#FFFFFF' : '#000000'}
+                />
+              </View>
+
+              {/* Hero CTA */}
+              <TouchableOpacity
+                onPress={() => router.push('/downloads')}
+                className={`rounded-3xl p-6 ${isDark ? 'bg-white' : 'bg-black'} shadow-xl`}>
+                <View className="flex-row items-center justify-center">
+                  <MaterialIcons name="download" size={32} color={isDark ? '#000000' : '#FFFFFF'} />
+                </View>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        {/* Collections Section */}
+        {collections.length > 0 && (
+          <>
+            {/* Divider */}
+            {lastReadProgress && (
+              <View className="mb-8 px-6">
+                <View className={`h-0.5 ${isDark ? 'bg-gray-700' : 'bg-gray-300'} shadow-sm`} />
               </View>
             )}
-          </>
-        }
-        ListEmptyComponent={
-          !lastReadProgress || !collections.length ? null : ( // Don't show if we already showed the prominent CTA above
-            <View className="items-center justify-center py-8">
-              <Text className={`text-center text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                No collections downloaded yet
-              </Text>
-            </View>
-          )
-        }
-      />
 
-      {/* Secondary Download Button - only show when user has reading progress */}
-      {lastReadProgress && collections.length > 0 && (
-        <View className="p-4">
-          <TouchableOpacity
-            onPress={() => router.push('/downloads')}
-            className={`rounded-lg p-3 ${isDark ? 'bg-gray-700' : 'bg-gray-100'} border ${isDark ? 'border-gray-600' : 'border-gray-300'}`}>
-            <View className="flex-row items-center justify-center">
-              <MaterialIcons name="add" size={20} color={isDark ? '#9CA3AF' : '#6B7280'} />
-              <Text
-                className={`ml-2 text-center font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                Download More Collections
-              </Text>
+            <View className="px-6 pb-8">
+              <View className="mb-6 flex-row items-center justify-between">
+                <View className="flex-row items-center">
+                  <MaterialIcons
+                    name="library-books"
+                    size={28}
+                    color={isDark ? '#FFFFFF' : '#000000'}
+                  />
+                  <View
+                    className={`ml-3 rounded-full px-3 py-1 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                    <Text className={`text-sm font-medium ${isDark ? 'text-white' : 'text-black'}`}>
+                      {collections.length}
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  onPress={() => router.push('/downloads')}
+                  className={`rounded-full p-3 ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
+                  <MaterialIcons name="add" size={24} color={isDark ? '#FFFFFF' : '#000000'} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Collections Grid */}
+              <View className="space-y-4">
+                {collections.map((item) => (
+                  <CollectionItem
+                    key={item.id}
+                    item={item}
+                    onPress={handleSelectCollection}
+                    onCollectionDeleted={refreshData}
+                    isDark={isDark}
+                  />
+                ))}
+              </View>
             </View>
-          </TouchableOpacity>
-        </View>
-      )}
+          </>
+        )}
+
+        {/* Empty State for Collections */}
+        {collections.length === 0 && lastReadProgress && (
+          <>
+            {/* Divider */}
+            <View className="mb-8 px-6">
+              <View className={`h-0.5 ${isDark ? 'bg-gray-700' : 'bg-gray-300'} shadow-sm`} />
+            </View>
+
+            <View
+              className={`rounded-3xl p-12 ${isDark ? 'bg-gray-900' : 'bg-gray-50'} border-2 border-dashed ${isDark ? 'border-gray-600' : 'border-gray-400'} shadow-inner`}>
+              <View className="items-center">
+                <MaterialIcons name="download" size={64} color={isDark ? '#6B7280' : '#9CA3AF'} />
+                <TouchableOpacity
+                  onPress={() => router.push('/downloads')}
+                  className={`mt-8 rounded-2xl p-4 ${isDark ? 'bg-white' : 'bg-black'} shadow-lg`}>
+                  <MaterialIcons name="add" size={24} color={isDark ? '#000000' : '#FFFFFF'} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </>
+        )}
+
+        {/* Bottom spacing */}
+        <View className="h-8" />
+      </ScrollView>
     </SafeAreaView>
   );
 }

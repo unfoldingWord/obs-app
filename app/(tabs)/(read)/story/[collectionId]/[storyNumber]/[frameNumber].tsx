@@ -19,6 +19,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { NotesSection } from '../../../../../../src/components/CommentsSection';
+import { FrameBadge } from '../../../../../../src/components/FrameBadge';
 import {
   CollectionsManager,
   Collection,
@@ -632,16 +633,13 @@ export default function StoryFrameScreen() {
           </View>
 
           <View className="p-4">
-            <View
-              className="mb-2 flex-row items-center justify-between"
-              style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-              <Text
-                className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
-                style={{ textAlign: isRTL ? 'right' : 'left' }}>
-                Frame {frame.frameNumber} of {totalFrames}
-              </Text>
-              {frame?.isFavorite && <MaterialIcons name="favorite" size={20} color="#EF4444" />}
-            </View>
+            <FrameBadge
+              storyNumber={parseInt(storyNumber as string, 10)}
+              frameNumber={frame.frameNumber}
+              isFavorite={frame?.isFavorite}
+              isRTL={isRTL}
+              size="medium"
+            />
 
             <Text
               className={`${getFontSizeClass()} leading-relaxed ${isDark ? 'text-white' : 'text-gray-800'}`}

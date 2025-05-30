@@ -1,11 +1,12 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { hashStringToNumber } from 'core/hashStringToNumber';
 import { useObsImage } from 'hooks/useObsImage';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, Image, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 
 import { CollectionInfoModal } from './CollectionInfoModal';
 import { Collection, CollectionsManager } from '../core/CollectionsManager';
+import { UnifiedLanguagesManager } from '../core/UnifiedLanguagesManager';
 
 interface CollectionItemProps {
   item: Collection;
@@ -22,10 +23,36 @@ export function CollectionItem({
 }: CollectionItemProps) {
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [languageName, setLanguageName] = useState<string>('');
+  const [isRTL, setIsRTL] = useState(false);
 
   const image = useObsImage({
     reference: { story: hashStringToNumber(item.id), frame: 1 },
   });
+
+  useEffect(() => {
+    const loadLanguageData = async () => {
+      try {
+        const languagesManager = UnifiedLanguagesManager.getInstance();
+        await languagesManager.initialize();
+
+        const languageData = await languagesManager.getLanguage(item.language);
+        if (languageData) {
+          setLanguageName(languageData.ln || item.language);
+          setIsRTL(languageData.ld === 'rtl');
+        } else {
+          setLanguageName(item.language);
+          setIsRTL(false);
+        }
+      } catch (error) {
+        console.error('Error loading language data:', error);
+        setLanguageName(item.language);
+        setIsRTL(false);
+      }
+    };
+
+    loadLanguageData();
+  }, [item.language]);
 
   const handleShowInfo = () => {
     setShowInfoModal(true);
@@ -71,35 +98,55 @@ export function CollectionItem({
     <>
       <TouchableOpacity
         onPress={() => onPress(item)}
-        className={`m-2 flex-row items-center rounded-lg p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-sm`}>
+        className={`mb-4 flex-row items-center rounded-xl p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-sm border ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
         <Image
           source={image}
-          style={{ width: 64, height: 64, borderRadius: 8, marginRight: 16 }}
+          style={{
+            width: 64,
+            height: 64,
+            borderRadius: 8,
+            marginRight: 16,
+          }}
           resizeMode="cover"
         />
         <View style={{ flex: 1 }}>
-          <Text className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            {item.displayName}
-          </Text>
-          <Text className={`mt-1 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-            {item.owner.fullName || item.owner.username}
-          </Text>
+          <View className="flex-row items-center justify-between">
+            <View style={{ flex: 1, paddingRight: 16 }}>
+              <Text
+                className={`text-base font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}
+                style={{ textAlign: isRTL ? 'right' : 'left' }}
+                numberOfLines={1}>
+                {item.displayName}
+              </Text>
+              <View
+                className="mt-2"
+                style={{
+                  alignItems: isRTL ? 'flex-end' : 'flex-start',
+                }}>
+                <Text
+                  className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
+                  style={{ textAlign: isRTL ? 'right' : 'left' }}
+                  numberOfLines={1}>
+                  {item.owner.fullName || item.owner.username}
+                </Text>
+                <Text
+                  className={`mt-1 text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
+                  style={{ textAlign: isRTL ? 'right' : 'left' }}
+                  numberOfLines={1}>
+                  {languageName} ({item.language})
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              onPress={(e) => {
+                e.stopPropagation();
+                handleShowInfo();
+              }}
+              className={`rounded-full p-2 ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
+              <MaterialIcons name="info" size={16} color={isDark ? '#9CA3AF' : '#6B7280'} />
+            </TouchableOpacity>
+          </View>
         </View>
-        <TouchableOpacity
-          onPress={(e) => {
-            e.stopPropagation();
-            handleShowInfo();
-          }}
-          className={`mr-2 rounded-full p-2 ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
-          <MaterialIcons name="info" size={16} color={isDark ? '#9CA3AF' : '#6B7280'} />
-        </TouchableOpacity>
-
-        <MaterialIcons
-          name="chevron-right"
-          size={24}
-          color={isDark ? '#60A5FA' : '#3B82F6'}
-          style={{ marginLeft: 8 }}
-        />
       </TouchableOpacity>
 
       <CollectionInfoModal

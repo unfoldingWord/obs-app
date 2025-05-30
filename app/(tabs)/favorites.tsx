@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CollectionsManager, Story, Frame } from '../../src/core/CollectionsManager';
 import { CommentsManager, FrameComment } from '../../src/core/CommentsManager';
 import { StoryManager, UserMarker } from '../../src/core/storyManager';
+import { FrameBadge } from '../../src/components/FrameBadge';
 
 interface FavoriteStory extends Story {
   collectionDisplayName?: string;
@@ -38,8 +39,8 @@ interface FavoriteComment extends FrameComment {
 }
 
 export default function FavoritesScreen() {
-  const [activeTab, setActiveTab] = useState<'stories' | 'frames' | 'markers' | 'comments'>(
-    'stories'
+  const [activeTab, setActiveTab] = useState<'favorites' | 'markers' | 'comments'>(
+    'favorites'
   );
   const [loading, setLoading] = useState(true);
   const [favoriteStories, setFavoriteStories] = useState<FavoriteStory[]>([]);
@@ -49,6 +50,12 @@ export default function FavoritesScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+
+  // Combine and sort favorites by timestamp (most recent first)
+  const combinedFavorites = [...favoriteStories.map(story => ({ ...story, type: 'story' as const })), ...favoriteFrames.map(frame => ({ ...frame, type: 'frame' as const }))].sort((a, b) => {
+    // Sort by most recently added (you might need to add timestamps to your data)
+    return 0; // For now, keep original order
+  });
 
   const loadFavoritesData = useCallback(async () => {
     try {
@@ -262,17 +269,25 @@ export default function FavoritesScreen() {
   const renderFavoriteStory = ({ item }: { item: FavoriteStory }) => (
     <TouchableOpacity
       onPress={() => navigateToStory(item)}
-      className={`m-2 overflow-hidden rounded-lg ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-sm`}>
-      <Image source={{ uri: item.thumbnailUrl }} className="h-32 w-full" />
+      className={`mx-4 mb-6 overflow-hidden rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-lg border ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
+      <View className="relative">
+        <Image source={{ uri: item.thumbnailUrl }} className="h-48 w-full" resizeMode="cover" />
+        {/* Story badge with icon and number */}
+        <View className={`absolute top-3 right-3 flex-row items-center rounded-full px-3 py-2 ${isDark ? 'bg-blue-600/90' : 'bg-blue-500/90'}`}>
+          <MaterialIcons name="menu-book" size={16} color="#FFFFFF" />
+          <Text className="ml-1 text-sm font-bold text-white">
+            {item.storyNumber}
+          </Text>
+        </View>
+      </View>
       <View className="p-4">
-        <Text className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+        <Text
+          className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}
+          numberOfLines={1}>
           {item.title}
         </Text>
-        <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+        <Text className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
           {item.collectionDisplayName}
-        </Text>
-        <Text className={`mt-1 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-          Story {item.storyNumber}
         </Text>
       </View>
     </TouchableOpacity>
@@ -281,20 +296,33 @@ export default function FavoritesScreen() {
   const renderFavoriteFrame = ({ item }: { item: FavoriteFrame }) => (
     <TouchableOpacity
       onPress={() => navigateToFrame(item)}
-      className={`m-2 overflow-hidden rounded-lg ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-sm`}>
-      <Image source={{ uri: item.imageUrl }} className="h-32 w-full" />
+      className={`mx-4 mb-6 overflow-hidden rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-lg border ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
+      <View className="relative">
+        <Image source={{ uri: item.imageUrl }} className="h-48 w-full" resizeMode="cover" />
+        {/* Frame badge with icon and reference */}
+        <View className={`absolute top-3 right-3 flex-row items-center rounded-full px-3 py-2 ${isDark ? 'bg-red-600/90' : 'bg-red-500/90'}`}>
+          <MaterialIcons name="photo" size={16} color="#FFFFFF" />
+          <Text className="ml-1 text-sm font-bold text-white">
+            {item.storyNumber}:{item.frameNumber}
+          </Text>
+        </View>
+      </View>
       <View className="p-4">
-        <Text className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-          {item.storyTitle}, Frame {item.frameNumber}
+        <Text
+          className={`text-base font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}
+          numberOfLines={1}>
+          {item.storyTitle}
         </Text>
-        <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+        <Text className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
           {item.collectionDisplayName}
         </Text>
-        <Text
-          className={`mt-2 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
-          numberOfLines={2}>
-          {item.text}
-        </Text>
+        {item.text && (
+          <Text
+            className={`mt-3 text-sm leading-5 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
+            numberOfLines={2}>
+            {item.text}
+          </Text>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -302,57 +330,110 @@ export default function FavoritesScreen() {
   const renderMarker = ({ item }: { item: FavoriteMarker }) => (
     <TouchableOpacity
       onPress={() => navigateToMarker(item)}
-      className={`m-2 rounded-lg p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-sm`}>
-      <View className="mb-2 flex-row items-center justify-between">
-        <Text className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-          {item.storyTitle}, Frame {item.frameNumber}
-        </Text>
-        <TouchableOpacity onPress={() => deleteMarker(item.id)} className="p-1">
-          <MaterialIcons name="delete" size={20} color={isDark ? '#EF4444' : '#DC2626'} />
-        </TouchableOpacity>
+      className={`mx-4 mb-4 flex-row items-center rounded-xl p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} border shadow-lg ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
+
+      {/* Colored marker indicator */}
+      <View
+        className="mr-4 h-12 w-12 items-center justify-center rounded-xl"
+        style={{ backgroundColor: item.color || '#FFD700' }}>
+        <MaterialIcons name="bookmark" size={20} color="#FFFFFF" />
       </View>
-      <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-        {item.collectionDisplayName}
-      </Text>
-      {item.note && (
-        <Text className={`mt-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{item.note}</Text>
-      )}
-      <View className="mt-2 flex-row items-center">
-        <View
-          className="mr-2 h-3 w-3 rounded-full"
-          style={{ backgroundColor: item.color || '#FFD700' }}
+
+      {/* Content */}
+      <View className="flex-1 justify-center">
+        <Text
+          className={`text-base font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}
+          numberOfLines={1}>
+          {item.storyTitle}
+        </Text>
+        <Text
+          className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
+          numberOfLines={1}>
+          {item.collectionDisplayName}
+        </Text>
+        {item.note && (
+          <Text
+            className={`mt-1 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
+            numberOfLines={1}>
+            {item.note}
+          </Text>
+        )}
+      </View>
+
+      {/* Frame reference */}
+      <View className="mx-3 justify-center">
+        <FrameBadge
+          storyNumber={item.storyNumber}
+          frameNumber={item.frameNumber}
+          size="compact"
+          showIcon={false}
         />
-        <Text className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-          {new Date(item.timestamp).toLocaleDateString()}
-        </Text>
       </View>
+
+      {/* Delete button */}
+      <TouchableOpacity
+        onPress={(e) => {
+          e.stopPropagation();
+          deleteMarker(item.id);
+        }}
+        className={`rounded-full p-2 ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
+        <MaterialIcons name="delete" size={16} color={isDark ? '#EF4444' : '#DC2626'} />
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 
   const renderComment = ({ item }: { item: FavoriteComment }) => (
     <TouchableOpacity
       onPress={() => navigateToComment(item)}
-      className={`m-2 rounded-lg p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-sm`}>
-      <View className="mb-2 flex-row items-center justify-between">
-        <Text className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-          {item.storyTitle}, Frame {item.frameNumber}
-        </Text>
-        <TouchableOpacity onPress={() => deleteComment(item.id)} className="p-1">
-          <MaterialIcons name="delete" size={20} color={isDark ? '#EF4444' : '#DC2626'} />
-        </TouchableOpacity>
+      className={`mx-4 mb-4 flex-row items-center rounded-xl p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} border shadow-lg ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
+
+      {/* Note icon indicator */}
+      <View className={`mr-4 h-12 w-12 items-center justify-center rounded-xl ${isDark ? 'bg-blue-600' : 'bg-blue-500'}`}>
+        <MaterialIcons name="edit-note" size={20} color="#FFFFFF" />
       </View>
-      <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-        {item.collectionDisplayName}
-      </Text>
-      <Text className={`mt-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{item.comment}</Text>
-      <View className="mt-2 flex-row items-center justify-between">
-        <Text className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+
+      {/* Content */}
+      <View className="flex-1 justify-center">
+        <Text
+          className={`text-base font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}
+          numberOfLines={1}>
+          {item.storyTitle}
+        </Text>
+        <Text
+          className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
+          numberOfLines={1}>
+          {item.collectionDisplayName}
+        </Text>
+        <Text
+          className={`mt-1 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
+          numberOfLines={1}>
+          {item.comment}
+        </Text>
+        <Text className={`mt-1 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
           {item.createdAt.toLocaleDateString()}
+          {item.updatedAt.getTime() !== item.createdAt.getTime() && ' • edited'}
         </Text>
-        {item.updatedAt.getTime() !== item.createdAt.getTime() && (
-          <Text className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>edited</Text>
-        )}
       </View>
+
+      {/* Frame reference */}
+      <View className="mx-3 justify-center">
+        <FrameBadge
+          storyNumber={item.storyNumber}
+          frameNumber={item.frameNumber}
+          size="compact"
+          showIcon={false}
+        />
+      </View>
+
+      {/* Delete button */}
+      <TouchableOpacity
+        onPress={(e) => {
+          e.stopPropagation();
+          deleteComment(item.id);
+        }}
+        className={`rounded-full p-2 ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
+        <MaterialIcons name="delete" size={16} color={isDark ? '#EF4444' : '#DC2626'} />
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 
@@ -371,141 +452,108 @@ export default function FavoritesScreen() {
   }
 
   return (
-    <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
+    <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
-      <View
-        className={`p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} border-b ${
-          isDark ? 'border-gray-700' : 'border-gray-200'
-        }`}>
-        <Text className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-          Favorites
-        </Text>
-        <View className="mt-4 flex-row">
+      {/* Header with icon tabs */}
+      <View className={`px-6 pt-6 pb-4 ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
+        <View className="flex-row justify-center">
           <TouchableOpacity
-            onPress={() => setActiveTab('stories')}
-            className={`flex-1 rounded-l-lg py-2 ${
-              activeTab === 'stories'
+            onPress={() => setActiveTab('favorites')}
+            className={`mx-2 items-center rounded-2xl px-6 py-3 ${
+              activeTab === 'favorites'
                 ? isDark
                   ? 'bg-blue-600'
                   : 'bg-blue-500'
                 : isDark
-                  ? 'bg-gray-700'
-                  : 'bg-gray-200'
+                  ? 'bg-gray-800'
+                  : 'bg-white'
+            } shadow-sm`}>
+            <MaterialIcons
+              name="favorite"
+              size={24}
+              color={activeTab === 'favorites' ? '#FFFFFF' : isDark ? '#9CA3AF' : '#6B7280'}
+            />
+            <Text className={`mt-1 text-xs font-medium ${
+              activeTab === 'favorites' ? 'text-white' : isDark ? 'text-gray-400' : 'text-gray-600'
             }`}>
-            <Text
-              className={`text-center text-xs ${
-                activeTab === 'stories' ? 'text-white' : isDark ? 'text-gray-400' : 'text-gray-600'
-              }`}>
-              Stories ({favoriteStories.length})
+              {favoriteStories.length + favoriteFrames.length}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setActiveTab('frames')}
-            className={`flex-1 py-2 ${
-              activeTab === 'frames'
-                ? isDark
-                  ? 'bg-blue-600'
-                  : 'bg-blue-500'
-                : isDark
-                  ? 'bg-gray-700'
-                  : 'bg-gray-200'
-            }`}>
-            <Text
-              className={`text-center text-xs ${
-                activeTab === 'frames' ? 'text-white' : isDark ? 'text-gray-400' : 'text-gray-600'
-              }`}>
-              Frames ({favoriteFrames.length})
-            </Text>
-          </TouchableOpacity>
+
           <TouchableOpacity
             onPress={() => setActiveTab('markers')}
-            className={`flex-1 py-2 ${
+            className={`mx-2 items-center rounded-2xl px-6 py-3 ${
               activeTab === 'markers'
                 ? isDark
                   ? 'bg-blue-600'
                   : 'bg-blue-500'
                 : isDark
-                  ? 'bg-gray-700'
-                  : 'bg-gray-200'
+                  ? 'bg-gray-800'
+                  : 'bg-white'
+            } shadow-sm`}>
+            <MaterialIcons
+              name="bookmark"
+              size={24}
+              color={activeTab === 'markers' ? '#FFFFFF' : isDark ? '#9CA3AF' : '#6B7280'}
+            />
+            <Text className={`mt-1 text-xs font-medium ${
+              activeTab === 'markers' ? 'text-white' : isDark ? 'text-gray-400' : 'text-gray-600'
             }`}>
-            <Text
-              className={`text-center text-xs ${
-                activeTab === 'markers' ? 'text-white' : isDark ? 'text-gray-400' : 'text-gray-600'
-              }`}>
-              Bookmarks ({markers.length})
+              {markers.length}
             </Text>
           </TouchableOpacity>
+
           <TouchableOpacity
             onPress={() => setActiveTab('comments')}
-            className={`flex-1 rounded-r-lg py-2 ${
+            className={`mx-2 items-center rounded-2xl px-6 py-3 ${
               activeTab === 'comments'
                 ? isDark
                   ? 'bg-blue-600'
                   : 'bg-blue-500'
                 : isDark
-                  ? 'bg-gray-700'
-                  : 'bg-gray-200'
+                  ? 'bg-gray-800'
+                  : 'bg-white'
+            } shadow-sm`}>
+            <MaterialIcons
+              name="edit-note"
+              size={24}
+              color={activeTab === 'comments' ? '#FFFFFF' : isDark ? '#9CA3AF' : '#6B7280'}
+            />
+            <Text className={`mt-1 text-xs font-medium ${
+              activeTab === 'comments' ? 'text-white' : isDark ? 'text-gray-400' : 'text-gray-600'
             }`}>
-            <Text
-              className={`text-center text-xs ${
-                activeTab === 'comments' ? 'text-white' : isDark ? 'text-gray-400' : 'text-gray-600'
-              }`}>
-              Notes ({comments.length})
+              {comments.length}
             </Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      {activeTab === 'stories' ? (
-        favoriteStories.length > 0 ? (
+      {/* Content */}
+      {activeTab === 'favorites' ? (
+        favoriteStories.length + favoriteFrames.length > 0 ? (
           <FlatList
-            data={favoriteStories}
-            renderItem={renderFavoriteStory}
-            keyExtractor={(item) => `${item.collectionId}-${item.storyNumber}`}
-            contentContainerStyle={{ padding: 12 }}
+            data={combinedFavorites}
+            renderItem={({ item }) =>
+              item.type === 'story' ? renderFavoriteStory({ item }) : renderFavoriteFrame({ item })
+            }
+            keyExtractor={(item) =>
+              item.type === 'story'
+                ? `story-${item.collectionId}-${item.storyNumber}`
+                : `frame-${item.collectionId}-${item.storyNumber}-${item.frameNumber}`
+            }
+            contentContainerStyle={{ padding: 16 }}
             showsVerticalScrollIndicator={false}
           />
         ) : (
-          <View className="flex-1 items-center justify-center p-4">
+          <View className="flex-1 items-center justify-center">
             <MaterialIcons
-              name="favorite-border"
-              size={48}
-              color={isDark ? '#9CA3AF' : '#6B7280'}
+              name="favorite"
+              size={64}
+              color={isDark ? '#374151' : '#D1D5DB'}
             />
-            <Text
-              className={`mt-4 text-center text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              No favorite stories yet
-            </Text>
-            <Text
-              className={`mt-2 text-center text-sm ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-              Tap the heart icon while reading to add stories to your favorites
-            </Text>
-          </View>
-        )
-      ) : activeTab === 'frames' ? (
-        favoriteFrames.length > 0 ? (
-          <FlatList
-            data={favoriteFrames}
-            renderItem={renderFavoriteFrame}
-            keyExtractor={(item) => `${item.collectionId}-${item.storyNumber}-${item.frameNumber}`}
-            contentContainerStyle={{ padding: 12 }}
-            showsVerticalScrollIndicator={false}
-          />
-        ) : (
-          <View className="flex-1 items-center justify-center p-4">
-            <MaterialIcons
-              name="favorite-border"
-              size={48}
-              color={isDark ? '#9CA3AF' : '#6B7280'}
-            />
-            <Text
-              className={`mt-4 text-center text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              No favorite frames yet
-            </Text>
-            <Text
-              className={`mt-2 text-center text-sm ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-              Tap the heart icon on frames while reading to add them to your favorites
+            <Text className={`mt-6 text-2xl font-light ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
+              ❤️
             </Text>
           </View>
         )
@@ -515,46 +563,42 @@ export default function FavoritesScreen() {
             data={markers}
             renderItem={renderMarker}
             keyExtractor={(item) => item.id}
-            contentContainerStyle={{ padding: 12 }}
+            contentContainerStyle={{ padding: 16 }}
             showsVerticalScrollIndicator={false}
           />
         ) : (
-          <View className="flex-1 items-center justify-center p-4">
+          <View className="flex-1 items-center justify-center">
             <MaterialIcons
-              name="bookmark-border"
-              size={48}
-              color={isDark ? '#9CA3AF' : '#6B7280'}
+              name="bookmark"
+              size={64}
+              color={isDark ? '#374151' : '#D1D5DB'}
             />
-            <Text
-              className={`mt-4 text-center text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              No bookmarks yet
-            </Text>
-            <Text
-              className={`mt-2 text-center text-sm ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-              Tap the bookmark icon while reading to add markers to your collection
+            <Text className={`mt-6 text-2xl font-light ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
+              🔖
             </Text>
           </View>
         )
-      ) : comments.length > 0 ? (
-        <FlatList
-          data={comments}
-          renderItem={renderComment}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{ padding: 12 }}
-          showsVerticalScrollIndicator={false}
-        />
       ) : (
-        <View className="flex-1 items-center justify-center p-4">
-          <MaterialIcons name="comment" size={48} color={isDark ? '#9CA3AF' : '#6B7280'} />
-          <Text
-            className={`mt-4 text-center text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            No notes yet
-          </Text>
-          <Text
-            className={`mt-2 text-center text-sm ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-            Add notes while reading to see them here
-          </Text>
-        </View>
+        comments.length > 0 ? (
+          <FlatList
+            data={comments}
+            renderItem={renderComment}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={{ padding: 16 }}
+            showsVerticalScrollIndicator={false}
+          />
+        ) : (
+          <View className="flex-1 items-center justify-center">
+            <MaterialIcons
+              name="edit-note"
+              size={64}
+              color={isDark ? '#374151' : '#D1D5DB'}
+            />
+            <Text className={`mt-6 text-2xl font-light ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
+              📝
+            </Text>
+          </View>
+        )
       )}
     </SafeAreaView>
   );

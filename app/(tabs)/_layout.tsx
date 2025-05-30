@@ -16,12 +16,19 @@ export default function TabLayout() {
     <Tabs
       initialRouteName="(read)"
       screenOptions={{
-        tabBarActiveTintColor: isDark ? '#60A5FA' : '#3B82F6',
-        tabBarInactiveTintColor: isDark ? '#9CA3AF' : '#6B7280',
+        tabBarActiveTintColor: isDark ? '#2563EB' : '#3B82F6',
+        tabBarInactiveTintColor: isDark ? '#6B7280' : '#9CA3AF',
         tabBarStyle: {
-          backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
-          borderTopColor: isDark ? '#374151' : '#E5E7EB',
+          backgroundColor: isDark ? '#000000' : '#FFFFFF',
+          borderTopWidth: 1,
+          borderTopColor: isDark ? '#4B5563' : '#F3F4F6',
+          height: 65,
+          paddingBottom: 8,
+          paddingTop: 8,
+          elevation: 0,
+          shadowOpacity: 0,
         },
+        tabBarShowLabel: false,
         headerStyle: {
           backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
         },
@@ -30,9 +37,12 @@ export default function TabLayout() {
       <Tabs.Screen
         name="(read)"
         options={{
-          title: 'Read',
-          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <MaterialIcons name="book" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }: { color: string; size: number; focused: boolean }) => (
+            <MaterialIcons
+              name="auto-stories"
+              size={focused ? 28 : 24}
+              color={color}
+            />
           ),
           headerShown: false,
         }}
@@ -40,9 +50,12 @@ export default function TabLayout() {
       <Tabs.Screen
         name="favorites"
         options={{
-          title: 'Favorites',
-          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <MaterialIcons name="favorite" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }: { color: string; size: number; focused: boolean }) => (
+            <MaterialIcons
+              name="favorite"
+              size={focused ? 28 : 24}
+              color={color}
+            />
           ),
           headerShown: false,
         }}
@@ -50,9 +63,12 @@ export default function TabLayout() {
       <Tabs.Screen
         name="search"
         options={{
-          title: 'Search',
-          tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <MaterialIcons name="search" size={size} color={color} />
+          tabBarIcon: ({ color, size, focused }: { color: string; size: number; focused: boolean }) => (
+            <MaterialIcons
+              name="search"
+              size={focused ? 28 : 24}
+              color={color}
+            />
           ),
           headerShown: false,
         }}

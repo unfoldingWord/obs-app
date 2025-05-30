@@ -14,6 +14,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CollectionsManager, SearchResult, Collection } from '../../src/core/CollectionsManager';
+import { NotesSection } from '../../src/components/CommentsSection';
+import { FrameBadge } from '../../src/components/FrameBadge';
 
 interface HighlightedTextProps {
   text: string;
@@ -23,7 +25,7 @@ interface HighlightedTextProps {
 const HighlightedText: React.FC<HighlightedTextProps> = ({ text, isDark }) => {
   // Parse the highlighted text with <mark> tags
   const parts = text.split(/(<mark>.*?<\/mark>)/g);
-  
+
   return (
     <Text className={`mt-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
       {parts.map((part, index) => {
@@ -110,9 +112,9 @@ export default function SearchScreen() {
     try {
       const collectionsManager = CollectionsManager.getInstance();
       await collectionsManager.initialize();
-      
+
       let allResults: SearchResult[] = [];
-      
+
       if (selectedCollections.size === 0) {
         // No collections selected, no results
         setResults([]);
@@ -127,7 +129,7 @@ export default function SearchScreen() {
           allResults.push(...results);
         }
       }
-      
+
       // Sort results by collection name, then story number, then frame number
       allResults.sort((a, b) => {
         if (a.collectionName !== b.collectionName) {
@@ -138,7 +140,7 @@ export default function SearchScreen() {
         }
         return a.frameNumber - b.frameNumber;
       });
-      
+
       setResults(allResults);
     } catch (error) {
       console.error('Search error:', error);
@@ -157,35 +159,51 @@ export default function SearchScreen() {
   const renderResult = ({ item }: { item: SearchResult }) => (
     <TouchableOpacity
       onPress={() => router.push(`/story/${encodeURIComponent(item.collectionId)}/${item.storyNumber}/${item.frameNumber}`)}
-      className={`m-2 p-4 rounded-lg ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-sm`}>
-      <Text className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-        {item.storyTitle}
+      className={`mx-4 mb-4 rounded-2xl p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} border shadow-lg ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
+
+      <View className="flex-row items-center justify-between mb-3">
+        <Text
+          className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}
+          numberOfLines={1}
+          style={{ flex: 1, marginRight: 12 }}>
+          {item.storyTitle}
+        </Text>
+        <FrameBadge
+          storyNumber={item.storyNumber}
+          frameNumber={item.frameNumber}
+          size="compact"
+          showIcon={false}
+        />
+      </View>
+
+      <Text className={`text-sm mb-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+        {item.collectionName}
       </Text>
-      <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-        {item.collectionName} - Frame {item.frameNumber}
-      </Text>
+
       <HighlightedText text={item.highlightedText} isDark={isDark} />
     </TouchableOpacity>
   );
 
   return (
-    <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
+    <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
-      <View className={`p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} border-b ${
-        isDark ? 'border-gray-700' : 'border-gray-200'
-      }`}>
-        <Text className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-          Search Stories
-        </Text>
-        <View className="flex-row mt-4">
+      {/* Search Header */}
+      <View className={`px-6 pt-6 pb-4 ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
+        <View className="flex-row items-center">
           <View className="flex-1 relative">
+            <MaterialIcons
+              name="search"
+              size={20}
+              color={isDark ? '#6B7280' : '#9CA3AF'}
+              style={{ position: 'absolute', left: 16, top: 16, zIndex: 1 }}
+            />
             <TextInput
-              className={`p-3 rounded-lg pr-10 ${
-                isDark ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-900'
-              }`}
-              placeholder="Search for text in stories..."
-              placeholderTextColor={isDark ? '#9CA3AF' : '#6B7280'}
+              className={`p-4 pl-12 rounded-2xl pr-12 text-base ${
+                isDark ? 'bg-gray-800 text-white border border-gray-700' : 'bg-white text-gray-900 border border-gray-200'
+              } shadow-sm`}
+              placeholder=""
+              placeholderTextColor={isDark ? '#6B7280' : '#9CA3AF'}
               value={searchQuery}
               onChangeText={setSearchQuery}
               onSubmitEditing={handleSearch}
@@ -193,84 +211,77 @@ export default function SearchScreen() {
             {searchQuery.length > 0 && (
               <TouchableOpacity
                 onPress={handleClear}
-                className="absolute right-2 top-3 p-1">
+                className="absolute right-3 top-3 p-1">
                 <MaterialIcons
                   name="clear"
-                  size={20}
-                  color={isDark ? '#9CA3AF' : '#6B7280'}
+                  size={24}
+                  color={isDark ? '#6B7280' : '#9CA3AF'}
                 />
               </TouchableOpacity>
             )}
           </View>
-          <TouchableOpacity
-            onPress={handleSearch}
-            className={`ml-2 p-3 rounded-lg ${isDark ? 'bg-blue-600' : 'bg-blue-500'}`}>
-            <MaterialIcons name="search" size={24} color="white" />
-          </TouchableOpacity>
         </View>
       </View>
 
       {/* Collection Filters */}
       {!loadingCollections && collections.length > 0 && (
-        <View className={`${isDark ? 'bg-gray-800' : 'bg-white'} border-b ${
-          isDark ? 'border-gray-700' : 'border-gray-200'
-        }`}>
+        <View className={`mx-6 mb-4 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-white'} border ${isDark ? 'border-gray-700' : 'border-gray-200'} shadow-sm`}>
           <TouchableOpacity
             onPress={() => setShowFilters(!showFilters)}
             className="flex-row items-center justify-between p-4">
             <View className="flex-row items-center">
               <MaterialIcons
-                name="filter-list"
-                size={20}
-                color={isDark ? '#9CA3AF' : '#6B7280'}
+                name="tune"
+                size={24}
+                color={isDark ? '#60A5FA' : '#3B82F6'}
               />
-              <Text className={`ml-2 text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                Collections ({selectedCollections.size}/{collections.length})
+              <Text className={`ml-3 text-base font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {selectedCollections.size}
               </Text>
             </View>
             <MaterialIcons
               name={showFilters ? "expand-less" : "expand-more"}
-              size={20}
-              color={isDark ? '#9CA3AF' : '#6B7280'}
+              size={24}
+              color={isDark ? '#6B7280' : '#9CA3AF'}
             />
           </TouchableOpacity>
 
           {showFilters && (
-            <View className="px-4 pb-4">
+            <View className="px-4 pb-4 border-t border-gray-200 dark:border-gray-700">
               {/* Select All/None buttons */}
-              <View className="flex-row mb-3">
+              <View className="flex-row mt-4 mb-4">
                 <TouchableOpacity
                   onPress={selectAllCollections}
-                  className={`mr-2 px-3 py-1 rounded ${isDark ? 'bg-blue-900' : 'bg-blue-100'}`}>
-                  <Text className={`text-xs ${isDark ? 'text-blue-300' : 'text-blue-700'}`}>
-                    Select All
-                  </Text>
+                  className={`mr-3 px-4 py-3 rounded-xl flex-row items-center ${isDark ? 'bg-blue-600' : 'bg-blue-500'}`}>
+                  <MaterialIcons name="check-circle" size={16} color="#FFFFFF" />
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={selectNoneCollections}
-                  className={`px-3 py-1 rounded ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                  <Text className={`text-xs ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                    Select None
-                  </Text>
+                  className={`px-4 py-3 rounded-xl flex-row items-center ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                  <MaterialIcons name="radio-button-unchecked" size={16} color={isDark ? '#9CA3AF' : '#6B7280'} />
                 </TouchableOpacity>
               </View>
 
               {/* Collection list */}
-              <View className="space-y-2">
+              <View>
                 {collections.map((collection) => (
                   <TouchableOpacity
                     key={collection.id}
                     onPress={() => toggleCollection(collection.id)}
-                    className="flex-row items-center py-2">
+                    className="flex-row items-center py-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
                     <MaterialIcons
-                      name={selectedCollections.has(collection.id) ? "check-box" : "check-box-outline-blank"}
+                      name={selectedCollections.has(collection.id) ? "check-circle" : "radio-button-unchecked"}
                       size={20}
-                      color={selectedCollections.has(collection.id) 
+                      color={selectedCollections.has(collection.id)
                         ? (isDark ? '#60A5FA' : '#3B82F6')
                         : (isDark ? '#6B7280' : '#9CA3AF')
                       }
                     />
-                    <Text className={`ml-2 flex-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                    <Text className={`ml-3 flex-1 text-sm ${
+                      selectedCollections.has(collection.id)
+                        ? (isDark ? 'text-white' : 'text-gray-900')
+                        : (isDark ? 'text-gray-400' : 'text-gray-500')
+                    }`}>
                       {collection.displayName}
                     </Text>
                   </TouchableOpacity>
@@ -284,39 +295,30 @@ export default function SearchScreen() {
       {loading ? (
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color={isDark ? '#60A5FA' : '#3B82F6'} />
-          <Text className={`mt-4 text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            Searching...
-          </Text>
         </View>
       ) : results.length > 0 ? (
         <FlatList
           data={results}
           renderItem={renderResult}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ padding: 12 }}
+          contentContainerStyle={{ padding: 16 }}
           showsVerticalScrollIndicator={false}
         />
       ) : searchQuery ? (
-        <View className="flex-1 items-center justify-center p-4">
+        <View className="flex-1 items-center justify-center">
           <MaterialIcons
             name="search-off"
-            size={48}
-            className={isDark ? 'text-gray-400' : 'text-gray-500'}
+            size={64}
+            color={isDark ? '#374151' : '#D1D5DB'}
           />
-          <Text className={`mt-4 text-center text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            No results found
-          </Text>
         </View>
       ) : (
-        <View className="flex-1 items-center justify-center p-4">
+        <View className="flex-1 items-center justify-center">
           <MaterialIcons
             name="search"
-            size={48}
-            className={isDark ? 'text-gray-400' : 'text-gray-500'}
+            size={64}
+            color={isDark ? '#374151' : '#D1D5DB'}
           />
-          <Text className={`mt-4 text-center text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            Enter a search term to find content in stories
-          </Text>
         </View>
       )}
     </SafeAreaView>

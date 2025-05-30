@@ -3,8 +3,7 @@ import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState, useCallback } from 'react';
 import {
-  StyleSheet,
-  FlatList,
+  ScrollView,
   Pressable,
   Image,
   Text,
@@ -29,6 +28,7 @@ export default function StoriesScreen() {
   const [collections, setCollections] = useState<Collection[]>([]);
   const [stories, setStories] = useState<CollectionStory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [storiesLoading, setStoriesLoading] = useState(false);
   const [showCollectionSelector, setShowCollectionSelector] = useState(false);
   const [progressMap, setProgressMap] = useState<Map<number, UserProgress>>(new Map());
   const [isRTL, setIsRTL] = useState(false);
@@ -72,6 +72,7 @@ export default function StoriesScreen() {
   const loadStories = useCallback(
     async (collectionId: string) => {
       try {
+        setStoriesLoading(true);
         const collectionsManager = CollectionsManager.getInstance();
         await collectionsManager.initialize();
         const collectionStories = await collectionsManager.getCollectionStories(collectionId);
@@ -81,6 +82,8 @@ export default function StoriesScreen() {
         await loadProgress(collectionId, collectionStories);
       } catch (error) {
         console.error('Error loading stories:', error);
+      } finally {
+        setStoriesLoading(false);
       }
     },
     [loadProgress]
@@ -189,16 +192,22 @@ export default function StoriesScreen() {
     });
 
     return (
-      <View style={[
-        styles.thumbnailContainer,
-        { 
-          marginRight: isRTL ? 0 : 16,
-          marginLeft: isRTL ? 16 : 0
-        }
-      ]}>
+      <View
+        className="relative"
+        style={{
+          width: 72,
+          height: 72,
+          borderRadius: 12,
+          marginRight: isRTL ? 0 : 12,
+          marginLeft: isRTL ? 12 : 0,
+          overflow: 'hidden',
+        }}>
         <Image
           source={thumbnailImage}
-          style={styles.thumbnail}
+          style={{
+            width: '100%',
+            height: '100%',
+          }}
           resizeMode="cover"
         />
       </View>
@@ -210,37 +219,50 @@ export default function StoriesScreen() {
 
     return (
       <TouchableOpacity
-        style={[
-          styles.storyCard,
-          isDark ? { backgroundColor: '#1F2937' } : { backgroundColor: '#fff' },
-          { flexDirection: isRTL ? 'row-reverse' : 'row' }
-        ]}
+        className={`mb-4 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-lg border ${isDark ? 'border-gray-700' : 'border-gray-100'}`}
+        style={{
+          flexDirection: isRTL ? 'row-reverse' : 'row',
+          alignItems: 'center',
+          padding: 16,
+        }}
         onPress={() =>
           router.push(
             `/story/${encodeURIComponent(currentCollection?.id || '')}/${item.storyNumber}/1`
           )
         }>
-        
+
         {/* Story Thumbnail */}
         <StoryThumbnail storyNumber={item.storyNumber} />
 
         {/* Story Content */}
-        <View style={styles.storyInfo}>
-          <View style={[styles.storyHeader, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-            <Text
-              style={[
-                styles.storyNumber, 
-                isDark ? { color: '#9CA3AF' } : { color: '#6B7280' },
-                { textAlign: isRTL ? 'right' : 'left' }
-              ]}>
-              Story {item.storyNumber}
-            </Text>
+        <View style={{ flex: 1 }}>
+          {/* Header Row: Story Number + Favorite */}
+          <View
+            style={{
+              flexDirection: isRTL ? 'row-reverse' : 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 8,
+            }}>
+            <View
+              className={`px-2 py-1 rounded-md ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <MaterialIcons
+                name="auto-stories"
+                size={12}
+                color={isDark ? '#9CA3AF' : '#6B7280'}
+              />
+              <Text className={`text-xs font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                {item.storyNumber}
+              </Text>
+            </View>
+
             <TouchableOpacity
               onPress={(e) => {
                 e.stopPropagation();
                 toggleStoryFavorite(item);
               }}
-              style={{ padding: 4 }}>
+              className="rounded-full p-1">
               <MaterialIcons
                 name={item.isFavorite ? 'favorite' : 'favorite-border'}
                 size={20}
@@ -249,88 +271,86 @@ export default function StoriesScreen() {
             </TouchableOpacity>
           </View>
 
-          <Text style={[
-            styles.storyTitle, 
-            isDark ? { color: '#fff' } : { color: '#000' },
-            { textAlign: isRTL ? 'right' : 'left' }
-          ]}>
-            {item.title}
-          </Text>
+          {/* Story Title */}
+          <View style={{ marginBottom: progressPercent > 0 ? 12 : 0 }}>
+            <Text
+              className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'} leading-6`}
+              style={{ textAlign: isRTL ? 'right' : 'left' }}>
+              {item.title}
+            </Text>
+          </View>
 
           {/* Progress Bar */}
           {progressPercent > 0 && (
-            <View style={[styles.progressContainer, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-              <View style={[
-                styles.progressBar, 
-                { flexDirection: isRTL ? 'row-reverse' : 'row' }
-              ]}>
-                <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
+            <View
+              style={{
+                flexDirection: isRTL ? 'row-reverse' : 'row',
+                alignItems: 'center',
+                gap: 10,
+              }}>
+              <View
+                className={`flex-1 h-2 rounded-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}
+                style={{
+                  flexDirection: isRTL ? 'row-reverse' : 'row',
+                  overflow: 'hidden',
+                }}>
+                <View
+                  className="h-full bg-green-500 rounded-full"
+                  style={{ width: `${progressPercent}%` }}
+                />
               </View>
               <Text
-                style={[
-                  styles.progressText, 
-                  isDark ? { color: '#9CA3AF' } : { color: '#6B7280' },
-                  { 
-                    textAlign: isRTL ? 'left' : 'right',
-                    marginLeft: isRTL ? 0 : 8,
-                    marginRight: isRTL ? 8 : 0
-                  }
-                ]}>
+                className={`text-xs font-semibold ${isDark ? 'text-gray-400' : 'text-gray-500'} min-w-[35px]`}
+                style={{ textAlign: 'right' }}>
                 {progressPercent}%
               </Text>
             </View>
           )}
         </View>
-
       </TouchableOpacity>
     );
   };
 
   const renderCollectionSelector = () => (
     <View
-      style={[
-        styles.collectionSelector,
-        isDark ? { backgroundColor: '#374151' } : { backgroundColor: '#fff' },
-      ]}>
-      <Text style={[
-        styles.selectorTitle, 
-        isDark ? { color: '#fff' } : { color: '#000' },
-        { textAlign: isRTL ? 'right' : 'left' }
-      ]}>
-        Select Collection
-      </Text>
+      className={`absolute top-20 left-4 right-4 z-10 rounded-2xl p-6 shadow-lg border ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
       {collections.map((collection) => (
         <TouchableOpacity
           key={collection.id}
-          style={[
-            styles.collectionOption,
-            currentCollection?.id === collection.id &&
-              (isDark ? { backgroundColor: '#1E40AF' } : { backgroundColor: '#DBEAFE' }),
-          ]}
+          className={`mb-3 p-4 rounded-xl border ${
+            currentCollection?.id === collection.id
+              ? isDark ? 'bg-blue-600 border-blue-500' : 'bg-blue-50 border-blue-200'
+              : isDark ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+          }`}
           onPress={() => selectCollection(collection)}>
-          <View>
-            <Text
-              style={[
-                styles.collectionOptionText,
-                isDark ? { color: '#fff' } : { color: '#000' },
-                currentCollection?.id === collection.id && { fontWeight: 'bold' },
-                { textAlign: isRTL ? 'right' : 'left' }
-              ]}>
-              {collection.displayName}
-            </Text>
-            <Text
-              style={[
-                styles.collectionLanguage,
-                isDark ? { color: '#9CA3AF' } : { color: '#6B7280' },
-                { textAlign: isRTL ? 'right' : 'left' }
-              ]}>
-              {collection.language}
-            </Text>
-          </View>
+          <Text
+            className={`text-base font-semibold ${
+              currentCollection?.id === collection.id
+                ? isDark ? 'text-white' : 'text-blue-900'
+                : isDark ? 'text-white' : 'text-gray-900'
+            }`}
+            style={{ textAlign: isRTL ? 'right' : 'left' }}
+            numberOfLines={1}>
+            {collection.displayName}
+          </Text>
+          <Text
+            className={`mt-1 text-sm ${
+              currentCollection?.id === collection.id
+                ? isDark ? 'text-blue-200' : 'text-blue-600'
+                : isDark ? 'text-gray-400' : 'text-gray-500'
+            }`}
+            style={{ textAlign: isRTL ? 'right' : 'left' }}
+            numberOfLines={1}>
+            {collection.language}
+          </Text>
         </TouchableOpacity>
       ))}
-      <TouchableOpacity style={styles.closeButton} onPress={() => setShowCollectionSelector(false)}>
-        <Text style={{ color: isDark ? '#60A5FA' : '#3B82F6' }}>Close</Text>
+      <TouchableOpacity
+        className={`mt-4 p-3 rounded-xl ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}
+        onPress={() => setShowCollectionSelector(false)}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+          <MaterialIcons name="close" size={20} color={isDark ? '#9CA3AF' : '#6B7280'} />
+        </View>
       </TouchableOpacity>
     </View>
   );
@@ -338,221 +358,113 @@ export default function StoriesScreen() {
   if (loading) {
     return (
       <SafeAreaView
-        style={[
-          styles.container,
-          styles.centerContent,
-          isDark ? { backgroundColor: '#111827' } : { backgroundColor: '#F3F4F6' },
-        ]}>
+        className={`flex-1 justify-center items-center ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
         <StatusBar style={isDark ? 'light' : 'dark'} />
         <ActivityIndicator size="large" color={isDark ? '#60A5FA' : '#3B82F6'} />
-        <Text style={{ color: isDark ? '#9CA3AF' : '#4B5563', marginTop: 16 }}>
-          Loading collections...
-        </Text>
+        <View className="mt-4 items-center">
+          <MaterialIcons
+            name="auto-stories"
+            size={48}
+            color={isDark ? '#4B5563' : '#9CA3AF'}
+          />
+          <Text className={`mt-2 text-base ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            Loading...
+          </Text>
+        </View>
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView
-      style={[
-        styles.container,
-        isDark ? { backgroundColor: '#111827' } : { backgroundColor: '#F3F4F6' },
-      ]}>
+      className={`flex-1 ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
 
+      {/* Header */}
       <View
-        style={[
-          styles.header,
-          isDark ? { backgroundColor: '#1F2937' } : { backgroundColor: '#3B82F6' },
-          { flexDirection: isRTL ? 'row-reverse' : 'row' }
-        ]}>
-        <Pressable onPress={() => router.push('/(tabs)/(read)')} style={styles.backButton}>
-          <MaterialIcons 
-            name={isRTL ? "arrow-forward" : "arrow-back"} 
-            size={24} 
-            color="#FFFFFF" 
+        className={`px-4 py-3 border-b ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}
+        style={{
+          flexDirection: isRTL ? 'row-reverse' : 'row',
+          alignItems: 'center',
+          gap: 12,
+        }}>
+        <Pressable
+          onPress={() => router.push('/(tabs)/(read)')}
+          className={`rounded-full p-2 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+          <MaterialIcons
+            name={isRTL ? "arrow-forward" : "arrow-back"}
+            size={20}
+            color={isDark ? '#9CA3AF' : '#6B7280'}
           />
         </Pressable>
 
         <TouchableOpacity
-          style={[styles.collectionSelectorButton, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}
+          className="flex-1"
+          style={{
+            flexDirection: isRTL ? 'row-reverse' : 'row',
+            alignItems: 'center',
+            gap: 8,
+          }}
           onPress={() => setShowCollectionSelector(true)}>
-          <Text style={[styles.headerTitle, { textAlign: isRTL ? 'right' : 'left' }]} numberOfLines={1}>
-            {currentCollection?.displayName || 'Select Collection'}
-          </Text>
-          <MaterialIcons name="arrow-drop-down" size={24} color="#fff" />
+          <View style={{ flex: 1 }}>
+            <Text
+              className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}
+              style={{ textAlign: isRTL ? 'right' : 'left' }}
+              numberOfLines={1}>
+              {currentCollection?.displayName || 'Select Collection'}
+            </Text>
+          </View>
+          <MaterialIcons
+            name="expand-more"
+            size={24}
+            color={isDark ? '#9CA3AF' : '#6B7280'}
+          />
         </TouchableOpacity>
       </View>
 
       {showCollectionSelector && renderCollectionSelector()}
 
-      <FlatList
-        data={stories}
-        renderItem={renderStoryItem}
-        keyExtractor={(item) => `${item.collectionId}_${item.storyNumber}`}
-        contentContainerStyle={styles.storiesList}
-        ListEmptyComponent={
-          <View style={styles.centerContent}>
-            <MaterialIcons name="library-books" size={48} color={isDark ? '#4B5563' : '#9CA3AF'} />
-            <Text
-              style={{ 
-                color: isDark ? '#9CA3AF' : '#4B5563', 
-                marginTop: 16, 
-                textAlign: 'center' 
-              }}>
-              No stories found in this collection
-            </Text>
+      {/* Stories List */}
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ padding: 16 }}>
+        {storiesLoading ? (
+          <View className="flex-1 justify-center items-center py-20">
+            <ActivityIndicator size="large" color={isDark ? '#60A5FA' : '#3B82F6'} />
+            <View className="mt-6 items-center">
+              <MaterialIcons
+                name="auto-stories"
+                size={64}
+                color={isDark ? '#4B5563' : '#9CA3AF'}
+              />
+            </View>
+          </View>
+        ) : stories.length > 0 ? (
+          stories.map((item) => (
+            <View key={`${item.collectionId}_${item.storyNumber}`}>
+              {renderStoryItem({ item })}
+            </View>
+          ))
+        ) : (
+          <View className="flex-1 justify-center items-center py-20">
+            <MaterialIcons
+              name="auto-stories"
+              size={80}
+              color={isDark ? '#4B5563' : '#9CA3AF'}
+            />
             <TouchableOpacity
-              style={[
-                styles.downloadButton,
-                isDark ? { backgroundColor: '#1E40AF' } : { backgroundColor: '#3B82F6' },
-              ]}
+              className={`mt-8 px-6 py-3 rounded-xl ${isDark ? 'bg-blue-600' : 'bg-blue-500'} shadow-lg`}
               onPress={() => router.push('/downloads')}>
-              <Text style={{ color: '#fff', textAlign: 'center' }}>Download Collections</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <MaterialIcons name="download" size={20} color="white" />
+                <Text className="text-white font-semibold">
+                  Download Collections
+                </Text>
+              </View>
             </TouchableOpacity>
           </View>
-        }
-      />
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  centerContent: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  header: {
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backButton: {
-    padding: 8,
-    marginRight: 8,
-  },
-  collectionSelectorButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
-    flex: 1,
-  },
-  storiesList: {
-    padding: 16,
-  },
-  storyCard: {
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  storyInfo: {
-    flex: 1,
-  },
-  storyHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  storyNumber: {
-    fontSize: 12,
-    textTransform: 'uppercase',
-    fontWeight: '600',
-  },
-  storyTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  progressContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  progressBar: {
-    flex: 1,
-    height: 4,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 2,
-    marginRight: 8,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#10B981',
-    borderRadius: 2,
-  },
-  progressText: {
-    fontSize: 12,
-    fontWeight: '500',
-    minWidth: 32,
-  },
-  collectionSelector: {
-    position: 'absolute',
-    top: 85,
-    left: 16,
-    right: 16,
-    padding: 16,
-    borderRadius: 8,
-    zIndex: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  selectorTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 12,
-  },
-  collectionOption: {
-    padding: 12,
-    borderRadius: 6,
-    marginBottom: 8,
-  },
-  collectionOptionText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  collectionLanguage: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  closeButton: {
-    alignItems: 'center',
-    marginTop: 8,
-    padding: 8,
-  },
-  downloadButton: {
-    marginTop: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 6,
-  },
-  thumbnailContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 8,
-  },
-  thumbnail: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 8,
-  },
-});
