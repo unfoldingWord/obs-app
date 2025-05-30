@@ -1,4 +1,4 @@
-name: Build and Release Apps
+name: Build and Release Apps (Hybrid - Native Android + EAS iOS)
 
 on:
   release:
@@ -17,19 +17,10 @@ on:
         options:
         - test
         - release
-      build_ios:
-        description: 'Build iOS (requires proper code signing setup)'
-        required: false
-        default: false
-        type: boolean
-  push:
-    branches:
-      - main
-      - 'release/**'
 
 jobs:
   build-android:
-    name: Build Android APK
+    name: Build Android APK (Native)
     runs-on: ubuntu-latest
     
     steps:
@@ -67,11 +58,9 @@ jobs:
 
       - name: Prepare APK artifact
         run: |
-          # Find the generated APK
           APK_PATH=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
           
           if [ -f "$APK_PATH" ]; then
-            # Determine filename based on trigger type
             if [ "${{ github.event_name }}" = "release" ]; then
               FILENAME="obs-app-${{ github.event.release.tag_name }}.apk"
             elif [ "${{ github.event.inputs.upload_to_release }}" != "" ]; then
@@ -82,13 +71,12 @@ jobs:
             
             cp "$APK_PATH" "$FILENAME"
             echo "APK_FILENAME=$FILENAME" >> $GITHUB_ENV
-            echo "APK_PATH=$APK_PATH" >> $GITHUB_ENV
           else
             echo "APK file not found"
             exit 1
           fi
 
-      - name: Upload APK to Release (if release event)
+      - name: Upload APK to Release
         if: github.event_name == 'release' || github.event.inputs.upload_to_release != ''
         run: |
           TAG_NAME="${{ github.event.release.tag_name || github.event.inputs.upload_to_release }}"
@@ -96,7 +84,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload APK as Artifact (for testing)
+      - name: Upload APK as Artifact
         if: github.event_name != 'release' && github.event.inputs.upload_to_release == ''
         uses: actions/upload-artifact@v4
         with:
@@ -105,20 +93,10 @@ jobs:
           retention-days: 30
 
   build-ios:
-    name: Build iOS IPA (Experimental)
-    runs-on: macos-latest
-    # Only run iOS build if explicitly requested via manual trigger
-    if: github.event_name == 'release' || github.event.inputs.build_ios == 'true'
+    name: Build iOS IPA (EAS)
+    runs-on: ubuntu-latest
     
     steps:
-      - name: ⚠️ iOS Build Warning
-        run: |
-          echo "::warning::iOS builds require proper Apple Developer setup including:"
-          echo "::warning::- Valid certificates and provisioning profiles"
-          echo "::warning::- Proper code signing configuration"
-          echo "::warning::- This workflow is experimental and may fail"
-          echo "::warning::Consider using EAS Build for iOS instead"
-
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -128,51 +106,27 @@ jobs:
           node-version: '18'
           cache: 'npm'
 
+      - name: Setup EAS CLI
+        run: npm install -g eas-cli
+
       - name: Install dependencies
         run: npm ci
 
-      - name: Generate native code (prebuild)
-        run: npx expo prebuild --platform ios --no-install
+      - name: Authenticate with Expo
+        run: eas login
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Setup Xcode
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: latest-stable
+      - name: Build iOS IPA
+        run: eas build --platform ios --profile production --non-interactive --wait
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Install CocoaPods
+      - name: Download and Upload IPA
         run: |
-          cd ios
-          pod install
-
-      - name: Build iOS App (Archive)
-        run: |
-          cd ios
-          # Find the actual scheme name
-          SCHEME=$(xcodebuild -list -workspace *.xcworkspace | grep -A 100 "Schemes:" | grep -v "Schemes:" | head -1 | xargs)
-          echo "Found scheme: $SCHEME"
+          BUILD_URL=$(eas build:list --platform ios --limit 1 --json | jq -r '.[0].artifacts.buildUrl')
           
-          xcodebuild -workspace *.xcworkspace \
-            -scheme "$SCHEME" \
-            -configuration Release \
-            -destination generic/platform=iOS \
-            -archivePath obs-app.xcarchive \
-            archive
-
-      - name: Export IPA
-        run: |
-          cd ios
-          xcodebuild -exportArchive \
-            -archivePath obs-app.xcarchive \
-            -exportPath . \
-            -exportOptionsPlist exportOptions.plist
-
-      - name: Prepare IPA artifact
-        run: |
-          # Find the generated IPA
-          IPA_PATH=$(find ios -name "*.ipa" | head -1)
-          
-          if [ -f "$IPA_PATH" ]; then
-            # Determine filename based on trigger type
+          if [ "$BUILD_URL" != "null" ] && [ -n "$BUILD_URL" ]; then
             if [ "${{ github.event_name }}" = "release" ]; then
               FILENAME="obs-app-${{ github.event.release.tag_name }}.ipa"
             elif [ "${{ github.event.inputs.upload_to_release }}" != "" ]; then
@@ -181,24 +135,22 @@ jobs:
               FILENAME="obs-app-${{ github.sha }}.ipa"
             fi
             
-            cp "$IPA_PATH" "$FILENAME"
+            curl -L -o "$FILENAME" "$BUILD_URL"
+            
+            if [ "${{ github.event_name }}" = "release" ] || [ "${{ github.event.inputs.upload_to_release }}" != "" ]; then
+              TAG_NAME="${{ github.event.release.tag_name || github.event.inputs.upload_to_release }}"
+              gh release upload "$TAG_NAME" "$FILENAME"
+            fi
+            
             echo "IPA_FILENAME=$FILENAME" >> $GITHUB_ENV
-            echo "IPA_PATH=$IPA_PATH" >> $GITHUB_ENV
           else
-            echo "IPA file not found - this is expected without proper code signing setup"
-            echo "Consider using EAS Build for iOS builds"
+            echo "Failed to get build URL"
             exit 1
           fi
-
-      - name: Upload IPA to Release (if release event)
-        if: github.event_name == 'release' || github.event.inputs.upload_to_release != ''
-        run: |
-          TAG_NAME="${{ github.event.release.tag_name || github.event.inputs.upload_to_release }}"
-          gh release upload "$TAG_NAME" "${{ env.IPA_FILENAME }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload IPA as Artifact (for testing)
+      - name: Upload IPA as Artifact
         if: github.event_name != 'release' && github.event.inputs.upload_to_release == ''
         uses: actions/upload-artifact@v4
         with:

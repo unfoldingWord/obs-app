@@ -36,6 +36,42 @@ Builds are automatically triggered when you push to:
   - `ios-ipa` - Contains the IPA file
 - Artifacts are kept for 30 days
 
+## ⚠️ Important: iOS Build Considerations
+
+### The Reality of iOS Builds
+
+**The native iOS workflow I initially provided has significant limitations:**
+
+1. **Code Signing Complexity**: iOS requires valid Apple Developer certificates and provisioning profiles
+2. **CI Environment Challenges**: Setting up proper keychain and certificate management in GitHub Actions is complex
+3. **Maintenance Overhead**: Native iOS builds require ongoing certificate management
+
+### Recommended Approaches:
+
+#### Option 1: Hybrid Approach (Recommended)
+Use the `release-hybrid.yml` workflow:
+- ✅ **Android**: Native builds (fast, free, no authentication)
+- ✅ **iOS**: EAS builds (reliable, handles code signing)
+- Requires: `EXPO_TOKEN` secret for iOS builds only
+
+#### Option 2: Android-Only
+Use the main `release.yml` workflow with iOS disabled:
+- ✅ **Android**: Native builds
+- ❌ **iOS**: Skip iOS builds entirely
+- Build iOS separately using EAS CLI locally
+
+#### Option 3: Full Native (Advanced Users Only)
+Use the main `release.yml` workflow with proper iOS setup:
+- Requires extensive Apple Developer certificate configuration
+- Need to add certificate installation steps
+- Complex keychain management in CI
+
+### Quick Start Recommendation:
+
+1. **Start with Android-only** using the main workflow
+2. **Test Android builds** to ensure everything works
+3. **Add iOS later** using the hybrid approach if needed
+
 ## Setup Instructions
 
 ### 1. No Expo Token Required! 🎉
