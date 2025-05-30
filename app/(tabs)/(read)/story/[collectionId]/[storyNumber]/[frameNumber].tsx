@@ -1,7 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,8 +11,11 @@ import {
   StatusBar,
   useColorScheme,
   ScrollView,
+  FlatList,
+  Dimensions,
+  Alert,
 } from 'react-native';
-import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { NotesSection } from '../../../../../../src/components/CommentsSection';
@@ -25,6 +28,8 @@ import {
 import { UnifiedLanguagesManager } from '../../../../../../src/core/UnifiedLanguagesManager';
 import { StoryManager, UserMarker } from '../../../../../../src/core/storyManager';
 import { useObsImage } from '../../../../../../src/hooks/useObsImage';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function StoryFrameScreen() {
   const { collectionId: encodedCollectionId, storyNumber, frameNumber } = useLocalSearchParams();
@@ -45,17 +50,23 @@ export default function StoryFrameScreen() {
   const [showFontSizeMenu, setShowFontSizeMenu] = useState(false);
   const [allStories, setAllStories] = useState<Story[]>([]);
   const [isRTL, setIsRTL] = useState(false);
+  const flatListRef = useRef<FlatList>(null);
+  const currentFrameNumberRef = useRef(currentFrameNumber);
+  const scrollStartOffsetRef = useRef<number>(0);
+  const isProgrammaticScrollRef = useRef(false);
   const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
-  // Get the image using the offline-first hook
-  const imageSource = useObsImage({
-    reference: {
-      story: parseInt(storyNumber as string, 10),
-      frame: currentFrameNumber,
-    },
-  });
+  // Update the ref whenever currentFrameNumber changes
+  useEffect(() => {
+    currentFrameNumberRef.current = currentFrameNumber;
+  }, [currentFrameNumber]);
+
+  // Debug effect to track frames changes
+  useEffect(() => {
+    console.log('frames state changed, length:', frames.length);
+  }, [frames]);
 
   useEffect(() => {
     loadStoryData();
@@ -69,18 +80,14 @@ export default function StoryFrameScreen() {
       setCurrentFrameNumber(frameNum);
 
       if (story && collection && frames.length > 0) {
-        navigateToFrame(frameNum);
+        const frameIndex = frames.findIndex((f) => f.frameNumber === frameNum);
+        if (frameIndex !== -1) {
+          const frame = frames[frameIndex];
+          setCurrentFrame(frame);
+        }
       }
     }
   }, [frameNumber, frames]);
-
-  // Effect to save reading progress whenever frame changes
-  useEffect(() => {
-    if (story && collection && currentFrame) {
-      saveReadingProgress();
-      loadMarkers();
-    }
-  }, [currentFrameNumber, story, collection]);
 
   const loadStoryData = async () => {
     if (!collectionId || !storyNumber) {
@@ -169,6 +176,19 @@ export default function StoryFrameScreen() {
       if (initialFrame) {
         setCurrentFrame(initialFrame);
         setCurrentFrameNumber(initialFrame.frameNumber);
+
+        // Load initial markers for the frame
+        const storyManager = StoryManager.getInstance();
+        try {
+          const frameMarkers = await storyManager.getMarkersForFrame(
+            collectionId as string,
+            parseInt(storyNumber as string, 10),
+            initialFrame.frameNumber
+          );
+          setMarkers(frameMarkers);
+        } catch (markerError) {
+          console.error('Error loading initial markers:', markerError);
+        }
       } else {
         setError(`Frame ${frameNum} not found`);
         setLoading(false);
@@ -215,11 +235,179 @@ export default function StoryFrameScreen() {
     setCurrentFrame(frame);
     setCurrentFrameNumber(safeFrameNumber);
 
-    // Update URL if needed
-    if (safeFrameNumber !== parseInt(frameNumber as string, 10)) {
-      router.setParams({ frameNumber: safeFrameNumber.toString() });
+    // Scroll to the frame in the FlatList
+    const frameIndex = frameArray.findIndex((f) => f.frameNumber === safeFrameNumber);
+    if (frameIndex !== -1 && flatListRef.current) {
+      isProgrammaticScrollRef.current = true;
+      flatListRef.current.scrollToIndex({
+        index: frameIndex,
+        animated: true,
+      });
+    }
+
+    // Load markers for the new frame
+    const loadMarkersForFrame = async () => {
+      try {
+        const storyManager = StoryManager.getInstance();
+        const frameMarkers = await storyManager.getMarkersForFrame(
+          collectionId as string,
+          parseInt(storyNumber as string, 10),
+          safeFrameNumber
+        );
+        setMarkers(frameMarkers);
+      } catch (error) {
+        console.error('Error loading markers:', error);
+      }
+    };
+    loadMarkersForFrame();
+  };
+
+  const onViewableItemsChanged = useCallback(
+    ({ viewableItems }: any) => {
+      if (viewableItems.length > 0) {
+        const currentIndex = viewableItems[0].index;
+        const frame = frames[currentIndex];
+
+        if (frame && frame.frameNumber !== currentFrameNumberRef.current) {
+          const newFrameNumber = frame.frameNumber;
+          console.log('Frame changed to:', newFrameNumber);
+
+          setCurrentFrame(frame);
+          setCurrentFrameNumber(newFrameNumber);
+
+          // Trigger marker loading and progress saving for the new frame
+          const loadMarkersForNewFrame = async () => {
+            try {
+              const storyManager = StoryManager.getInstance();
+              const frameMarkers = await storyManager.getMarkersForFrame(
+                collectionId as string,
+                parseInt(storyNumber as string, 10),
+                newFrameNumber
+              );
+              setMarkers(frameMarkers);
+
+              // Save reading progress for continue reading feature
+              await storyManager.saveReadingProgress(
+                collectionId as string,
+                parseInt(storyNumber as string, 10),
+                newFrameNumber,
+                totalFrames
+              );
+            } catch (error) {
+              console.error('Error loading markers or saving progress:', error);
+            }
+          };
+
+          loadMarkersForNewFrame();
+        } else if (!frame) {
+          console.warn('No frame found for index:', currentIndex);
+        }
+      }
+    },
+    [frames, collectionId, storyNumber, totalFrames]
+  );
+
+  // Simple boundary detection handlers
+  const handleScrollBegin = useCallback((event: any) => {
+    const { contentOffset } = event.nativeEvent;
+    scrollStartOffsetRef.current = contentOffset.x;
+  }, []);
+
+  const handleScrollEnd = useCallback(
+    (event: any) => {
+      const { contentOffset } = event.nativeEvent;
+      const startOffset = scrollStartOffsetRef.current;
+      const endOffset = contentOffset.x;
+      const currentFrame = currentFrameNumberRef.current;
+
+      // Ignore boundary detection if this was programmatic scrolling
+      if (isProgrammaticScrollRef.current) {
+        isProgrammaticScrollRef.current = false;
+        return;
+      }
+
+      console.log('Scroll debug:', {
+        startOffset,
+        endOffset,
+        currentFrame,
+        totalFrames,
+        framesLength: frames.length,
+        screenWidth: SCREEN_WIDTH,
+        isRTL,
+      });
+
+      // Simplified boundary detection - let's get basic functionality working first
+      const maxOffset = (frames.length - 1) * SCREEN_WIDTH;
+      const tolerance = 10;
+
+      // Check if user tried to scroll beyond start (first frame)
+      if (currentFrame === 1) {
+        const isAtStart = startOffset <= tolerance && endOffset <= tolerance;
+        console.log('First frame boundary check:', {
+          isAtStart,
+          startOffset,
+          endOffset,
+          tolerance,
+        });
+
+        if (isAtStart) {
+          console.log('User tried to scroll beyond first frame');
+          // Navigate to previous story
+          const previousStory = getPreviousStory();
+          if (previousStory) {
+            navigateToPreviousStoryLastFrame(previousStory);
+          }
+        }
+      }
+
+      // Check if user tried to scroll beyond end (last frame)
+      if (currentFrame === totalFrames) {
+        const isAtEnd = startOffset >= maxOffset - tolerance && endOffset >= maxOffset - tolerance;
+        console.log('Last frame boundary check:', {
+          isAtEnd,
+          startOffset,
+          endOffset,
+          maxOffset,
+          tolerance,
+        });
+
+        if (isAtEnd) {
+          console.log('User tried to scroll beyond last frame');
+          // Navigate to next story
+          const nextStory = getNextStory();
+          if (nextStory) {
+            console.log(`Navigating to next story ${nextStory.storyNumber}, frame 1`);
+            router.push(`/story/${encodeURIComponent(collectionId)}/${nextStory.storyNumber}/1`);
+          }
+        }
+      }
+    },
+    [frames.length, totalFrames, isRTL]
+  );
+
+  const navigateToPreviousStoryLastFrame = async (previousStory: Story) => {
+    try {
+      const collectionsManager = CollectionsManager.getInstance();
+      const previousStoryFrames = await collectionsManager.getStoryFrames(
+        collectionId as string,
+        previousStory.storyNumber
+      );
+      const lastFrameNumber = previousStoryFrames.length;
+      console.log(
+        `Navigating to previous story ${previousStory.storyNumber}, frame ${lastFrameNumber}`
+      );
+      router.push(
+        `/story/${encodeURIComponent(collectionId)}/${previousStory.storyNumber}/${lastFrameNumber}`
+      );
+    } catch (error) {
+      console.error('Error loading previous story frames:', error);
     }
   };
+
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 50,
+    waitForInteraction: false,
+  }).current;
 
   const saveReadingProgress = async () => {
     if (!collectionId || !storyNumber) return;
@@ -275,7 +463,14 @@ export default function StoryFrameScreen() {
         currentFrameNumber,
         note
       );
-      await loadMarkers(); // Reload markers
+
+      // Reload markers for current frame
+      const frameMarkers = await storyManager.getMarkersForFrame(
+        collectionId as string,
+        parseInt(storyNumber as string, 10),
+        currentFrameNumber
+      );
+      setMarkers(frameMarkers);
     } catch (error) {
       console.error('Error adding marker:', error);
     }
@@ -379,33 +574,157 @@ export default function StoryFrameScreen() {
     }
   };
 
-  // Handle swipe gestures
-  const onSwipeGestureEvent = (event: any) => {
-    const { translationX, state } = event.nativeEvent;
+  // Individual frame component for horizontal scrolling
+  const FrameCard = ({ frame, index }: { frame: Frame; index: number }) => {
+    const imageSource = useObsImage({
+      reference: {
+        story: parseInt(storyNumber as string, 10),
+        frame: frame.frameNumber,
+      },
+    });
 
-    if (state === State.END) {
-      const swipeThreshold = 50; // Minimum distance for a swipe
+    const [frameMarkers, setFrameMarkers] = useState<UserMarker[]>([]);
 
-      if (translationX > swipeThreshold) {
-        // Swipe right
-        if (isRTL) {
-          // In RTL, swipe right goes to next
-          goToNextFrame();
-        } else {
-          // In LTR, swipe right goes to previous
-          goToPreviousFrame();
+    useEffect(() => {
+      const loadFrameMarkers = async () => {
+        if (!collectionId || !storyNumber) return;
+        try {
+          const storyManager = StoryManager.getInstance();
+          const markers = await storyManager.getMarkersForFrame(
+            collectionId as string,
+            parseInt(storyNumber as string, 10),
+            frame.frameNumber
+          );
+          setFrameMarkers(markers);
+        } catch (error) {
+          console.error('Error loading frame markers:', error);
         }
-      } else if (translationX < -swipeThreshold) {
-        // Swipe left
-        if (isRTL) {
-          // In RTL, swipe left goes to previous
-          goToPreviousFrame();
-        } else {
-          // In LTR, swipe left goes to next
-          goToNextFrame();
-        }
-      }
-    }
+      };
+      loadFrameMarkers();
+    }, [frame.frameNumber]);
+
+    return (
+      <View style={{ width: SCREEN_WIDTH }}>
+        <ScrollView style={{ flex: 1 }}>
+          <View className="relative">
+            <Image source={imageSource} style={{ width: '100%', height: 200 }} resizeMode="cover" />
+
+            {/* Markers indicator */}
+            {frameMarkers.length > 0 && (
+              <View className={`absolute top-2 ${isRTL ? 'left-2' : 'right-2'}`}>
+                <View
+                  className={`flex-row items-center rounded-full px-2 py-1 ${
+                    isDark ? 'bg-black/50' : 'bg-white/80'
+                  }`}
+                  style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+                  <MaterialIcons name="bookmark" size={16} color={isDark ? '#FFD700' : '#F59E0B'} />
+                  <Text
+                    className={`text-xs font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}
+                    style={{
+                      marginLeft: isRTL ? 0 : 4,
+                      marginRight: isRTL ? 4 : 0,
+                    }}>
+                    {frameMarkers.length}
+                  </Text>
+                </View>
+              </View>
+            )}
+          </View>
+
+          <View className="p-4">
+            <View
+              className="mb-2 flex-row items-center justify-between"
+              style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+              <Text
+                className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
+                style={{ textAlign: isRTL ? 'right' : 'left' }}>
+                Frame {frame.frameNumber} of {totalFrames}
+              </Text>
+              {frame?.isFavorite && <MaterialIcons name="favorite" size={20} color="#EF4444" />}
+            </View>
+
+            <Text
+              className={`${getFontSizeClass()} leading-relaxed ${isDark ? 'text-white' : 'text-gray-800'}`}
+              style={{ textAlign: isRTL ? 'right' : 'left' }}>
+              {frame.text}
+            </Text>
+
+            {/* Display markers if any */}
+            {frameMarkers.length > 0 && (
+              <View className="mt-4">
+                <Text
+                  className={`mb-2 text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
+                  style={{ textAlign: isRTL ? 'right' : 'left' }}>
+                  Bookmarks ({frameMarkers.length})
+                </Text>
+                {frameMarkers.map((marker) => (
+                  <View
+                    key={marker.id}
+                    className={`mb-2 rounded-lg p-3 ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                    <View
+                      className="flex-row items-center justify-between"
+                      style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+                      <View
+                        className="flex-1 flex-row items-center"
+                        style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+                        <View
+                          className="mr-2 h-3 w-3 rounded-full"
+                          style={{
+                            backgroundColor: marker.color || '#FFD700',
+                            marginRight: isRTL ? 0 : 8,
+                            marginLeft: isRTL ? 8 : 0,
+                          }}
+                        />
+                        <Text
+                          className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}
+                          style={{ textAlign: isRTL ? 'right' : 'left' }}>
+                          {new Date(marker.timestamp).toLocaleDateString()}
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        onPress={() => {
+                          const storyManager = StoryManager.getInstance();
+                          storyManager.deleteMarker(marker.id).then(() => {
+                            // Reload markers for this specific frame
+                            const loadFrameMarkers = async () => {
+                              if (!collectionId || !storyNumber) return;
+                              try {
+                                const markers = await storyManager.getMarkersForFrame(
+                                  collectionId as string,
+                                  parseInt(storyNumber as string, 10),
+                                  frame.frameNumber
+                                );
+                                setFrameMarkers(markers);
+                              } catch (error) {
+                                console.error('Error loading frame markers:', error);
+                              }
+                            };
+                            loadFrameMarkers();
+                          });
+                        }}
+                        className="p-1">
+                        <MaterialIcons
+                          name="delete"
+                          size={16}
+                          color={isDark ? '#EF4444' : '#DC2626'}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                    {marker.note && (
+                      <Text
+                        className={`mt-1 text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}
+                        style={{ textAlign: isRTL ? 'right' : 'left' }}>
+                        {marker.note}
+                      </Text>
+                    )}
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        </ScrollView>
+      </View>
+    );
   };
 
   if (loading) {
@@ -552,137 +871,51 @@ export default function StoryFrameScreen() {
           </View>
         )}
 
-        <PanGestureHandler
-          onHandlerStateChange={onSwipeGestureEvent}
-          activeOffsetX={[-50, 50]}
-          failOffsetY={[-20, 20]}
-          shouldCancelWhenOutside>
-          <View style={{ flex: 1 }} onTouchStart={() => setShowFontSizeMenu(false)}>
-            <ScrollView className="flex-1">
-              <View className="relative">
-                <Image
-                  source={imageSource}
-                  style={{ width: '100%', height: 200 }}
-                  resizeMode="cover"
-                />
-
-                {/* Markers indicator */}
-                {markers.length > 0 && (
-                  <View className={`absolute top-2 ${isRTL ? 'left-2' : 'right-2'}`}>
-                    <View
-                      className={`flex-row items-center rounded-full px-2 py-1 ${
-                        isDark ? 'bg-black/50' : 'bg-white/80'
-                      }`}
-                      style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                      <MaterialIcons
-                        name="bookmark"
-                        size={16}
-                        color={isDark ? '#FFD700' : '#F59E0B'}
-                      />
-                      <Text
-                        className={`text-xs font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}
-                        style={{
-                          marginLeft: isRTL ? 0 : 4,
-                          marginRight: isRTL ? 4 : 0,
-                        }}>
-                        {markers.length}
-                      </Text>
-                    </View>
-                  </View>
-                )}
-              </View>
-
-              <View className="p-4">
-                <View
-                  className="mb-2 flex-row items-center justify-between"
-                  style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                  <Text
-                    className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
-                    style={{ textAlign: isRTL ? 'right' : 'left' }}>
-                    Frame {currentFrameNumber} of {totalFrames}
-                  </Text>
-                  {currentFrame?.isFavorite && (
-                    <MaterialIcons name="favorite" size={20} color="#EF4444" />
-                  )}
-                </View>
-
-                <Text
-                  className={`${getFontSizeClass()} leading-relaxed ${isDark ? 'text-white' : 'text-gray-800'}`}
-                  style={{ textAlign: isRTL ? 'right' : 'left' }}>
-                  {currentFrame.text}
-                </Text>
-
-                {/* Display markers if any */}
-                {markers.length > 0 && (
-                  <View className="mt-4">
-                    <Text
-                      className={`mb-2 text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
-                      style={{ textAlign: isRTL ? 'right' : 'left' }}>
-                      Bookmarks ({markers.length})
-                    </Text>
-                    {markers.map((marker) => (
-                      <View
-                        key={marker.id}
-                        className={`mb-2 rounded-lg p-3 ${isDark ? 'bg-gray-800' : 'bg-gray-50'}`}>
-                        <View
-                          className="flex-row items-center justify-between"
-                          style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                          <View
-                            className="flex-1 flex-row items-center"
-                            style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                            <View
-                              className="mr-2 h-3 w-3 rounded-full"
-                              style={{
-                                backgroundColor: marker.color || '#FFD700',
-                                marginRight: isRTL ? 0 : 8,
-                                marginLeft: isRTL ? 8 : 0,
-                              }}
-                            />
-                            <Text
-                              className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}
-                              style={{ textAlign: isRTL ? 'right' : 'left' }}>
-                              {new Date(marker.timestamp).toLocaleDateString()}
-                            </Text>
-                          </View>
-                          <TouchableOpacity
-                            onPress={() => {
-                              const storyManager = StoryManager.getInstance();
-                              storyManager.deleteMarker(marker.id).then(() => loadMarkers());
-                            }}
-                            className="p-1">
-                            <MaterialIcons
-                              name="delete"
-                              size={16}
-                              color={isDark ? '#EF4444' : '#DC2626'}
-                            />
-                          </TouchableOpacity>
-                        </View>
-                        {marker.note && (
-                          <Text
-                            className={`mt-1 text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}
-                            style={{ textAlign: isRTL ? 'right' : 'left' }}>
-                            {marker.note}
-                          </Text>
-                        )}
-                      </View>
-                    ))}
-                  </View>
-                )}
-              </View>
-            </ScrollView>
-
-            {/* Notes Section */}
-            {currentFrame && (
-              <NotesSection
-                collectionId={collectionId as string}
-                storyNumber={parseInt(storyNumber as string, 10)}
-                frameNumber={currentFrameNumber}
-                isVisible={showComments}
-                onToggleVisibility={() => setShowComments(!showComments)}
-              />
+        {/* Horizontal Scrolling Frames */}
+        <View style={{ flex: 1 }} onTouchStart={() => setShowFontSizeMenu(false)}>
+          <FlatList
+            ref={flatListRef}
+            data={frames}
+            renderItem={({ item, index }) => {
+              return <FrameCard frame={item} index={index} />;
+            }}
+            keyExtractor={(item) => `frame-${item.frameNumber}`}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onViewableItemsChanged={onViewableItemsChanged}
+            style={{ flex: 1 }}
+            onScrollBeginDrag={handleScrollBegin}
+            onScrollEndDrag={handleScrollEnd}
+            viewabilityConfig={viewabilityConfig}
+            getItemLayout={(data, index) => ({
+              length: SCREEN_WIDTH,
+              offset: SCREEN_WIDTH * index,
+              index,
+            })}
+            onScrollToIndexFailed={(info) => {
+              console.warn('Failed to scroll to index:', info);
+              // Fallback to scroll to beginning
+              flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+            }}
+            initialScrollIndex={Math.max(
+              0,
+              frames.findIndex((f) => f.frameNumber === currentFrameNumber)
             )}
-          </View>
-        </PanGestureHandler>
+            inverted={isRTL}
+          />
+
+          {/* Notes Section */}
+          {currentFrame && (
+            <NotesSection
+              collectionId={collectionId as string}
+              storyNumber={parseInt(storyNumber as string, 10)}
+              frameNumber={currentFrameNumber}
+              isVisible={showComments}
+              onToggleVisibility={() => setShowComments(!showComments)}
+            />
+          )}
+        </View>
 
         {/* Navigation controls */}
         <View
@@ -730,21 +963,25 @@ export default function StoryFrameScreen() {
 
           {/* Frame indicators */}
           <View className="flex-row" style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-            {[...Array(totalFrames)].map((_, index) => (
-              <TouchableOpacity
-                key={index}
-                onPress={() => navigateToFrame(index + 1)}
-                className={`mx-1 h-2 w-2 rounded-full ${
-                  index + 1 === currentFrameNumber
-                    ? isDark
-                      ? 'bg-blue-400'
-                      : 'bg-blue-500'
-                    : isDark
-                      ? 'bg-gray-600'
-                      : 'bg-gray-300'
-                }`}
-              />
-            ))}
+            {[...Array(totalFrames)].map((_, index) => {
+              const frameNum = index + 1;
+              const isActive = frameNum === currentFrameNumber;
+              return (
+                <TouchableOpacity
+                  key={index}
+                  onPress={() => navigateToFrame(frameNum)}
+                  className={`mx-1 h-2 w-2 rounded-full ${
+                    isActive
+                      ? isDark
+                        ? 'bg-blue-400'
+                        : 'bg-blue-500'
+                      : isDark
+                        ? 'bg-gray-600'
+                        : 'bg-gray-300'
+                  }`}
+                />
+              );
+            })}
           </View>
 
           {/* Next Button */}
