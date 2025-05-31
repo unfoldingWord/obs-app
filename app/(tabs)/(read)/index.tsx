@@ -1,4 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useFocusEffect } from 'expo-router';
 import React, { useEffect, useState, useCallback } from 'react';
 import {
@@ -14,7 +15,6 @@ import {
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 
 import { CollectionItem } from '../../../src/components/CollectionItem';
 import { ContinueReading } from '../../../src/components/ContinueReading';
@@ -133,18 +133,10 @@ export default function ReadScreen() {
 
   const handleSelectCollection = async (collection: Collection) => {
     try {
-      const storyManager = StoryManager.getInstance();
-      // Save progress for story 1, frame 1 as the starting point
-      await storyManager.saveReadingProgress(
-        collection.id,
-        1,
-        1,
-        10 // Default total frames, will be updated when actual story is loaded
-      );
-
+      // Just navigate to the stories page, don't overwrite existing progress
       router.push(`/stories?collectionId=${encodeURIComponent(collection.id)}`);
     } catch (err) {
-      console.error('Error saving selected collection:', err);
+      console.error('Error navigating to collection:', err);
     }
   };
 
@@ -165,7 +157,7 @@ export default function ReadScreen() {
 
       {/* Show full-screen empty state when no collections and no reading progress */}
       {collections.length === 0 && !lastReadProgress ? (
-        <View className="flex-1 relative">
+        <View className="relative flex-1">
           {/* Gradient Background */}
           <LinearGradient
             colors={
@@ -188,7 +180,7 @@ export default function ReadScreen() {
 
           {/* Optional subtle pattern overlay */}
           <View
-            className={`absolute inset-0 opacity-5`}
+            className="absolute inset-0 opacity-5"
             style={{
               backgroundColor: 'transparent',
             }}
@@ -220,7 +212,11 @@ export default function ReadScreen() {
                   <MaterialIcons name="history" size={28} color={isDark ? '#FFFFFF' : '#000000'} />
                   <View
                     className={`ml-3 flex-row items-center rounded-full px-3 py-1 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
-                    <MaterialIcons name="schedule" size={16} color={isDark ? '#9CA3AF' : '#6B7280'} />
+                    <MaterialIcons
+                      name="schedule"
+                      size={16}
+                      color={isDark ? '#9CA3AF' : '#6B7280'}
+                    />
                     <Text
                       className={`ml-2 text-sm font-medium ${isDark ? 'text-white' : 'text-black'}`}>
                       {new Date(lastReadProgress.timestamp).toLocaleDateString()}
@@ -256,7 +252,8 @@ export default function ReadScreen() {
                     />
                     <View
                       className={`ml-3 rounded-full px-3 py-1 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
-                      <Text className={`text-sm font-medium ${isDark ? 'text-white' : 'text-black'}`}>
+                      <Text
+                        className={`text-sm font-medium ${isDark ? 'text-white' : 'text-black'}`}>
                         {collections.length}
                       </Text>
                     </View>
@@ -295,8 +292,12 @@ export default function ReadScreen() {
               <View className="px-6 pb-8">
                 <View className="items-center py-12">
                   <View
-                    className={`mb-8 rounded-2xl p-6 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} shadow-lg border ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                    <MaterialIcons name="library-books" size={48} color={isDark ? '#9CA3AF' : '#6B7280'} />
+                    className={`mb-8 rounded-2xl p-6 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} border shadow-lg ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+                    <MaterialIcons
+                      name="library-books"
+                      size={48}
+                      color={isDark ? '#9CA3AF' : '#6B7280'}
+                    />
                   </View>
                   <TouchableOpacity
                     onPress={() => router.push('/downloads')}
@@ -305,12 +306,10 @@ export default function ReadScreen() {
                       flexDirection: 'row',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: 8
+                      gap: 8,
                     }}>
                     <MaterialIcons name="download" size={20} color="white" />
-                    <Text className="text-white font-semibold">
-                      Download Collections
-                    </Text>
+                    <Text className="font-semibold text-white">Download Collections</Text>
                   </TouchableOpacity>
                 </View>
               </View>

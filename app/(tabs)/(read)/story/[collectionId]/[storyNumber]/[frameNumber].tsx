@@ -284,22 +284,20 @@ export default function StoryFrameScreen() {
   };
 
   const navigateToFrame = (frameNum: number, framesToUse?: Frame[]) => {
-    const frameArray = framesToUse || frames;
+    // Use auxiliaryFrames by default since that's what the FlatList uses
+    const frameArray = framesToUse || auxiliaryFrames;
     if (!frameArray || frameArray.length === 0) return;
 
-    // Ensure frame number is within bounds
-    const safeFrameNumber = Math.max(1, Math.min(frameNum, frameArray.length));
-
-    // Find the frame with matching frameNumber
-    const frame = frameArray.find((f) => f.frameNumber === safeFrameNumber);
-    if (!frame) return;
+    // For auxiliary frames, we need to find the real frame (not auxiliary)
+    const realFrame = frameArray.find(f => f.frameNumber === frameNum && !(f as any).isAuxiliary);
+    if (!realFrame) return;
 
     // Set current frame
-    setCurrentFrame(frame);
-    setCurrentFrameNumber(safeFrameNumber);
+    setCurrentFrame(realFrame);
+    setCurrentFrameNumber(frameNum);
 
-    // Scroll to the frame in the FlatList
-    const frameIndex = frameArray.findIndex((f) => f.frameNumber === safeFrameNumber);
+    // Find the index in auxiliaryFrames array (including auxiliary frames)
+    const frameIndex = frameArray.findIndex((f) => f.frameNumber === frameNum && !(f as any).isAuxiliary);
     if (frameIndex !== -1 && flatListRef.current) {
       isProgrammaticScrollRef.current = true;
       flatListRef.current.scrollToIndex({
@@ -317,7 +315,7 @@ export default function StoryFrameScreen() {
         const frameMarkers = await storyManager.getMarkersForFrame(
           collectionId as string,
           parseInt(storyNumber as string, 10),
-          safeFrameNumber
+          frameNum
         );
         setMarkers(frameMarkers);
 
@@ -325,7 +323,7 @@ export default function StoryFrameScreen() {
         await storyManager.saveReadingProgress(
           collectionId as string,
           parseInt(storyNumber as string, 10),
-          safeFrameNumber,
+          frameNum,
           totalFrames
         );
       } catch (error) {
@@ -741,6 +739,7 @@ export default function StoryFrameScreen() {
 
   const goToNextFrame = async () => {
     if (currentFrameNumber < totalFrames) {
+      // Navigate to next real frame
       navigateToFrame(currentFrameNumber + 1);
     } else {
       // On last frame, save progress before going to next story
@@ -760,6 +759,7 @@ export default function StoryFrameScreen() {
 
   const goToPreviousFrame = async () => {
     if (currentFrameNumber > 1) {
+      // Navigate to previous real frame
       navigateToFrame(currentFrameNumber - 1);
     } else {
       // On first frame, save progress before going to previous story
@@ -1196,7 +1196,7 @@ export default function StoryFrameScreen() {
             }}
             initialScrollIndex={Math.max(
               0,
-              auxiliaryFrames.findIndex((f) => f.frameNumber === currentFrameNumber)
+              auxiliaryFrames.findIndex((f) => f.frameNumber === currentFrameNumber && !(f as any).isAuxiliary)
             )}
             inverted={isRTL}
           />

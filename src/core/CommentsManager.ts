@@ -43,23 +43,25 @@ export class CommentsManager {
       frameNumber: dbComment.frame_number,
       comment: dbComment.comment,
       createdAt: new Date(dbComment.created_at),
-      updatedAt: new Date(dbComment.updated_at)
+      updatedAt: new Date(dbComment.updated_at),
     };
   }
 
-  private convertCommentToDb(comment: Partial<FrameComment> & {
-    collectionId: string;
-    storyNumber: number;
-    frameNumber: number;
-    comment: string;
-  }) {
+  private convertCommentToDb(
+    comment: Partial<FrameComment> & {
+      collectionId: string;
+      storyNumber: number;
+      frameNumber: number;
+      comment: string;
+    }
+  ) {
     return {
       collection_id: comment.collectionId,
       story_number: comment.storyNumber,
       frame_number: comment.frameNumber,
       comment: comment.comment,
       created_at: comment.createdAt?.toISOString(),
-      updated_at: comment.updatedAt?.toISOString()
+      updated_at: comment.updatedAt?.toISOString(),
     };
   }
 
@@ -76,7 +78,7 @@ export class CommentsManager {
         collection_id: collectionId,
         story_number: storyNumber,
         frame_number: frameNumber,
-        comment: comment
+        comment,
       });
 
       return id;
@@ -99,9 +101,11 @@ export class CommentsManager {
         storyNumber,
         frameNumber
       );
-      return dbComments.map(comment => this.convertDbToComment(comment));
+      return dbComments.map((comment) => this.convertDbToComment(comment));
     } catch (error) {
-      warn(`Error getting frame comments: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Error getting frame comments: ${error instanceof Error ? error.message : String(error)}`
+      );
       return [];
     }
   }
@@ -133,7 +137,7 @@ export class CommentsManager {
 
     try {
       const dbComments = await this.databaseManager.getAllComments();
-      return dbComments.map(comment => this.convertDbToComment(comment));
+      return dbComments.map((comment) => this.convertDbToComment(comment));
     } catch (error) {
       warn(`Error getting all comments: ${error instanceof Error ? error.message : String(error)}`);
       return [];
@@ -150,7 +154,9 @@ export class CommentsManager {
     try {
       return await this.databaseManager.getCommentsCount(collectionId, storyNumber, frameNumber);
     } catch (error) {
-      warn(`Error getting comments count: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Error getting comments count: ${error instanceof Error ? error.message : String(error)}`
+      );
       return 0;
     }
   }
@@ -161,7 +167,9 @@ export class CommentsManager {
     try {
       return await this.databaseManager.deleteCommentsForCollection(collectionId);
     } catch (error) {
-      warn(`Error deleting comments for collection: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Error deleting comments for collection: ${error instanceof Error ? error.message : String(error)}`
+      );
       return 0;
     }
   }
@@ -172,9 +180,11 @@ export class CommentsManager {
 
     try {
       const allComments = await this.getAllComments();
-      return allComments.find(comment => comment.id === commentId) || null;
+      return allComments.find((comment) => comment.id === commentId) || null;
     } catch (error) {
-      warn(`Error getting comment by ID: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Error getting comment by ID: ${error instanceof Error ? error.message : String(error)}`
+      );
       return null;
     }
   }
@@ -190,7 +200,9 @@ export class CommentsManager {
       const count = await this.getCommentsCount(collectionId, storyNumber, frameNumber);
       return count > 0;
     } catch (error) {
-      warn(`Error checking if frame has comments: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Error checking if frame has comments: ${error instanceof Error ? error.message : String(error)}`
+      );
       return false;
     }
   }
@@ -207,26 +219,26 @@ export class CommentsManager {
     try {
       const allComments = await this.getAllComments();
       const uniqueFrames = new Set(
-        allComments.map(c => `${c.collectionId}_${c.storyNumber}_${c.frameNumber}`)
+        allComments.map((c) => `${c.collectionId}_${c.storyNumber}_${c.frameNumber}`)
       );
-      const uniqueStories = new Set(
-        allComments.map(c => `${c.collectionId}_${c.storyNumber}`)
-      );
-      const uniqueCollections = new Set(allComments.map(c => c.collectionId));
+      const uniqueStories = new Set(allComments.map((c) => `${c.collectionId}_${c.storyNumber}`));
+      const uniqueCollections = new Set(allComments.map((c) => c.collectionId));
 
       return {
         totalComments: allComments.length,
         uniqueFrames: uniqueFrames.size,
         uniqueStories: uniqueStories.size,
-        uniqueCollections: uniqueCollections.size
+        uniqueCollections: uniqueCollections.size,
       };
     } catch (error) {
-      warn(`Error getting comment statistics: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Error getting comment statistics: ${error instanceof Error ? error.message : String(error)}`
+      );
       return {
         totalComments: 0,
         uniqueFrames: 0,
         uniqueStories: 0,
-        uniqueCollections: 0
+        uniqueCollections: 0,
       };
     }
   }

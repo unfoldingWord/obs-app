@@ -100,27 +100,27 @@ export interface SearchResult {
 
 /**
  * CollectionsManager - Manages Bible story collections with offline-first approach
- * 
+ *
  * All Collection objects include embedded owner data from the catalog response,
  * eliminating the need for additional API calls during downloads.
- * 
+ *
  * Owner data management:
  * - Owner records are shared across collections and persist when collections are deleted
  * - Each download updates owner information with the latest data from the catalog
  * - This ensures owner data stays fresh and accurate over time
- * 
+ *
  * Usage example:
  * ```typescript
  * const manager = CollectionsManager.getInstance();
- * 
+ *
  * // Get collections (always include embedded owner data)
  * const collections = await manager.getRemoteCollectionsByLanguage('en');
- * 
+ *
  * // Download using embedded owner data (updates owner info automatically)
  * for (const { collection } of collections) {
  *   await manager.downloadRemoteCollection(collection);
  * }
- * 
+ *
  * // Display collections with owner names (fully offline)
  * const localCollections = await manager.getLocalCollections();
  * for (const collection of localCollections) {
@@ -234,7 +234,9 @@ export class CollectionsManager {
     }
   }
 
-  async getRemoteCollectionsByLanguage(language: string): Promise<Array<{ collection: Collection; ownerData: any }>> {
+  async getRemoteCollectionsByLanguage(
+    language: string
+  ): Promise<{ collection: Collection; ownerData: any }[]> {
     try {
       const params = new URLSearchParams({
         subject: 'Open Bible Stories',
@@ -270,14 +272,14 @@ export class CollectionsManager {
   // Local Collection Operations using DatabaseManager
   async getLocalCollections(): Promise<Collection[]> {
     if (!this.initialized) await this.initialize();
-    
+
     try {
       const collections = await this.databaseManager.getAllCollections();
       const collectionsWithOwnerData: Collection[] = [];
-      
+
       for (const collection of collections) {
         const owner = await this.databaseManager.getRepositoryOwner(collection.owner);
-        
+
         collectionsWithOwnerData.push({
           id: collection.id,
           owner: {
@@ -300,7 +302,7 @@ export class CollectionsManager {
           metadata: collection.metadata || undefined,
         });
       }
-      
+
       return collectionsWithOwnerData;
     } catch (error) {
       console.error('Error getting local collections:', error);
@@ -310,14 +312,14 @@ export class CollectionsManager {
 
   async getLocalCollectionsByLanguage(language: string): Promise<Collection[]> {
     if (!this.initialized) await this.initialize();
-    
+
     try {
       const collections = await this.databaseManager.getCollectionsByLanguage(language);
       const collectionsWithOwnerData: Collection[] = [];
-      
+
       for (const collection of collections) {
         const owner = await this.databaseManager.getRepositoryOwner(collection.owner);
-        
+
         collectionsWithOwnerData.push({
           id: collection.id,
           owner: {
@@ -340,7 +342,7 @@ export class CollectionsManager {
           metadata: collection.metadata || undefined,
         });
       }
-      
+
       return collectionsWithOwnerData;
     } catch (error) {
       console.error('Error getting local collections by language:', error);
@@ -357,13 +359,13 @@ export class CollectionsManager {
 
   async getCollection(id: string): Promise<Collection | null> {
     if (!this.initialized) await this.initialize();
-    
+
     try {
       const collection = await this.databaseManager.getCollection(id);
       if (!collection) return null;
-      
+
       const owner = await this.databaseManager.getRepositoryOwner(collection.owner);
-      
+
       return {
         id: collection.id,
         owner: {
@@ -661,7 +663,7 @@ export class CollectionsManager {
     }
   }
 
-      private async cleanupComments(commentsManager: any, collectionId: string): Promise<void> {
+  private async cleanupComments(commentsManager: any, collectionId: string): Promise<void> {
     try {
       // Use the CommentsManager's efficient bulk delete method
       await commentsManager.initialize();
@@ -672,11 +674,14 @@ export class CollectionsManager {
     }
   }
 
-  private convertRemoteToCollection(remote: RemoteCollection): { collection: Collection; ownerData: any } {
+  private convertRemoteToCollection(remote: RemoteCollection): {
+    collection: Collection;
+    ownerData: any;
+  } {
     const collectionId = `${remote.owner}/${remote.name}`;
-    
+
     const ownerData = remote.repo?.owner;
-    
+
     const collection: Collection = {
       id: collectionId,
       owner: {
@@ -852,10 +857,7 @@ export class CollectionsManager {
   }
 
   // Download Operations
-  async downloadRemoteCollection(
-    collection: Collection,
-    languageData?: any
-  ): Promise<void> {
+  async downloadRemoteCollection(collection: Collection, languageData?: any): Promise<void> {
     if (!this.initialized) await this.initialize();
     try {
       // Save language data FIRST to satisfy foreign key constraints
@@ -907,7 +909,7 @@ export class CollectionsManager {
       // Always try to save/update owner data when available
       if (ownerData) {
         const fullName = ownerData.full_name || ownerData.fullName;
-        
+
         // Save/update the owner with the latest information
         await this.databaseManager.saveRepositoryOwner({
           username: ownerUsername,
@@ -926,14 +928,19 @@ export class CollectionsManager {
             bio: ownerData.bio || undefined,
             company: ownerData.company || undefined,
             hireable: ownerData.hireable || undefined,
-            publicRepos: ownerData.publicRepos || ownerData.public_repos || ownerData.starred_repos_count || undefined,
+            publicRepos:
+              ownerData.publicRepos ||
+              ownerData.public_repos ||
+              ownerData.starred_repos_count ||
+              undefined,
             publicGists: ownerData.publicGists || ownerData.public_gists || undefined,
             followers: ownerData.followers || ownerData.followers_count || undefined,
             following: ownerData.following || ownerData.following_count || undefined,
-            createdAt: ownerData.createdAt || ownerData.created_at || ownerData.created || undefined,
+            createdAt:
+              ownerData.createdAt || ownerData.created_at || ownerData.created || undefined,
             updatedAt: ownerData.updatedAt || ownerData.updated_at || undefined,
-            ...ownerData.metadata
-          }
+            ...ownerData.metadata,
+          },
         });
       } else {
         // Only create minimal entry if owner doesn't exist yet
@@ -1019,7 +1026,7 @@ export class CollectionsManager {
       for (const owner of allOwners) {
         // Check if this owner has any collections
         const collections = await this.databaseManager.getCollectionsByOwner(owner.username);
-        
+
         if (collections.length === 0) {
           // This owner has no collections, remove them
           await this.databaseManager.deleteRepositoryOwner(owner.username);
@@ -1030,7 +1037,7 @@ export class CollectionsManager {
       if (removedCount > 0) {
         warn(`🧹 Cleaned up ${removedCount} orphaned owner records`);
       }
-      
+
       return removedCount;
     } catch (error) {
       warn(
@@ -1133,14 +1140,14 @@ export class CollectionsManager {
 
   async getCollectionsByOwner(ownerUsername: string): Promise<Collection[]> {
     if (!this.initialized) await this.initialize();
-    
+
     try {
       const collections = await this.databaseManager.getCollectionsByOwner(ownerUsername);
       const collectionsWithOwnerData: Collection[] = [];
-      
+
       for (const collection of collections) {
         const owner = await this.databaseManager.getRepositoryOwner(collection.owner);
-        
+
         collectionsWithOwnerData.push({
           id: collection.id,
           owner: {
@@ -1163,7 +1170,7 @@ export class CollectionsManager {
           metadata: collection.metadata || undefined,
         });
       }
-      
+
       return collectionsWithOwnerData;
     } catch (error) {
       console.error('Error getting collections by owner:', error);
@@ -1175,7 +1182,7 @@ export class CollectionsManager {
    * Downloads a remote collection using owner data already available from the catalog response.
    * Since Collection objects always have owner data embedded, this is now just an alias
    * to the standard downloadRemoteCollection method.
-   * 
+   *
    * @param collection - Collection to download
    * @param ownerData - Owner data from the catalog response (not used since Collection has embedded data)
    * @param languageData - Optional language data

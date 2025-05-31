@@ -206,7 +206,6 @@ export const NotesSection: React.FC<NotesSectionProps> = ({
               className={`rounded-xl p-3 shadow-lg ${isDark ? 'bg-blue-600' : 'bg-blue-500'}`}
               style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               <MaterialIcons name="add" size={20} color="white" />
-              <Text className="font-semibold text-white">Add Note</Text>
             </TouchableOpacity>
           </View>
         </View>
