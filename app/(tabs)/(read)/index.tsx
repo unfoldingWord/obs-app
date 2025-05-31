@@ -11,13 +11,16 @@ import {
   useColorScheme,
   Alert,
   ScrollView,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { CollectionItem } from '../../../src/components/CollectionItem';
 import { ContinueReading } from '../../../src/components/ContinueReading';
 import { CollectionsManager, Collection } from '../../../src/core/CollectionsManager';
 import { StoryManager, UserProgress } from '../../../src/core/storyManager';
+import { useObsImage } from '../../../src/hooks/useObsImage';
 
 export default function ReadScreen() {
   const [loading, setLoading] = useState(true);
@@ -26,6 +29,11 @@ export default function ReadScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+
+  // Get aesthetic image for empty state
+  const aestheticImage = useObsImage({
+    reference: { story: 28, frame: 10 },
+  });
 
   const loadData = useCallback(async () => {
     try {
@@ -155,123 +163,164 @@ export default function ReadScreen() {
     <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        {/* Hero Section */}
-        <View className="relative">
-          {lastReadProgress ? (
-            <View className="px-6 pb-6 pt-8">
-              <View className="mb-6 flex-row items-center">
-                <MaterialIcons name="history" size={28} color={isDark ? '#FFFFFF' : '#000000'} />
-                <View
-                  className={`ml-3 flex-row items-center rounded-full px-3 py-1 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
-                  <MaterialIcons name="schedule" size={16} color={isDark ? '#9CA3AF' : '#6B7280'} />
-                  <Text
-                    className={`ml-2 text-sm font-medium ${isDark ? 'text-white' : 'text-black'}`}>
-                    {new Date(lastReadProgress.timestamp).toLocaleDateString()}
-                  </Text>
-                </View>
-              </View>
-              <ContinueReading
-                lastReadProgress={lastReadProgress}
-                onPress={handleContinueReading}
-                isDark={isDark}
-              />
-            </View>
-          ) : (
-            <View className="px-6 pb-8 pt-12">
-              <View className="mb-8 flex-row items-center justify-center">
-                <MaterialIcons
-                  name="auto-stories"
-                  size={48}
-                  color={isDark ? '#FFFFFF' : '#000000'}
-                />
-              </View>
+      {/* Show full-screen empty state when no collections and no reading progress */}
+      {collections.length === 0 && !lastReadProgress ? (
+        <View className="flex-1 relative">
+          {/* Gradient Background */}
+          <LinearGradient
+            colors={
+              isDark
+                ? ['#0F172A', '#1E293B', '#334155'] // Dark: slate gradient
+                : ['#F8FAFC', '#E2E8F0', '#CBD5E1'] // Light: subtle gray gradient
+            }
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              width: '100%',
+              height: '100%',
+            }}
+          />
 
-              {/* Hero CTA */}
-              <TouchableOpacity
-                onPress={() => router.push('/downloads')}
-                className={`rounded-3xl p-6 ${isDark ? 'bg-white' : 'bg-black'} shadow-xl`}>
-                <View className="flex-row items-center justify-center">
-                  <MaterialIcons name="download" size={32} color={isDark ? '#000000' : '#FFFFFF'} />
-                </View>
-              </TouchableOpacity>
-            </View>
-          )}
+          {/* Optional subtle pattern overlay */}
+          <View
+            className={`absolute inset-0 opacity-5`}
+            style={{
+              backgroundColor: 'transparent',
+            }}
+          />
+
+          {/* Centered Download Button */}
+          <View className="flex-1 items-center justify-center px-6">
+            <TouchableOpacity
+              onPress={() => router.push('/downloads')}
+              className={`rounded-full p-8 ${isDark ? 'bg-blue-600' : 'bg-blue-500'} shadow-2xl`}
+              style={{
+                width: 120,
+                height: 120,
+                justifyContent: 'center',
+                alignItems: 'center',
+                elevation: 20,
+              }}>
+              <MaterialIcons name="download" size={48} color="white" />
+            </TouchableOpacity>
+          </View>
         </View>
-
-        {/* Collections Section */}
-        {collections.length > 0 && (
-          <>
-            {/* Divider */}
-            {lastReadProgress && (
-              <View className="mb-8 px-6">
-                <View className={`h-0.5 ${isDark ? 'bg-gray-700' : 'bg-gray-300'} shadow-sm`} />
-              </View>
-            )}
-
-            <View className="px-6 pb-8">
-              <View className="mb-6 flex-row items-center justify-between">
-                <View className="flex-row items-center">
-                  <MaterialIcons
-                    name="library-books"
-                    size={28}
-                    color={isDark ? '#FFFFFF' : '#000000'}
-                  />
+      ) : (
+        <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+          {/* Hero Section */}
+          <View className="relative">
+            {lastReadProgress ? (
+              <View className="px-6 pb-6 pt-8">
+                <View className="mb-6 flex-row items-center">
+                  <MaterialIcons name="history" size={28} color={isDark ? '#FFFFFF' : '#000000'} />
                   <View
-                    className={`ml-3 rounded-full px-3 py-1 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
-                    <Text className={`text-sm font-medium ${isDark ? 'text-white' : 'text-black'}`}>
-                      {collections.length}
+                    className={`ml-3 flex-row items-center rounded-full px-3 py-1 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                    <MaterialIcons name="schedule" size={16} color={isDark ? '#9CA3AF' : '#6B7280'} />
+                    <Text
+                      className={`ml-2 text-sm font-medium ${isDark ? 'text-white' : 'text-black'}`}>
+                      {new Date(lastReadProgress.timestamp).toLocaleDateString()}
                     </Text>
                   </View>
                 </View>
-                <TouchableOpacity
-                  onPress={() => router.push('/downloads')}
-                  className={`rounded-full p-3 ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
-                  <MaterialIcons name="add" size={24} color={isDark ? '#FFFFFF' : '#000000'} />
-                </TouchableOpacity>
+                <ContinueReading
+                  lastReadProgress={lastReadProgress}
+                  onPress={handleContinueReading}
+                  isDark={isDark}
+                />
+              </View>
+            ) : null}
+          </View>
+
+          {/* Collections Section */}
+          {collections.length > 0 && (
+            <>
+              {/* Divider */}
+              {lastReadProgress && (
+                <View className="mb-8 px-6">
+                  <View className={`h-0.5 ${isDark ? 'bg-gray-700' : 'bg-gray-300'} shadow-sm`} />
+                </View>
+              )}
+
+              <View className="px-6 pb-8">
+                <View className="mb-6 flex-row items-center justify-between">
+                  <View className="flex-row items-center">
+                    <MaterialIcons
+                      name="library-books"
+                      size={28}
+                      color={isDark ? '#FFFFFF' : '#000000'}
+                    />
+                    <View
+                      className={`ml-3 rounded-full px-3 py-1 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                      <Text className={`text-sm font-medium ${isDark ? 'text-white' : 'text-black'}`}>
+                        {collections.length}
+                      </Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => router.push('/downloads')}
+                    className={`rounded-full p-3 ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
+                    <MaterialIcons name="add" size={24} color={isDark ? '#FFFFFF' : '#000000'} />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Collections Grid */}
+                <View className="space-y-4">
+                  {collections.map((item) => (
+                    <CollectionItem
+                      key={item.id}
+                      item={item}
+                      onPress={handleSelectCollection}
+                      onCollectionDeleted={refreshData}
+                      isDark={isDark}
+                    />
+                  ))}
+                </View>
+              </View>
+            </>
+          )}
+
+          {/* Empty State for Collections when there's reading progress */}
+          {collections.length === 0 && lastReadProgress && (
+            <>
+              {/* Divider */}
+              <View className="mb-8 px-6">
+                <View className={`h-px ${isDark ? 'bg-gray-800' : 'bg-gray-200'}`} />
               </View>
 
-              {/* Collections Grid */}
-              <View className="space-y-4">
-                {collections.map((item) => (
-                  <CollectionItem
-                    key={item.id}
-                    item={item}
-                    onPress={handleSelectCollection}
-                    onCollectionDeleted={refreshData}
-                    isDark={isDark}
-                  />
-                ))}
+              <View className="px-6 pb-8">
+                <View className="items-center py-12">
+                  <View
+                    className={`mb-8 rounded-2xl p-6 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} shadow-lg border ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+                    <MaterialIcons name="library-books" size={48} color={isDark ? '#9CA3AF' : '#6B7280'} />
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => router.push('/downloads')}
+                    className={`rounded-xl px-6 py-3 ${isDark ? 'bg-blue-600' : 'bg-blue-500'} shadow-lg`}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8
+                    }}>
+                    <MaterialIcons name="download" size={20} color="white" />
+                    <Text className="text-white font-semibold">
+                      Download Collections
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
-          </>
-        )}
+            </>
+          )}
 
-        {/* Empty State for Collections */}
-        {collections.length === 0 && lastReadProgress && (
-          <>
-            {/* Divider */}
-            <View className="mb-8 px-6">
-              <View className={`h-0.5 ${isDark ? 'bg-gray-700' : 'bg-gray-300'} shadow-sm`} />
-            </View>
-
-            <View
-              className={`rounded-3xl p-12 ${isDark ? 'bg-gray-900' : 'bg-gray-50'} border-2 border-dashed ${isDark ? 'border-gray-600' : 'border-gray-400'} shadow-inner`}>
-              <View className="items-center">
-                <MaterialIcons name="download" size={64} color={isDark ? '#6B7280' : '#9CA3AF'} />
-                <TouchableOpacity
-                  onPress={() => router.push('/downloads')}
-                  className={`mt-8 rounded-2xl p-4 ${isDark ? 'bg-white' : 'bg-black'} shadow-lg`}>
-                  <MaterialIcons name="add" size={24} color={isDark ? '#000000' : '#FFFFFF'} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          </>
-        )}
-
-        {/* Bottom spacing */}
-        <View className="h-8" />
-      </ScrollView>
+          {/* Bottom spacing */}
+          <View className="h-8" />
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }

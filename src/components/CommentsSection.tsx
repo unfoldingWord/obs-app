@@ -153,14 +153,8 @@ export const NotesSection: React.FC<NotesSectionProps> = ({
   );
 
   const renderEmptyState = () => (
-    <View className="items-center justify-center py-8">
-      <MaterialIcons name="note" size={48} color={isDark ? '#6B7280' : '#9CA3AF'} />
-      <Text className={`mt-2 text-center ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-        No notes yet
-      </Text>
-      <Text className={`mt-1 text-center text-sm ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-        Add your first note for this frame!
-      </Text>
+    <View className="items-center justify-center py-12">
+      <MaterialIcons name="edit-note" size={64} color={isDark ? '#4B5563' : '#9CA3AF'} />
     </View>
   );
 
@@ -169,17 +163,13 @@ export const NotesSection: React.FC<NotesSectionProps> = ({
       {/* Notes Toggle Button */}
       <TouchableOpacity
         onPress={onToggleVisibility}
-        className={`flex-row items-center justify-between p-3 ${
-          isDark ? 'bg-gray-800' : 'bg-gray-100'
-        } border-t ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-        <View className="flex-row items-center">
-          <MaterialIcons name="note" size={20} color={isDark ? '#9CA3AF' : '#6B7280'} />
-          <Text className={`ml-2 font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-            Notes
-          </Text>
+        className={`px-4 py-3 border-t ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}
+        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <MaterialIcons name="edit-note" size={20} color={isDark ? '#9CA3AF' : '#6B7280'} />
           {notesCount > 0 && (
             <View
-              className={`ml-2 rounded-full px-2 py-1 ${isDark ? 'bg-blue-600' : 'bg-blue-500'}`}>
+              className={`rounded-full px-2.5 py-1 ${isDark ? 'bg-blue-600' : 'bg-blue-500'}`}>
               <Text className="text-xs font-bold text-white">{notesCount}</Text>
             </View>
           )}
@@ -194,8 +184,8 @@ export const NotesSection: React.FC<NotesSectionProps> = ({
       {/* Notes List */}
       {isVisible && (
         <View
-          className={`${isDark ? 'bg-gray-900' : 'bg-white'} border-t ${
-            isDark ? 'border-gray-700' : 'border-gray-200'
+          className={`${isDark ? 'bg-gray-950' : 'bg-gray-50'} border-t ${
+            isDark ? 'border-gray-800' : 'border-gray-200'
           }`}>
           {/* Notes List */}
           <View style={{ maxHeight: 300 }}>
@@ -204,20 +194,19 @@ export const NotesSection: React.FC<NotesSectionProps> = ({
               renderItem={renderNoteItem}
               keyExtractor={(item) => item.id}
               ListEmptyComponent={renderEmptyState}
-              contentContainerStyle={{ paddingBottom: 16 }}
+              contentContainerStyle={{ padding: 16 }}
               showsVerticalScrollIndicator={false}
             />
           </View>
 
           {/* Add Note Button */}
-          <View className="border-t border-gray-200 p-3 dark:border-gray-700">
+          <View className={`border-t p-4 ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
             <TouchableOpacity
               onPress={() => setShowAddModal(true)}
-              className={`flex-row items-center justify-center rounded-lg p-3 ${
-                isDark ? 'bg-blue-600' : 'bg-blue-500'
-              }`}>
+              className={`rounded-xl p-3 shadow-lg ${isDark ? 'bg-blue-600' : 'bg-blue-500'}`}
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
               <MaterialIcons name="add" size={20} color="white" />
-              <Text className="ml-2 font-medium text-white">Add Note</Text>
+              <Text className="font-semibold text-white">Add Note</Text>
             </TouchableOpacity>
           </View>
         </View>

@@ -552,9 +552,6 @@ export default function FavoritesScreen() {
               size={64}
               color={isDark ? '#374151' : '#D1D5DB'}
             />
-            <Text className={`mt-6 text-2xl font-light ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
-              ❤️
-            </Text>
           </View>
         )
       ) : activeTab === 'markers' ? (
@@ -573,9 +570,6 @@ export default function FavoritesScreen() {
               size={64}
               color={isDark ? '#374151' : '#D1D5DB'}
             />
-            <Text className={`mt-6 text-2xl font-light ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
-              🔖
-            </Text>
           </View>
         )
       ) : (
@@ -594,9 +588,6 @@ export default function FavoritesScreen() {
               size={64}
               color={isDark ? '#374151' : '#D1D5DB'}
             />
-            <Text className={`mt-6 text-2xl font-light ${isDark ? 'text-gray-600' : 'text-gray-400'}`}>
-              📝
-            </Text>
           </View>
         )
       )}

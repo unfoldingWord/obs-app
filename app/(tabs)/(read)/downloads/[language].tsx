@@ -11,6 +11,7 @@ import {
   useColorScheme,
   Image,
   Alert,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -21,6 +22,61 @@ import {
 } from '../../../../src/core/CollectionsManager';
 import { hashStringToNumber } from '../../../../src/core/hashStringToNumber';
 import { SearchBar } from '../../../components/SearchBar';
+
+// Icon-based Delete Confirmation Modal Component
+interface DeleteConfirmationModalProps {
+  visible: boolean;
+  collectionName: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  isDark: boolean;
+}
+
+const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
+  visible,
+  collectionName,
+  onConfirm,
+  onCancel,
+  isDark,
+}) => (
+  <Modal visible={visible} transparent animationType="fade">
+    <View className="flex-1 items-center justify-center bg-black/50">
+      <View className={`mx-6 overflow-hidden rounded-3xl ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-2xl border ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+        {/* Header with warning icon */}
+        <View className="items-center p-6">
+          <View className={`mb-4 rounded-full p-4 ${isDark ? 'bg-red-600/20' : 'bg-red-500/10'} border ${isDark ? 'border-red-600/30' : 'border-red-500/20'}`}>
+            <MaterialIcons name="warning" size={32} color={isDark ? '#F87171' : '#EF4444'} />
+          </View>
+
+          {/* Collection info */}
+          <View className="items-center max-w-64">
+            <Text className={`text-center text-base font-medium ${isDark ? 'text-white' : 'text-gray-900'}`} numberOfLines={2}>
+              {collectionName}
+            </Text>
+          </View>
+        </View>
+
+        {/* Action buttons */}
+        <View className="flex-row border-t" style={{ borderColor: isDark ? '#374151' : '#E5E7EB' }}>
+          {/* Cancel button */}
+          <TouchableOpacity
+            onPress={onCancel}
+            className={`flex-1 items-center justify-center py-4 ${isDark ? 'bg-gray-700' : 'bg-gray-50'}`}
+            style={{ borderRightWidth: 1, borderRightColor: isDark ? '#374151' : '#E5E7EB' }}>
+            <MaterialIcons name="close" size={24} color={isDark ? '#9CA3AF' : '#6B7280'} />
+          </TouchableOpacity>
+
+          {/* Delete button */}
+          <TouchableOpacity
+            onPress={onConfirm}
+            className="flex-1 items-center justify-center py-4">
+            <MaterialIcons name="delete" size={24} color={isDark ? '#F87171' : '#EF4444'} />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  </Modal>
+);
 
 interface Language {
   alt: string[];
@@ -45,6 +101,8 @@ export default function LanguageScreen() {
   const [collectionsManager, setCollectionsManager] = useState<CollectionsManager | null>(null);
   const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);
   const [showInfoModal, setShowInfoModal] = useState(false);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [collectionToDelete, setCollectionToDelete] = useState<Collection | null>(null);
   const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -129,10 +187,10 @@ export default function LanguageScreen() {
     if (!collectionsManager) return;
     try {
       setDownloadingId(collection.id);
-      
+
       // Use the standard download method which now uses embedded owner data
       await collectionsManager.downloadRemoteCollection(collection, language);
-      
+
       await loadCollections(); // Refresh the list
     } catch (err) {
       console.error('Download failed:', err);
@@ -148,29 +206,8 @@ export default function LanguageScreen() {
 
   const handleDeleteCollection = async (collection: Collection) => {
     if (!collectionsManager) return;
-    Alert.alert('Delete Collection', `Are you sure you want to delete ${collection.displayName}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            setDownloadingId(collection.id);
-            await collectionsManager.deleteCollection(collection.id);
-            await loadCollections(); // Refresh the list
-          } catch (err) {
-            console.error('Delete failed:', err);
-            Alert.alert(
-              'Delete Failed',
-              'There was an error deleting this collection. Please try again.',
-              [{ text: 'OK' }]
-            );
-          } finally {
-            setDownloadingId(null);
-          }
-        },
-      },
-    ]);
+    setCollectionToDelete(collection);
+    setShowDeleteConfirmation(true);
   };
 
   const handleShowInfo = (collection: Collection) => {
@@ -185,6 +222,33 @@ export default function LanguageScreen() {
 
   const handleCollectionDeleted = () => {
     loadCollections(); // Refresh the list
+  };
+
+  const handleDeleteConfirmation = async () => {
+    if (!collectionsManager || !collectionToDelete) return;
+    try {
+      setDownloadingId(collectionToDelete.id);
+      await collectionsManager.deleteCollection(collectionToDelete.id);
+      setShowDeleteConfirmation(false);
+      setCollectionToDelete(null);
+      await loadCollections(); // Refresh the list
+    } catch (err) {
+      console.error('Delete failed:', err);
+      setShowDeleteConfirmation(false);
+      setCollectionToDelete(null);
+      Alert.alert(
+        'Delete Failed',
+        'There was an error deleting this collection. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteConfirmation(false);
+    setCollectionToDelete(null);
   };
 
   const filteredCollections = collections.filter((item) => {
@@ -202,91 +266,133 @@ export default function LanguageScreen() {
   const renderCollectionItem = ({ item }: { item: Collection }) => {
     const storyNumber = hashStringToNumber(item.id);
     const fallbackImageUrl = `https://cdn.door43.org/obs/jpg/360px/obs-en-${String(storyNumber).padStart(2, '0')}-01.jpg`;
-    
+
     return (
       <TouchableOpacity
         key={item.id}
         onPress={() => handleSelectCollection(item)}
-        className={`m-2 flex-row items-center rounded-lg p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-sm`}>
-        <Image
-          source={{ uri: item.metadata?.thumbnail || fallbackImageUrl }}
-          style={{ width: 64, height: 64, borderRadius: 8, marginRight: 16 }}
-          resizeMode="cover"
-        />
-        <View style={{ flex: 1 }}>
-          <Text className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            {item.displayName}
-          </Text>
-          <Text className={`mt-1 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-            {item.owner.fullName || item.owner.username}
-          </Text>
+        className={`mx-3 mb-4 overflow-hidden rounded-2xl shadow-lg ${isDark ? 'bg-gray-800' : 'bg-white'} border ${isDark ? 'border-gray-700' : 'border-gray-200'}`}
+        style={{ elevation: 8 }}>
+        <View className="p-4">
+          <View className="flex-row items-center">
+            {/* Collection Image */}
+            <View className="mr-4 overflow-hidden rounded-xl shadow-md">
+              <Image
+                source={{ uri: item.metadata?.thumbnail || fallbackImageUrl }}
+                style={{ width: 72, height: 72 }}
+                resizeMode="cover"
+              />
+            </View>
+
+            {/* Collection Info */}
+            <View className="flex-1">
+              <Text className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}
+                    numberOfLines={2}>
+                {item.displayName}
+              </Text>
+              <Text className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
+                    numberOfLines={1}>
+                {item.owner.fullName || item.owner.username}
+              </Text>
+
+              {/* Status Badge */}
+              <View className="mt-2 flex-row items-center">
+                {item.isDownloaded ? (
+                  <View className="rounded-full bg-green-500/20 px-2 py-1">
+                    <MaterialIcons name="check-circle" size={16} color="#10B981" />
+                  </View>
+                ) : (
+                  <View className="rounded-full bg-blue-500/20 px-2 py-1">
+                    <MaterialIcons name="cloud-download" size={16} color={isDark ? '#60A5FA' : '#3B82F6'} />
+                  </View>
+                )}
+              </View>
+            </View>
+
+            {/* Action Buttons */}
+            <View className="flex-row items-center">
+              {/* Info Button */}
+              <TouchableOpacity
+                onPress={(e) => {
+                  e.stopPropagation();
+                  handleShowInfo(item);
+                }}
+                className={`mr-2 rounded-full p-3 ${isDark ? 'bg-gray-600/30' : 'bg-gray-200/50'}`}>
+                <MaterialIcons name="info" size={18} color={isDark ? '#9CA3AF' : '#6B7280'} />
+              </TouchableOpacity>
+
+              {/* Download/Delete Button */}
+              {!item.isDownloaded ? (
+                <TouchableOpacity
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleDownload(item);
+                  }}
+                  className="rounded-full bg-blue-600 p-3 shadow-lg"
+                  disabled={downloadingId === item.id}>
+                  {downloadingId === item.id ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <MaterialIcons name="download" size={18} color="#FFFFFF" />
+                  )}
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleDeleteCollection(item);
+                  }}
+                  className="rounded-full bg-red-600 p-3 shadow-lg"
+                  disabled={downloadingId === item.id}>
+                  {downloadingId === item.id ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <MaterialIcons name="delete" size={18} color="#FFFFFF" />
+                  )}
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
         </View>
-        <TouchableOpacity
-          onPress={(e) => {
-            e.stopPropagation();
-            handleShowInfo(item);
-          }}
-          className={`mr-2 rounded-full p-2 ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
-          <MaterialIcons name="info" size={16} color={isDark ? '#9CA3AF' : '#6B7280'} />
-        </TouchableOpacity>
-        {!item.isDownloaded ? (
-          <TouchableOpacity
-            onPress={(e) => {
-              e.stopPropagation();
-              handleDownload(item);
-            }}
-            className={`mr-2 rounded-full p-2 ${isDark ? 'bg-blue-700' : 'bg-blue-500'}`}
-            disabled={downloadingId === item.id}>
-            {downloadingId === item.id ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <MaterialIcons name="file-download" size={16} color="#FFFFFF" />
-            )}
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            onPress={(e) => {
-              e.stopPropagation();
-              handleDeleteCollection(item);
-            }}
-            className={`mr-2 rounded-full p-2 ${isDark ? 'bg-red-700' : 'bg-red-500'}`}
-            disabled={downloadingId === item.id}>
-            {downloadingId === item.id ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <MaterialIcons name="delete" size={16} color="#FFFFFF" />
-            )}
-          </TouchableOpacity>
-        )}
-        <MaterialIcons
-          name="chevron-right"
-          size={24}
-          color={isDark ? '#60A5FA' : '#3B82F6'}
-          style={{ marginLeft: 8 }}
-        />
       </TouchableOpacity>
     );
   };
 
-  const renderSection = (title: string, data: Collection[]) =>
-    data.length > 0 && (
-      <View>
-        <Text className="mb-2 mt-4 text-base font-bold" style={{ color: isDark ? '#fff' : '#222' }}>
-          {title}
-        </Text>
+  const renderSection = (data: Collection[], iconName: "check-circle" | "cloud-download", badgeColor: string) => {
+    if (data.length === 0) return null;
+
+    return (
+      <View className="mb-6">
+        {/* Section Header */}
+        <View className="mx-3 mb-4 flex-row items-center">
+          <MaterialIcons name={iconName} size={24} color={isDark ? '#60A5FA' : '#3B82F6'} />
+          <View className={`ml-3 rounded-full px-3 py-1 ${badgeColor}`}>
+            <Text className={`text-sm font-medium ${isDark ? 'text-blue-300' : 'text-blue-600'}`}>
+              {data.length}
+            </Text>
+          </View>
+        </View>
+
+        {/* Collections */}
         {data.map((item) => renderCollectionItem({ item }))}
       </View>
     );
+  };
 
   if (loading) {
     return (
-      <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
+      <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
         <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color={isDark ? '#60A5FA' : '#3B82F6'} />
-          <Text className={`mt-4 text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            Loading collections...
-          </Text>
+          <View className={`rounded-2xl p-8 ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-xl border ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+            <ActivityIndicator size="large" color={isDark ? '#60A5FA' : '#3B82F6'} />
+            <MaterialIcons
+              name="library-books"
+              size={32}
+              color={isDark ? '#60A5FA' : '#3B82F6'}
+              style={{ marginTop: 16, alignSelf: 'center' }}
+            />
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -294,129 +400,137 @@ export default function LanguageScreen() {
 
   if (error) {
     return (
-      <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
+      <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
         <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-        <View className="flex-1 items-center justify-center p-4">
-          <MaterialIcons name="error-outline" size={48} color={isDark ? '#F87171' : '#EF4444'} />
-          <Text
-            className={`mt-4 text-center text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            {error}
-          </Text>
-          <TouchableOpacity
-            onPress={loadCollections}
-            className={`mt-6 rounded-lg px-4 py-2 ${isDark ? 'bg-blue-600' : 'bg-blue-500'}`}>
-            <Text className="text-white">Retry</Text>
-          </TouchableOpacity>
+        <View className="flex-1 items-center justify-center p-6">
+          <View className="items-center">
+            <View className={`mb-6 rounded-3xl p-6 ${isDark ? 'bg-red-600/20' : 'bg-red-500/10'} border ${isDark ? 'border-red-600/30' : 'border-red-500/20'}`}>
+              <MaterialIcons
+                name="error-outline"
+                size={48}
+                color={isDark ? '#F87171' : '#EF4444'}
+              />
+            </View>
+            <TouchableOpacity
+              onPress={loadCollections}
+              className={`rounded-2xl px-8 py-4 ${isDark ? 'bg-blue-600' : 'bg-blue-500'} shadow-xl`}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 12,
+              }}>
+              <MaterialIcons name="refresh" size={24} color="white" />
+              <MaterialIcons name="cloud-download" size={24} color="white" />
+            </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-          <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
+    <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       {/* Language Header */}
-      <View
-        style={{
-          backgroundColor: isDark ? '#1F2937' : '#fff',
-          paddingHorizontal: 16,
-          paddingTop: 16,
-          paddingBottom: 12,
-          borderBottomWidth: 1,
-          borderBottomColor: isDark ? '#374151' : '#E5E7EB',
-        }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-          <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 12, padding: 4 }}>
-            <MaterialIcons name="arrow-back" size={24} color={isDark ? '#9CA3AF' : '#374151'} />
+      <View className={`px-6 py-4 ${isDark ? 'bg-gray-900' : 'bg-white'} border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+        <View className="flex-row items-center">
+          <TouchableOpacity
+            onPress={() => router.back()}
+            className={`mr-4 rounded-full p-2 ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+            <MaterialIcons name="arrow-back" size={24} color={isDark ? '#FFFFFF' : '#374151'} />
           </TouchableOpacity>
-          <View style={{ flex: 1 }}>
-            <Text style={{
-              fontSize: 20,
-              fontWeight: 'bold',
-              color: isDark ? '#fff' : '#000',
-              textAlign: language.ld === 'rtl' ? 'right' : 'left'
-            }}>
-              {language.ln || language.ang || language.lc}
-            </Text>
-            {language.ln && language.ang && language.ln !== language.ang && (
-              <Text style={{
-                fontSize: 14,
-                color: isDark ? '#9CA3AF' : '#6B7280',
-                textAlign: language.ld === 'rtl' ? 'right' : 'left'
-              }}>
-                {language.ang} ({language.lc})
+
+          <View className="flex-1 flex-row items-center">
+            <MaterialIcons
+              name={language.gw ? "language" : "translate"}
+              size={28}
+              color={isDark ? '#60A5FA' : '#3B82F6'}
+            />
+            <View className="ml-3 flex-1">
+              <Text className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}
+                    style={{ textAlign: language.ld === 'rtl' ? 'right' : 'left' }}>
+                {language.ln || language.ang || language.lc}
               </Text>
-            )}
-            {language.gw && (
-              <View style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                marginTop: 4,
-                justifyContent: language.ld === 'rtl' ? 'flex-end' : 'flex-start'
-              }}>
-                <MaterialIcons name="language" size={16} color={isDark ? '#60A5FA' : '#3B82F6'} />
-                <Text style={{
-                  fontSize: 12,
-                  color: isDark ? '#60A5FA' : '#3B82F6',
-                  marginLeft: language.ld === 'rtl' ? 0 : 4,
-                  marginRight: language.ld === 'rtl' ? 4 : 0,
-                  fontWeight: '500'
-                }}>
-                  Gateway Language
+              {language.ln && language.ang && language.ln !== language.ang && (
+                <Text className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}
+                      style={{ textAlign: language.ld === 'rtl' ? 'right' : 'left' }}>
+                  {language.ang} ({language.lc})
                 </Text>
-              </View>
-            )}
+              )}
+              {language.gw && (
+                <View className="mt-1 flex-row items-center"
+                      style={{ justifyContent: language.ld === 'rtl' ? 'flex-end' : 'flex-start' }}>
+                  <View className="rounded-full bg-blue-500/20 px-2 py-1">
+                    <Text className={`text-xs font-medium ${isDark ? 'text-blue-300' : 'text-blue-600'}`}>
+                      GW
+                    </Text>
+                  </View>
+                </View>
+              )}
+            </View>
           </View>
         </View>
       </View>
 
-      {/* Search Bar */}
-      <View
-        style={{
-          backgroundColor: isDark ? '#1F2937' : '#fff',
-          paddingHorizontal: 12,
-          paddingTop: 8,
-          paddingBottom: 8,
-          zIndex: 10,
-        }}>
+      {/* Search */}
+      <View className={`px-6 py-4 ${isDark ? 'bg-gray-900/50' : 'bg-white/50'}`}>
         <SearchBar
-          placeholder="Search collections..."
+          placeholder=""
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
       </View>
-      <View className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
-        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-        <FlatList
-          data={[]}
-          renderItem={null}
-          ListHeaderComponent={
-            <>
-              {renderSection('Downloaded', downloadedCollections)}
-              {renderSection('Available to Download', notDownloadedCollections)}
-            </>
-          }
-          keyExtractor={() => Math.random().toString()}
-          contentContainerStyle={{ padding: 12 }}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            !filteredCollections.length ? (
-              <View className="mt-12 items-center">
+
+      <FlatList
+        data={[]}
+        renderItem={null}
+        ListHeaderComponent={
+          <View className="py-4">
+            {renderSection(downloadedCollections, "check-circle", isDark ? 'bg-green-600/20' : 'bg-green-500/10')}
+            {renderSection(notDownloadedCollections, "cloud-download", isDark ? 'bg-blue-600/20' : 'bg-blue-500/10')}
+          </View>
+        }
+        keyExtractor={() => Math.random().toString()}
+        contentContainerStyle={{ paddingBottom: 20 }}
+        showsVerticalScrollIndicator={false}
+        className={`flex-1 ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}
+        ListEmptyComponent={
+          !filteredCollections.length ? (
+            <View className="mt-12 items-center px-6">
+              <View className={`mb-6 rounded-3xl p-6 ${isDark ? 'bg-gray-600/20' : 'bg-gray-500/10'} border ${isDark ? 'border-gray-600/30' : 'border-gray-500/20'}`}>
                 <MaterialIcons name="search-off" size={48} color={isDark ? '#6B7280' : '#9CA3AF'} />
-                <Text className={`mt-4 text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                  No collections found
-                </Text>
               </View>
-            ) : null
-          }
-        />
-      </View>
+              <TouchableOpacity
+                onPress={() => setSearchQuery('')}
+                className={`rounded-2xl px-6 py-3 ${isDark ? 'bg-blue-600' : 'bg-blue-500'} shadow-lg`}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 8,
+                }}>
+                <MaterialIcons name="clear" size={20} color="white" />
+                <MaterialIcons name="refresh" size={20} color="white" />
+              </TouchableOpacity>
+            </View>
+          ) : null
+        }
+      />
 
       <CollectionInfoModal
         collection={selectedCollection}
         visible={showInfoModal}
         onClose={handleCloseInfo}
         onCollectionDeleted={handleCollectionDeleted}
+        onCollectionDownloaded={loadCollections}
+        isDark={isDark}
+      />
+
+      <DeleteConfirmationModal
+        visible={showDeleteConfirmation}
+        collectionName={collectionToDelete?.displayName || ''}
+        onConfirm={handleDeleteConfirmation}
+        onCancel={handleCancelDelete}
         isDark={isDark}
       />
     </SafeAreaView>
