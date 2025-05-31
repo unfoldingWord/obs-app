@@ -17,25 +17,30 @@ import { CollectionsManager, Story, Frame } from '../../src/core/CollectionsMana
 import { CommentsManager, FrameComment } from '../../src/core/CommentsManager';
 import { StoryManager, UserMarker } from '../../src/core/storyManager';
 import { FrameBadge } from '../../src/components/FrameBadge';
+import { UnifiedLanguagesManager } from '../../src/core/UnifiedLanguagesManager';
 
 interface FavoriteStory extends Story {
   collectionDisplayName?: string;
   thumbnailUrl?: string;
+  isRTL?: boolean;
 }
 
 interface FavoriteFrame extends Frame {
   storyTitle?: string;
   collectionDisplayName?: string;
+  isRTL?: boolean;
 }
 
 interface FavoriteMarker extends UserMarker {
   storyTitle?: string;
   collectionDisplayName?: string;
+  isRTL?: boolean;
 }
 
 interface FavoriteComment extends FrameComment {
   storyTitle?: string;
   collectionDisplayName?: string;
+  isRTL?: boolean;
 }
 
 export default function FavoritesScreen() {
@@ -62,19 +67,23 @@ export default function FavoritesScreen() {
       setLoading(true);
       const collectionsManager = CollectionsManager.getInstance();
       const storyManager = StoryManager.getInstance();
+      const languagesManager = UnifiedLanguagesManager.getInstance();
 
       await collectionsManager.initialize();
       await storyManager.initialize();
+      await languagesManager.initialize();
 
       // Load favorite stories
       const favStories = await collectionsManager.getFavoriteStories();
       const storiesWithThumbnails = await Promise.all(
         favStories.map(async (story) => {
           const collection = await collectionsManager.getCollection(story.collectionId);
+          const languageData = collection ? await languagesManager.getLanguage(collection.language) : null;
           return {
             ...story,
             collectionDisplayName: collection?.displayName || story.collectionId,
             thumbnailUrl: `https://cdn.door43.org/obs/jpg/360px/obs-en-${story.storyNumber.toString().padStart(2, '0')}-01.jpg`,
+            isRTL: languageData?.ld === 'rtl',
           };
         })
       );
@@ -86,10 +95,12 @@ export default function FavoritesScreen() {
         favFrames.map(async (frame) => {
           const story = await collectionsManager.getStory(frame.collectionId, frame.storyNumber);
           const collection = await collectionsManager.getCollection(frame.collectionId);
+          const languageData = collection ? await languagesManager.getLanguage(collection.language) : null;
           return {
             ...frame,
             storyTitle: story?.title || `Story ${frame.storyNumber}`,
             collectionDisplayName: collection?.displayName || frame.collectionId,
+            isRTL: languageData?.ld === 'rtl',
           };
         })
       );
@@ -101,10 +112,12 @@ export default function FavoritesScreen() {
         allMarkers.map(async (marker) => {
           const story = await collectionsManager.getStory(marker.collectionId, marker.storyNumber);
           const collection = await collectionsManager.getCollection(marker.collectionId);
+          const languageData = collection ? await languagesManager.getLanguage(collection.language) : null;
           return {
             ...marker,
             storyTitle: story?.title || `Story ${marker.storyNumber}`,
             collectionDisplayName: collection?.displayName || marker.collectionId,
+            isRTL: languageData?.ld === 'rtl',
           };
         })
       );
@@ -121,10 +134,12 @@ export default function FavoritesScreen() {
             comment.storyNumber
           );
           const collection = await collectionsManager.getCollection(comment.collectionId);
+          const languageData = collection ? await languagesManager.getLanguage(collection.language) : null;
           return {
             ...comment,
             storyTitle: story?.title || `Story ${comment.storyNumber}`,
             collectionDisplayName: collection?.displayName || comment.collectionId,
+            isRTL: languageData?.ld === 'rtl',
           };
         })
       );
@@ -140,19 +155,23 @@ export default function FavoritesScreen() {
     try {
       const collectionsManager = CollectionsManager.getInstance();
       const storyManager = StoryManager.getInstance();
+      const languagesManager = UnifiedLanguagesManager.getInstance();
 
       await collectionsManager.initialize();
       await storyManager.initialize();
+      await languagesManager.initialize();
 
       // Load favorite stories
       const favStories = await collectionsManager.getFavoriteStories();
       const storiesWithThumbnails = await Promise.all(
         favStories.map(async (story) => {
           const collection = await collectionsManager.getCollection(story.collectionId);
+          const languageData = collection ? await languagesManager.getLanguage(collection.language) : null;
           return {
             ...story,
             collectionDisplayName: collection?.displayName || story.collectionId,
             thumbnailUrl: `https://cdn.door43.org/obs/jpg/360px/obs-en-${story.storyNumber.toString().padStart(2, '0')}-01.jpg`,
+            isRTL: languageData?.ld === 'rtl',
           };
         })
       );
@@ -164,10 +183,12 @@ export default function FavoritesScreen() {
         favFrames.map(async (frame) => {
           const story = await collectionsManager.getStory(frame.collectionId, frame.storyNumber);
           const collection = await collectionsManager.getCollection(frame.collectionId);
+          const languageData = collection ? await languagesManager.getLanguage(collection.language) : null;
           return {
             ...frame,
             storyTitle: story?.title || `Story ${frame.storyNumber}`,
             collectionDisplayName: collection?.displayName || frame.collectionId,
+            isRTL: languageData?.ld === 'rtl',
           };
         })
       );
@@ -179,10 +200,12 @@ export default function FavoritesScreen() {
         allMarkers.map(async (marker) => {
           const story = await collectionsManager.getStory(marker.collectionId, marker.storyNumber);
           const collection = await collectionsManager.getCollection(marker.collectionId);
+          const languageData = collection ? await languagesManager.getLanguage(collection.language) : null;
           return {
             ...marker,
             storyTitle: story?.title || `Story ${marker.storyNumber}`,
             collectionDisplayName: collection?.displayName || marker.collectionId,
+            isRTL: languageData?.ld === 'rtl',
           };
         })
       );
@@ -199,10 +222,12 @@ export default function FavoritesScreen() {
             comment.storyNumber
           );
           const collection = await collectionsManager.getCollection(comment.collectionId);
+          const languageData = collection ? await languagesManager.getLanguage(collection.language) : null;
           return {
             ...comment,
             storyTitle: story?.title || `Story ${comment.storyNumber}`,
             collectionDisplayName: collection?.displayName || comment.collectionId,
+            isRTL: languageData?.ld === 'rtl',
           };
         })
       );
@@ -273,7 +298,7 @@ export default function FavoritesScreen() {
       <View className="relative">
         <Image source={{ uri: item.thumbnailUrl }} className="h-48 w-full" resizeMode="cover" />
         {/* Story badge with icon and number */}
-        <View className={`absolute top-3 right-3 flex-row items-center rounded-full px-3 py-2 ${isDark ? 'bg-blue-600/90' : 'bg-blue-500/90'}`}>
+        <View className={`absolute top-3 ${item.isRTL ? 'left-3' : 'right-3'} flex-row items-center rounded-full px-3 py-2 ${isDark ? 'bg-blue-600/90' : 'bg-blue-500/90'}`}>
           <MaterialIcons name="menu-book" size={16} color="#FFFFFF" />
           <Text className="ml-1 text-sm font-bold text-white">
             {item.storyNumber}
@@ -283,10 +308,13 @@ export default function FavoritesScreen() {
       <View className="p-4">
         <Text
           className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}
+          style={{ textAlign: item.isRTL ? 'right' : 'left' }}
           numberOfLines={1}>
           {item.title}
         </Text>
-        <Text className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+        <Text
+          className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
+          style={{ textAlign: item.isRTL ? 'right' : 'left' }}>
           {item.collectionDisplayName}
         </Text>
       </View>
@@ -300,7 +328,7 @@ export default function FavoritesScreen() {
       <View className="relative">
         <Image source={{ uri: item.imageUrl }} className="h-48 w-full" resizeMode="cover" />
         {/* Frame badge with icon and reference */}
-        <View className={`absolute top-3 right-3 flex-row items-center rounded-full px-3 py-2 ${isDark ? 'bg-red-600/90' : 'bg-red-500/90'}`}>
+        <View className={`absolute top-3 ${item.isRTL ? 'left-3' : 'right-3'} flex-row items-center rounded-full px-3 py-2 ${isDark ? 'bg-red-600/90' : 'bg-red-500/90'}`}>
           <MaterialIcons name="photo" size={16} color="#FFFFFF" />
           <Text className="ml-1 text-sm font-bold text-white">
             {item.storyNumber}:{item.frameNumber}
@@ -310,15 +338,19 @@ export default function FavoritesScreen() {
       <View className="p-4">
         <Text
           className={`text-base font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}
+          style={{ textAlign: item.isRTL ? 'right' : 'left' }}
           numberOfLines={1}>
           {item.storyTitle}
         </Text>
-        <Text className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+        <Text
+          className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
+          style={{ textAlign: item.isRTL ? 'right' : 'left' }}>
           {item.collectionDisplayName}
         </Text>
         {item.text && (
           <Text
             className={`mt-3 text-sm leading-5 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
+            style={{ textAlign: item.isRTL ? 'right' : 'left' }}
             numberOfLines={2}>
             {item.text}
           </Text>
@@ -343,17 +375,20 @@ export default function FavoritesScreen() {
       <View className="flex-1 justify-center">
         <Text
           className={`text-base font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}
+          style={{ textAlign: item.isRTL ? 'right' : 'left' }}
           numberOfLines={1}>
           {item.storyTitle}
         </Text>
         <Text
           className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
+          style={{ textAlign: item.isRTL ? 'right' : 'left' }}
           numberOfLines={1}>
           {item.collectionDisplayName}
         </Text>
         {item.note && (
           <Text
             className={`mt-1 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
+            style={{ textAlign: item.isRTL ? 'right' : 'left' }}
             numberOfLines={1}>
             {item.note}
           </Text>
@@ -396,20 +431,25 @@ export default function FavoritesScreen() {
       <View className="flex-1 justify-center">
         <Text
           className={`text-base font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}
+          style={{ textAlign: item.isRTL ? 'right' : 'left' }}
           numberOfLines={1}>
           {item.storyTitle}
         </Text>
         <Text
           className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
+          style={{ textAlign: item.isRTL ? 'right' : 'left' }}
           numberOfLines={1}>
           {item.collectionDisplayName}
         </Text>
         <Text
           className={`mt-1 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
+          style={{ textAlign: item.isRTL ? 'right' : 'left' }}
           numberOfLines={1}>
           {item.comment}
         </Text>
-        <Text className={`mt-1 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+        <Text
+          className={`mt-1 text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}
+          style={{ textAlign: item.isRTL ? 'right' : 'left' }}>
           {item.createdAt.toLocaleDateString()}
           {item.updatedAt.getTime() !== item.createdAt.getTime() && ' • edited'}
         </Text>

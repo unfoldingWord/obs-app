@@ -1258,13 +1258,26 @@ export default function StoryFrameScreen() {
           {/* Frame Progress Indicators */}
           <View
             className="flex-1 items-center"
-            style={{ flexDirection: isRTL ? 'row-reverse' : 'row', justifyContent: 'center' }}>
+            style={{
+              flexDirection: isRTL ? 'row-reverse' : 'row',
+              justifyContent: 'center'
+            }}>
             <View
-              className={`rounded-full border px-4 py-2 ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-100'}`}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              className={`rounded-full border px-3 py-2 ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-100'}`}
+              style={{
+                flexDirection: (isRTL ? 'row-reverse' : 'row') as 'row' | 'row-reverse',
+                alignItems: 'center',
+                gap: 6
+              }}>
               <MaterialIcons name="auto-stories" size={16} color={isDark ? '#9CA3AF' : '#6B7280'} />
-              <Text className={`text-sm font-bold ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
-                {parseInt(storyNumber as string, 10)}:{currentFrameNumber}
+              <Text className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                {parseInt(storyNumber as string, 10)}
+              </Text>
+              <Text className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                •
+              </Text>
+              <Text className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                {currentFrameNumber}/{totalFrames}
               </Text>
             </View>
           </View>

@@ -176,10 +176,18 @@ export default function StoriesScreen() {
       const collectionsManager = CollectionsManager.getInstance();
       await collectionsManager.toggleStoryFavorite(currentCollection.id, story.storyNumber);
 
-      // Reload stories to get updated favorite status
-      await loadStories(currentCollection.id);
+      // Update local state directly instead of reloading all stories
+      setStories(prevStories =>
+        prevStories.map(s =>
+          s.storyNumber === story.storyNumber
+            ? { ...s, isFavorite: !s.isFavorite }
+            : s
+        )
+      );
     } catch (error) {
       console.error('Error toggling story favorite:', error);
+      // On error, reload stories to ensure consistency
+      await loadStories(currentCollection.id);
     }
   };
 
