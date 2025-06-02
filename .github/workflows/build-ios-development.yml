@@ -1,0 +1,219 @@
+name: Build iOS Development (Free Account)
+
+on:
+  workflow_dispatch:
+    inputs:
+      apple_id:
+        description: 'Apple ID email'
+        required: true
+        type: string
+      team_id:
+        description: 'Team ID (if multiple teams)'
+        required: false
+        type: string
+
+jobs:
+  build-ios-dev:
+    runs-on: macos-latest
+    
+    steps:
+    - name: 🏗 Setup repo
+      uses: actions/checkout@v4
+      
+    - name: 🏗 Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18.x
+        cache: npm
+        
+    - name: 📦 Install dependencies
+      run: npm ci
+      
+    - name: 🔧 Setup Expo CLI
+      run: npm install -g @expo/cli@latest
+      
+    - name: 📱 Install iOS build tools
+      run: |
+        sudo gem install cocoapods
+        
+    - name: 🏗 Prebuild Expo project
+      run: |
+        expo prebuild --platform ios --clean
+        
+    - name: ⚠️ Configure for development signing
+      env:
+        APPLE_ID: ${{ github.event.inputs.apple_id }}
+        TEAM_ID: ${{ github.event.inputs.team_id }}
+      run: |
+        # Update bundle identifier for free account
+        BUNDLE_ID="com.${APPLE_ID//[@.]/-}.obsapp.dev"
+        
+        # Update project settings
+        PLIST_PATH="ios/obsapp/Info.plist"
+        PBXPROJ_PATH="ios/obsapp.xcodeproj/project.pbxproj"
+        
+        # Set unique bundle identifier
+        /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $BUNDLE_ID" "$PLIST_PATH"
+        sed -i '' "s/PRODUCT_BUNDLE_IDENTIFIER = .*/PRODUCT_BUNDLE_IDENTIFIER = $BUNDLE_ID;/g" "$PBXPROJ_PATH"
+        
+        # Configure for automatic signing
+        sed -i '' "s/CODE_SIGN_STYLE = .*/CODE_SIGN_STYLE = Automatic;/g" "$PBXPROJ_PATH"
+        
+        if [ ! -z "$TEAM_ID" ]; then
+          sed -i '' "s/DEVELOPMENT_TEAM = .*/DEVELOPMENT_TEAM = $TEAM_ID;/g" "$PBXPROJ_PATH"
+        fi
+        
+        echo "Bundle ID: $BUNDLE_ID"
+        
+    - name: 📦 Install iOS dependencies
+      run: |
+        cd ios
+        pod install --repo-update
+        
+    - name: ⚠️ Build limitations notice
+      run: |
+        cat << EOF
+        
+        ⚠️  FREE APPLE DEVELOPER ACCOUNT LIMITATIONS:
+        
+        🔴 This build will have the following restrictions:
+        - Can only install on YOUR registered devices (max 3)
+        - Apps expire after 7 DAYS and need reinstalling
+        - No distribution to other users
+        - Must install via Xcode or cable connection
+        
+        ✅ For unrestricted distribution, consider:
+        - PWA version (no account needed)
+        - Paid Apple Developer account (\$99/year)
+        
+        EOF
+        
+    - name: 🔨 Build iOS app (Development)
+      run: |
+        cd ios
+        
+        # Build for development
+        xcodebuild \
+          -workspace obsapp.xcworkspace \
+          -scheme obsapp \
+          -configuration Debug \
+          -destination generic/platform=iOS \
+          -archivePath build/obsapp-dev.xcarchive \
+          archive \
+          CODE_SIGN_STYLE=Automatic \
+          ONLY_ACTIVE_ARCH=NO
+          
+    - name: 📦 Export for development
+      run: |
+        cd ios
+        
+        # Create export options for development
+        cat > ExportOptions.plist << EOF
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>method</key>
+            <string>development</string>
+            <key>compileBitcode</key>
+            <false/>
+            <key>stripSwiftSymbols</key>
+            <true/>
+        </dict>
+        </plist>
+        EOF
+        
+        # Export the IPA
+        xcodebuild \
+          -exportArchive \
+          -archivePath build/obsapp-dev.xcarchive \
+          -exportOptionsPlist ExportOptions.plist \
+          -exportPath build/
+          
+    - name: 📁 Prepare artifacts
+      run: |
+        mkdir -p dist
+        cp ios/build/obsapp.ipa dist/obsapp-development.ipa
+        
+        # Create installation instructions
+        cat > dist/INSTALLATION.md << EOF
+        # Development Build Installation
+        
+        ⚠️ **FREE ACCOUNT LIMITATIONS:**
+        - Only works on YOUR registered devices (max 3)
+        - App expires in 7 days
+        - Must reinstall weekly
+        
+        ## Installation Methods:
+        
+        ### Option 1: Xcode (Recommended)
+        1. Open Xcode
+        2. Window → Devices and Simulators
+        3. Connect your iPhone/iPad
+        4. Drag the IPA file to your device
+        
+        ### Option 2: Apple Configurator 2
+        1. Download Apple Configurator 2 from Mac App Store
+        2. Connect device
+        3. Add → Apps → Choose IPA file
+        
+        ### Option 3: 3uTools (Windows/Mac)
+        1. Download 3uTools
+        2. Connect device
+        3. Install → Local install → Select IPA
+        
+        ## Troubleshooting:
+        - **"Untrusted Developer"**: Settings → General → Device Management → Trust
+        - **"Unable to install"**: Device UDID not registered or certificate expired
+        - **Build fails**: Check Apple ID and team permissions
+        
+        ## For Better Distribution:
+        Consider the PWA version instead - no limitations!
+        EOF
+        
+        # Create build info
+        cat > dist/build-info.json << EOF
+        {
+          "type": "iOS Development",
+          "version": "$(node -p "require('./package.json').version")",
+          "buildDate": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+          "commit": "${{ github.sha }}",
+          "branch": "${{ github.ref_name }}",
+          "limitations": {
+            "maxDevices": 3,
+            "expiryDays": 7,
+            "installMethod": "Cable/Xcode only"
+          }
+        }
+        EOF
+        
+    - name: 📤 Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ios-development-build-${{ github.run_number }}
+        path: |
+          dist/
+        retention-days: 7
+        
+    - name: 📋 Build Summary
+      run: |
+        echo "## ⚠️ iOS Development Build Completed" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🔴 IMPORTANT LIMITATIONS:" >> $GITHUB_STEP_SUMMARY
+        echo "- **Device limit**: 3 devices maximum" >> $GITHUB_STEP_SUMMARY
+        echo "- **Expiry**: App expires in 7 days" >> $GITHUB_STEP_SUMMARY
+        echo "- **Installation**: Cable/Xcode only" >> $GITHUB_STEP_SUMMARY
+        echo "- **Distribution**: Personal use only" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📱 Installation:" >> $GITHUB_STEP_SUMMARY
+        echo "1. Download the artifacts" >> $GITHUB_STEP_SUMMARY
+        echo "2. Use Xcode, Apple Configurator 2, or 3uTools" >> $GITHUB_STEP_SUMMARY
+        echo "3. Connect device via cable" >> $GITHUB_STEP_SUMMARY
+        echo "4. Install the IPA file" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 💡 Better Alternative:" >> $GITHUB_STEP_SUMMARY
+        echo "Consider using the **PWA workflow** instead:" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ No device limits" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ No expiry" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Easy installation" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Works on iOS, Android, Desktop" >> $GITHUB_STEP_SUMMARY 

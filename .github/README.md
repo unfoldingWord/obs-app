@@ -1,198 +1,152 @@
-# GitHub Actions Setup for Automated Releases
+# Open Bible Stories - Android Distribution Workflow
 
-This repository includes GitHub Actions workflows that automatically build and release Android APK and iOS IPA files when a new release is created using **native build processes** (no EAS required).
+This repository uses GitHub Actions to automatically build and distribute Android APK files for the **Open Bible Stories** app. The workflow provides seamless release management with APK files directly attached to GitHub releases.
 
-## 🚀 Multiple Ways to Trigger Builds
+## 🚀 How It Works
 
-### 1. Automatic Release Builds
-When you create a GitHub release, builds are automatically triggered and artifacts are uploaded to the release.
+### Automatic Releases (Recommended)
+Create releases with APKs automatically attached:
 
-### 2. Manual Testing Builds
-You can manually trigger builds for testing without creating a release:
-
-- Go to **Actions** tab in your repository
-- Select **"Build and Release Apps"** workflow  
-- Click **"Run workflow"**
-- Choose options:
-  - **Build type**: `test` (for testing) or `release` (for production)
-  - **Upload to release**: Leave empty for testing, or enter a tag name to upload to existing release
-
-### 3. Automatic Branch Builds
-Builds are automatically triggered when you push to:
-- `main` branch
-- Any `release/*` branch (e.g., `release/v1.0.0`)
-
-## 📦 Where to Find Your Built Apps
-
-### For Release Builds:
-- APK/IPA files are attached to the GitHub release
-
-### For Testing Builds:
-- Go to the **Actions** tab
-- Click on the completed workflow run
-- Scroll down to **"Artifacts"** section
-- Download:
-  - `android-apk` - Contains the APK file
-  - `ios-ipa` - Contains the IPA file
-- Artifacts are kept for 30 days
-
-## ⚠️ Important: iOS Build Considerations
-
-### The Reality of iOS Builds
-
-**The native iOS workflow I initially provided has significant limitations:**
-
-1. **Code Signing Complexity**: iOS requires valid Apple Developer certificates and provisioning profiles
-2. **CI Environment Challenges**: Setting up proper keychain and certificate management in GitHub Actions is complex
-3. **Maintenance Overhead**: Native iOS builds require ongoing certificate management
-
-### Recommended Approaches:
-
-#### Option 1: Hybrid Approach (Recommended)
-Use the `release-hybrid.yml` workflow:
-- ✅ **Android**: Native builds (fast, free, no authentication)
-- ✅ **iOS**: EAS builds (reliable, handles code signing)
-- Requires: `EXPO_TOKEN` secret for iOS builds only
-
-#### Option 2: Android-Only
-Use the main `release.yml` workflow with iOS disabled:
-- ✅ **Android**: Native builds
-- ❌ **iOS**: Skip iOS builds entirely
-- Build iOS separately using EAS CLI locally
-
-#### Option 3: Full Native (Advanced Users Only)
-Use the main `release.yml` workflow with proper iOS setup:
-- Requires extensive Apple Developer certificate configuration
-- Need to add certificate installation steps
-- Complex keychain management in CI
-
-### Quick Start Recommendation:
-
-1. **Start with Android-only** using the main workflow
-2. **Test Android builds** to ensure everything works
-3. **Add iOS later** using the hybrid approach if needed
-
-## Setup Instructions
-
-### 1. No Expo Token Required! 🎉
-
-Unlike EAS-based workflows, this setup uses native Android Gradle builds and Xcode builds, so you don't need any Expo authentication tokens.
-
-### 2. iOS Code Signing Setup (iOS only)
-
-For iOS builds, you'll need to configure code signing:
-
-1. **Update Team ID:**
-   - Edit `ios/exportOptions.plist`
-   - Replace `YOUR_TEAM_ID` with your Apple Developer Team ID
-
-2. **Add Certificates (if needed):**
-   - For more complex signing requirements, you may need to add certificates as GitHub secrets
-   - The current setup uses automatic signing
-
-### 3. Creating a Release
-
-When you're ready to release:
-
-1. **Tag your release:**
+1. **Create and Push a Tag**:
    ```bash
-   git tag v1.0.0
-   git push origin v1.0.0
+   git tag v1.2.3
+   git push origin v1.2.3
    ```
 
-2. **Create GitHub Release:**
-   - Go to your repository on GitHub
-   - Click "Releases" → "Create a new release"
-   - Choose your tag (v1.0.0)
-   - Fill in release notes
-   - Click "Publish release"
+2. **Workflow Triggers Automatically**:
+   - Builds APK using your existing `npm run build:android:release` script
+   - Creates a GitHub release with the tag
+   - **Automatically attaches the APK** to the release
+   - Includes build info and release notes
 
-3. **Automatic Build Process:**
-   - The GitHub Action will automatically trigger
-   - Android: Uses Gradle to build APK natively
-   - iOS: Uses Xcode to build IPA natively
-   - The built files will be attached to the release
+3. **Download Ready**:
+   - Go to [Releases page](https://github.com/abelpz/my-expo-app/releases)
+   - Download `obs-app-v1.2.3.apk` directly from the release
 
-### 4. Build Process Details
+### Manual Builds
+For testing or custom builds:
 
-- **Android:** 
-  - Uses `expo prebuild` to generate native Android code
-  - Builds APK using Gradle (`./gradlew assembleRelease`)
-  - No EAS or authentication required
+1. **Go to Actions Tab** → **Build Android Release**
+2. **Click "Run workflow"**
+3. **Optional Settings**:
+   - **Version Bump**: patch/minor/major (updates package.json)
+   - **Create Release**: Check to create GitHub release after build
+4. **Click "Run workflow"**
 
-- **iOS:** 
-  - Uses `expo prebuild` to generate native iOS code
-  - Builds IPA using Xcode command line tools
-  - Requires valid Apple Developer setup for code signing
+## 📱 Installation Guide
 
-### 5. Expected Artifacts
+### For Users
+1. **Download APK**: Go to [Releases](https://github.com/abelpz/my-expo-app/releases) and download the latest `obs-app-v*.*.*.apk`
+2. **Enable Unknown Sources**: Android Settings → Security → Unknown Sources → Enable
+3. **Install**: Tap the APK file and follow installation prompts
+4. **Launch**: Find "Open Bible Stories" in your app drawer
 
-After a successful build, your release will include:
-- `obs-app-v1.0.0.apk` - Android application
-- `obs-app-v1.0.0.ipa` - iOS application
+### For Ministry Distribution
+Perfect for sharing God's Word in areas with limited connectivity:
 
-## Troubleshooting
+- **📧 Email**: Attach APK file to emails
+- **💾 USB/SD**: Copy APK to storage devices
+- **📱 Direct Transfer**: Send via Bluetooth, WiFi Direct, or file sharing apps
+- **🌐 Website**: Host APK on your ministry website
+- **☁️ Cloud**: Share via Google Drive, Dropbox, etc.
 
-### Common Issues
+## 🔧 Workflow Features
 
-1. **Android Build Failures:**
-   - Check that `android/gradlew` has proper permissions
-   - Ensure Java 17 is being used (handled automatically)
-   - Verify Android SDK components are available
+### Build Capabilities
+- ✅ Uses your existing `npm run build:android:release` script
+- ✅ Automatic version management
+- ✅ Proper Android signing and optimization
+- ✅ SQLite database with Drizzle ORM support
+- ✅ Expo Router navigation
+- ✅ Dark mode support
 
-2. **iOS Build Issues:**
-   - Update your Team ID in `ios/exportOptions.plist`
-   - Ensure your Apple Developer account has valid certificates
-   - Check that the iOS project scheme name matches your app
+### Artifacts Generated
+Each build produces:
+- **`obs-app-v*.*.*.apk`** - Ready-to-install Android app
+- **`build-info.json`** - Build metadata and version info
+- **`RELEASE-NOTES.md`** - User-friendly installation instructions
 
-3. **Prebuild Issues:**
-   - Make sure `app.json` has correct configuration
-   - Verify all required Expo plugins are properly configured
+### Automatic Release Creation
+When triggered by tags (v*.*.*), the workflow:
+1. 🏗 Builds the APK
+2. 📝 Generates release notes
+3. 🚀 Creates GitHub release
+4. 📎 **Attaches APK directly to the release**
+5. 📊 Updates version in app.json if needed
 
-### Manual Testing
+## 📋 Workflow Triggers
 
-You can test the build process locally:
+| Trigger | When | Result |
+|---------|------|--------|
+| **Tag Push** | `git push origin v1.2.3` | ✅ Build APK + Create Release with APK attached |
+| **Manual Run** | Actions tab → Run workflow | ✅ Build APK + Optional release creation |
+| **Manual + Release** | Manual run with "Create Release" checked | ✅ Build APK + Create Release with APK attached |
 
+## 🏷️ Version Management
+
+### Recommended Tagging
 ```bash
-# Install dependencies
-npm install
+# Patch release (1.0.1)
+git tag v1.0.1
+git push origin v1.0.1
 
-# Test Android build
-npm run prebuild
-npm run build:android:release
+# Minor release (1.1.0)
+git tag v1.1.0
+git push origin v1.1.0
 
-# Test iOS build (macOS only)
-npm run prebuild
-cd ios && pod install
-xcodebuild -workspace *.xcworkspace -scheme obs-app -configuration Release
+# Major release (2.0.0)
+git tag v2.0.0
+git push origin v2.0.0
 ```
 
-### Local Build Scripts
+### Manual Version Bumping
+When running manually, you can automatically bump the version:
+- **patch**: 1.0.0 → 1.0.1
+- **minor**: 1.0.0 → 1.1.0  
+- **major**: 1.0.0 → 2.0.0
 
-The following npm scripts are available for local development:
+## 🌍 Perfect for Ministry
 
-- `npm run build:android:release` - Build Android APK
-- `npm run build:android:debug` - Build debug APK
-- `npm run install:android:release` - Install release APK on device
+### Use Cases
+- **🌏 Missionaries**: Offline Bible stories for remote areas
+- **⛪ Churches**: Easy distribution to congregation
+- **📚 Translation Teams**: Test new language versions
+- **👨‍👩‍👧‍👦 Families**: Engaging Bible stories for children
+- **📖 Study Groups**: Visual Bible story discussions
 
-## Workflow Details
+### Distribution Benefits
+- **📶 Works Offline**: No internet required after installation
+- **🔒 No App Store**: Direct installation bypass
+- **💾 Small Size**: Optimized for low-bandwidth areas
+- **🌍 Multi-language**: Ready for localization
+- **📱 Universal**: Works on all Android devices
 
-The workflow consists of two parallel jobs:
+## 🔧 Technical Details
 
-1. **build-android**: 
-   - Runs on Ubuntu
-   - Sets up Java 17 and Android SDK
-   - Uses Expo prebuild + Gradle
+### Build Process
+1. **Checkout** code from repository
+2. **Install** Node.js dependencies with `npm ci`
+3. **Setup** Java 17 and Android build tools
+4. **Prebuild** with Expo for Android
+5. **Build** release APK with your existing script
+6. **Sign** and optimize APK for distribution
+7. **Create** GitHub release with APK attached
 
-2. **build-ios**: 
-   - Runs on macOS
-   - Sets up Xcode and CocoaPods
-   - Uses Expo prebuild + Xcode
+### Requirements Met
+- ✅ SQLite database with Drizzle ORM
+- ✅ Expo Router for navigation
+- ✅ React Native screens optimization
+- ✅ Gesture handling support
+- ✅ Status bar configuration
+- ✅ Dark mode support
 
-### Advantages of Native Builds
+## 📞 Support
 
-✅ **No Authentication Required** - No Expo tokens needed  
-✅ **Faster Builds** - No cloud build queue  
-✅ **Full Control** - Direct access to native build tools  
-✅ **Free** - No EAS build credits required  
-✅ **Debugging** - Full build logs available in Actions 
+- **Issues**: [GitHub Issues](https://github.com/abelpz/my-expo-app/issues)
+- **Documentation**: [Main README](../README.md)
+- **Releases**: [Download APKs](https://github.com/abelpz/my-expo-app/releases)
+
+---
+
+**Built with ❤️ for global Bible translation and distribution**  
+**unfoldingWord** - Providing unrestricted biblical content in every language 
