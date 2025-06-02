@@ -46,4 +46,4 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   );
 };
 
-export default SearchBar;
+export default SearchBar; 

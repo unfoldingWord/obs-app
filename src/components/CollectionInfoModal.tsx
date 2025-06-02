@@ -1,3 +1,4 @@
+import { MaterialIcons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -10,7 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialIcons } from '@expo/vector-icons';
+
 import { Collection, CollectionsManager } from '../core/CollectionsManager';
 import { UnifiedLanguagesManager } from '../core/UnifiedLanguagesManager';
 import { hashStringToNumber } from '../core/hashStringToNumber';
@@ -34,16 +35,20 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
 }) => (
   <Modal visible={visible} transparent animationType="fade">
     <View className="flex-1 items-center justify-center bg-black/50">
-      <View className={`mx-6 overflow-hidden rounded-3xl ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-2xl border ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+      <View
+        className={`mx-6 overflow-hidden rounded-3xl ${isDark ? 'bg-gray-800' : 'bg-white'} border shadow-2xl ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
         {/* Header with warning icon */}
         <View className="items-center p-6">
-          <View className={`mb-4 rounded-full p-4 ${isDark ? 'bg-red-600/20' : 'bg-red-500/10'} border ${isDark ? 'border-red-600/30' : 'border-red-500/20'}`}>
+          <View
+            className={`mb-4 rounded-full p-4 ${isDark ? 'bg-red-600/20' : 'bg-red-500/10'} border ${isDark ? 'border-red-600/30' : 'border-red-500/20'}`}>
             <MaterialIcons name="warning" size={32} color={isDark ? '#F87171' : '#EF4444'} />
           </View>
 
           {/* Collection info */}
-          <View className="items-center max-w-64">
-            <Text className={`text-center text-base font-medium ${isDark ? 'text-white' : 'text-gray-900'}`} numberOfLines={2}>
+          <View className="max-w-64 items-center">
+            <Text
+              className={`text-center text-base font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}
+              numberOfLines={2}>
               {collectionName}
             </Text>
           </View>
@@ -60,9 +65,7 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
           </TouchableOpacity>
 
           {/* Delete button */}
-          <TouchableOpacity
-            onPress={onConfirm}
-            className="flex-1 items-center justify-center py-4">
+          <TouchableOpacity onPress={onConfirm} className="flex-1 items-center justify-center py-4">
             <MaterialIcons name="delete" size={24} color={isDark ? '#F87171' : '#EF4444'} />
           </TouchableOpacity>
         </View>
@@ -99,6 +102,10 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
   } | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+
+  const image = useObsImage({
+    reference: { story: hashStringToNumber(collection?.id || ''), frame: 1 },
+  });
 
   useEffect(() => {
     const loadLanguageInfo = async () => {
@@ -173,9 +180,6 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
 
   if (!collection) return null;
 
-  const storyNumber = hashStringToNumber(collection.id);
-  const fallbackImageUrl = `https://cdn.door43.org/obs/jpg/360px/obs-en-${String(storyNumber).padStart(2, '0')}-01.jpg`;
-
   const handleDeleteCollection = async () => {
     setShowDeleteConfirmation(true);
   };
@@ -190,11 +194,7 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
     } catch (error) {
       console.error('Error deleting collection:', error);
       setShowDeleteConfirmation(false);
-      Alert.alert(
-        'Error',
-        'Failed to delete collection. Please try again.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Error', 'Failed to delete collection. Please try again.', [{ text: 'OK' }]);
     }
   };
 
@@ -204,11 +204,9 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
 
   const handleExportCollection = () => {
     // TODO: Implement export functionality
-    Alert.alert(
-      'Export Collection',
-      'Export functionality will be implemented soon.',
-      [{ text: 'OK' }]
-    );
+    Alert.alert('Export Collection', 'Export functionality will be implemented soon.', [
+      { text: 'OK' },
+    ]);
   };
 
   const handleDownloadCollection = async () => {
@@ -230,7 +228,7 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
         lr: '',
         pk: 0,
         alt: [],
-        cc: []
+        cc: [],
       };
 
       await collectionsManager.downloadRemoteCollection(collection, language);
@@ -252,26 +250,21 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
         {/* Header */}
-        <View className={`px-6 py-4 ${isDark ? 'bg-gray-900' : 'bg-white'} border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+        <View
+          className={`px-6 py-4 ${isDark ? 'bg-gray-900' : 'bg-white'} border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
           <View className="flex-row items-center justify-between">
             <View className="flex-row items-center">
               <MaterialIcons name="info" size={28} color={isDark ? '#60A5FA' : '#3B82F6'} />
               {languageInfo?.isGateway && (
                 <View className="ml-3 rounded-full bg-blue-500/20 px-2 py-1">
-                  <Text className={`text-xs font-medium ${isDark ? 'text-blue-300' : 'text-blue-600'}`}>
-                    GW
-                  </Text>
+                  <MaterialIcons name="language" size={12} color={isDark ? '#60A5FA' : '#3B82F6'} />
                 </View>
               )}
             </View>
             <TouchableOpacity
               onPress={onClose}
               className={`rounded-full p-2 ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
-              <MaterialIcons
-                name="close"
-                size={24}
-                color={isDark ? '#FFFFFF' : '#374151'}
-              />
+              <MaterialIcons name="close" size={24} color={isDark ? '#FFFFFF' : '#374151'} />
             </TouchableOpacity>
           </View>
         </View>
@@ -281,35 +274,34 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
           <View className={`p-6 ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
             <View className="flex-row items-start">
               {/* Collection Image */}
-              <View className="mr-4 overflow-hidden rounded-2xl shadow-lg" style={{ width: 120, height: 120 }}>
-                <Image
-                  source={{ uri: collection.metadata?.thumbnail || fallbackImageUrl }}
-                  style={{ width: 120, height: 120 }}
-                  resizeMode="cover"
-                />
+              <View
+                className="mr-4 overflow-hidden rounded-2xl shadow-lg"
+                style={{ width: 120, height: 120 }}>
+                <Image source={image} style={{ width: 120, height: 120 }} resizeMode="cover" />
               </View>
 
               {/* Collection Info */}
-              <View className="flex-1 min-w-0">
-                <Text className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}
-                      numberOfLines={3}>
+              <View className="min-w-0 flex-1">
+                <Text
+                  className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}
+                  numberOfLines={3}>
                   {collection.displayName}
                 </Text>
-                <Text className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}
-                      numberOfLines={2}>
+                <Text
+                  className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}
+                  numberOfLines={2}>
                   {collection.owner.fullName || collection.owner.username}
                 </Text>
 
                 {/* Language with Direction */}
-                <View className="mt-2 flex-row items-center flex-wrap">
-                  <Text className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                <View className="mt-2 flex-row flex-wrap items-center">
+                  <Text
+                    className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                     {languageInfo?.nativeName || collection.language}
                   </Text>
                   {languageInfo?.isRTL && (
                     <View className="ml-2 rounded-full bg-orange-500/20 px-2 py-1">
-                      <Text className={`text-xs font-medium ${isDark ? 'text-orange-300' : 'text-orange-600'}`}>
-                        RTL
-                      </Text>
+                      <MaterialIcons name="format-textdirection-r-to-l" size={12} color={isDark ? '#FB923C' : '#EA580C'} />
                     </View>
                   )}
                 </View>
@@ -317,16 +309,16 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
                 {/* Status Badge */}
                 <View className="mt-3">
                   {collection.isDownloaded ? (
-                    <View className="flex-row items-center rounded-full bg-green-500/20 px-3 py-2 self-start">
+                    <View className="flex-row items-center self-start rounded-full bg-green-500/20 px-3 py-2">
                       <MaterialIcons name="check-circle" size={16} color="#10B981" />
-                      <Text className="ml-2 text-sm font-medium text-green-600">Downloaded</Text>
                     </View>
                   ) : (
-                    <View className="flex-row items-center rounded-full bg-blue-500/20 px-3 py-2 self-start">
-                      <MaterialIcons name="cloud-download" size={16} color={isDark ? '#60A5FA' : '#3B82F6'} />
-                      <Text className={`ml-2 text-sm font-medium ${isDark ? 'text-blue-300' : 'text-blue-600'}`}>
-                        Available
-                      </Text>
+                    <View className="flex-row items-center self-start rounded-full bg-blue-500/20 px-3 py-2">
+                      <MaterialIcons
+                        name="cloud-download"
+                        size={16}
+                        color={isDark ? '#60A5FA' : '#3B82F6'}
+                      />
                     </View>
                   )}
                 </View>
@@ -345,11 +337,7 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
               />
 
               {/* Version */}
-              <InfoCard
-                icon="update"
-                value={`${collection.version}`}
-                isDark={isDark}
-              />
+              <InfoCard icon="update" value={`${collection.version}`} isDark={isDark} />
 
               {/* Download Date (if downloaded and available) */}
               {collection.isDownloaded && collectionStats?.downloadDate && (
@@ -370,15 +358,17 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
 
             {/* Description */}
             {collection.metadata?.description && (
-              <View className={`mt-6 p-4 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-white'} border ${isDark ? 'border-gray-700' : 'border-gray-200'} shadow-sm`}>
-                <View className="flex-row items-start mb-2">
+              <View
+                className={`mt-6 rounded-2xl p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} border ${isDark ? 'border-gray-700' : 'border-gray-200'} shadow-sm`}>
+                <View className="mb-2 flex-row items-start">
                   <MaterialIcons
                     name="description"
                     size={18}
                     color={isDark ? '#60A5FA' : '#3B82F6'}
                     style={{ marginTop: 2, marginRight: 8 }}
                   />
-                  <Text className={`text-sm leading-6 flex-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <Text
+                    className={`flex-1 text-sm leading-6 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                     {collection.metadata.description}
                   </Text>
                 </View>
@@ -401,7 +391,8 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
 
                 <TouchableOpacity
                   onPress={handleDeleteCollection}
-                  className={`flex-1 rounded-xl p-3 ${isDark ? 'bg-red-600' : 'bg-red-500'} shadow-lg`}>
+                  className="flex-1 rounded-xl p-3 shadow-lg"
+                  style={{ backgroundColor: isDark ? '#DC2626' : '#EF4444' }}>
                   <View className="flex-row items-center justify-center">
                     <MaterialIcons name="delete" size={20} color="white" />
                   </View>
@@ -449,13 +440,10 @@ interface InfoCardProps {
 }
 
 const InfoCard: React.FC<InfoCardProps> = ({ icon, value, isDark }) => (
-  <View className={`flex-row items-center p-4 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-white'} border ${isDark ? 'border-gray-700' : 'border-gray-200'} shadow-sm`}>
+  <View
+    className={`flex-row items-center rounded-2xl p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} border ${isDark ? 'border-gray-700' : 'border-gray-200'} shadow-sm`}>
     <View className={`mr-4 rounded-full p-3 ${isDark ? 'bg-blue-600/20' : 'bg-blue-500/10'}`}>
-      <MaterialIcons
-        name={icon as any}
-        size={20}
-        color={isDark ? '#60A5FA' : '#3B82F6'}
-      />
+      <MaterialIcons name={icon as any} size={20} color={isDark ? '#60A5FA' : '#3B82F6'} />
     </View>
     <Text className={`text-base font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
       {value}

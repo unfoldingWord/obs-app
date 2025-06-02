@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CollectionsManager, SearchResult, Collection } from '../../src/core/CollectionsManager';
 import { NotesSection } from '../../src/components/CommentsSection';
 import { FrameBadge } from '../../src/components/FrameBadge';
+import { useStoryNavigation } from '../../src/hooks/useStoryNavigation';
 
 interface HighlightedTextProps {
   text: string;
@@ -65,6 +66,7 @@ export default function SearchScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const { navigateToStory } = useStoryNavigation();
 
   useFocusEffect(
     useCallback(() => {
@@ -158,7 +160,7 @@ export default function SearchScreen() {
 
   const renderResult = ({ item }: { item: SearchResult }) => (
     <TouchableOpacity
-      onPress={() => router.push(`/story/${encodeURIComponent(item.collectionId)}/${item.storyNumber}/${item.frameNumber}`)}
+      onPress={() => navigateToStory(item.collectionId, item.storyNumber, item.frameNumber)}
       className={`mx-4 mb-4 rounded-2xl p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} border shadow-lg ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
 
       <View className="flex-row items-center justify-between mb-3">

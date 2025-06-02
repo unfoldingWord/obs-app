@@ -12,12 +12,16 @@ import {
   FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { CollectionsManager, Story, Frame } from '../../src/core/CollectionsManager';
 import { CommentsManager, FrameComment } from '../../src/core/CommentsManager';
 import { StoryManager, UserMarker } from '../../src/core/storyManager';
 import { FrameBadge } from '../../src/components/FrameBadge';
 import { UnifiedLanguagesManager } from '../../src/core/UnifiedLanguagesManager';
+import { useStoryNavigation } from '../../src/hooks/useStoryNavigation';
+
+type ReadingMode = 'horizontal' | 'vertical';
 
 interface FavoriteStory extends Story {
   collectionDisplayName?: string;
@@ -53,6 +57,7 @@ export default function FavoritesScreen() {
   const [markers, setMarkers] = useState<FavoriteMarker[]>([]);
   const [comments, setComments] = useState<FavoriteComment[]>([]);
   const router = useRouter();
+  const { navigateToStory, navigateToStoryStart } = useStoryNavigation();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -249,20 +254,16 @@ export default function FavoritesScreen() {
     }, [refreshFavoritesData])
   );
 
-  const navigateToStory = (story: FavoriteStory) => {
-    router.push(`/story/${encodeURIComponent(story.collectionId)}/${story.storyNumber}/1`);
+  const navigateToFavoriteStory = (story: FavoriteStory) => {
+    navigateToStoryStart(story.collectionId, story.storyNumber);
   };
 
   const navigateToFrame = (frame: Frame) => {
-    router.push(
-      `/story/${encodeURIComponent(frame.collectionId)}/${frame.storyNumber}/${frame.frameNumber}`
-    );
+    navigateToStory(frame.collectionId, frame.storyNumber, frame.frameNumber);
   };
 
   const navigateToMarker = (marker: UserMarker) => {
-    router.push(
-      `/story/${encodeURIComponent(marker.collectionId)}/${marker.storyNumber}/${marker.frameNumber}`
-    );
+    navigateToStory(marker.collectionId, marker.storyNumber, marker.frameNumber);
   };
 
   const deleteMarker = async (markerId: string) => {
@@ -276,9 +277,7 @@ export default function FavoritesScreen() {
   };
 
   const navigateToComment = (comment: FavoriteComment) => {
-    router.push(
-      `/story/${encodeURIComponent(comment.collectionId)}/${comment.storyNumber}/${comment.frameNumber}`
-    );
+    navigateToStory(comment.collectionId, comment.storyNumber, comment.frameNumber);
   };
 
   const deleteComment = async (commentId: string) => {
@@ -293,7 +292,7 @@ export default function FavoritesScreen() {
 
   const renderFavoriteStory = ({ item }: { item: FavoriteStory }) => (
     <TouchableOpacity
-      onPress={() => navigateToStory(item)}
+      onPress={() => navigateToFavoriteStory(item)}
       className={`mx-4 mb-6 overflow-hidden rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-lg border ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
       <View className="relative">
         <Image source={{ uri: item.thumbnailUrl }} className="h-48 w-full" resizeMode="cover" />
