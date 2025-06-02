@@ -5,11 +5,13 @@
     "slug": "obs-app",
     "version": "1.0.0",
     "owner": "unfoldingword",
+    "scheme": "obs-app",
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "experiments": {
-      "tsconfigPaths": true
+      "tsconfigPaths": true,
+      "newArchEnabled": true
     },
     "plugins": [
       "expo-router",
