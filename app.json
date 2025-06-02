@@ -35,6 +35,7 @@
     "ios": {
       "supportsTablet": true,
       "icon": "./assets/icon.png",
+      "bundleIdentifier": "com.unfoldingword.obsapp",
       "splash": {
         "image": "./assets/splash-icon.png",
         "imageWidth": 200,
@@ -48,7 +49,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.abelpz.obsapp"
+      "package": "com.unfoldingword.obsapp"
     }
   }
 }

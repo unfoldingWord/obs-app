@@ -1,7 +1,7 @@
 # Open Bible Stories (OBS) Mobile App
 
 <div align="center">
-  <img src="./assets/icon.png" alt="OBS App Icon" width="120" height="120">
+  <img src="./assets/splash-icon.png" alt="OBS App Icon" width="120" height="120">
 
   **A free and open-source Bible app for reading illustrated Bible stories**
 
@@ -26,18 +26,22 @@ Open Bible Stories is a free and open-source Bible app that allows you to read i
 - **🌙 Dark Mode**: Comfortable reading in any lighting condition
 - **📊 Progress Tracking**: Keep track of your reading progress
 
+
 ## 📱 For Users
 
-### Installation
+### 🤖 Android Installation
 
-#### Option 1: Download APK (Recommended)
-1. Go to the [Releases](https://github.com/your-repo/releases) page
-2. Download the latest `app-release.apk` file
+#### Option 1: Download from GitHub Releases (Recommended)
+1. Go to the [Releases](https://github.com/abelpz/my-expo-app/releases) page
+2. Download the latest `obs-app-release.apk` file
 3. Enable "Install from unknown sources" in your Android settings
 4. Install the APK on your device
 
-#### Option 2: Build from Source
-See the [Development Setup](#-development-setup) section below.
+#### Option 2: GitHub Actions Builds
+1. Go to the [Actions](https://github.com/abelpz/my-expo-app/actions) tab
+2. Click on a completed "Build Android Release" workflow
+3. Download the build artifacts
+4. Extract and install the APK
 
 ### Getting Started
 
@@ -52,7 +56,14 @@ See the [Development Setup](#-development-setup) section below.
 - **📖 Read Tab**: Browse and read downloaded stories
 - **❤️ Favorites Tab**: Access your saved favorite stories
 - **🔍 Search Tab**: Discover new content and manage downloads
-- **⚙️ Settings**: Customize app appearance and manage storage
+
+### Perfect For Ministry Use
+
+- **🌏 Missionaries**: Offline access in remote areas
+- **⛪ Churches**: Share with congregation members
+- **📚 Translation Teams**: Test new language versions
+- **👨‍👩‍👧‍👦 Family Devotions**: Engaging stories for children
+- **📖 Bible Study Groups**: Illustrated Bible stories
 
 ## 🛠️ For Developers
 
@@ -64,7 +75,7 @@ See the [Development Setup](#-development-setup) section below.
 - **Database**: Expo SQLite with Drizzle ORM
 - **State Management**: React hooks and context
 - **Language**: TypeScript
-- **Build System**: Expo CLI with native Android/iOS builds
+- **Build System**: GitHub Actions with native Android builds
 
 ### Architecture
 
@@ -87,7 +98,6 @@ src/                      # Business logic
 └── utils/              # Utility functions
 
 android/                 # Native Android project
-ios/                    # Native iOS project (future)
 ```
 
 ### Development Setup
@@ -103,8 +113,8 @@ ios/                    # Native iOS project (future)
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/your-repo/obs-app.git
-   cd obs-app
+   git clone https://github.com/abelpz/my-expo-app.git
+   cd my-expo-app
    ```
 
 2. **Install dependencies**
@@ -131,10 +141,7 @@ npm start
 # Run on Android device/emulator
 npm run android
 
-# Run on iOS device/simulator (macOS only)
-npm run ios
-
-# Run in web browser
+# Run in web browser (for testing)
 npm run web
 
 # Lint and format code
@@ -142,29 +149,47 @@ npm run lint
 npm run format
 ```
 
-### Building APKs
+### 🚀 Automated Builds with GitHub Actions
+
+This project uses GitHub Actions for automated Android builds. See [`.github/README.md`](.github/README.md) for complete workflow documentation.
+
+#### Quick Build Guide
+
+**Manual Build:**
+1. Go to **Actions** → **"Build Android Release"**
+2. Click **"Run workflow"**
+3. Download APK from artifacts
+
+**Automatic Build:**
+1. Create a new GitHub release
+2. APK is automatically built and attached
+
+#### Build Features
+- ✅ **No complex setup** - Uses your existing build scripts
+- ✅ **Manual or automatic** triggers
+- ✅ **Professional APKs** ready for distribution
+- ✅ **Ministry-focused** - Perfect for Open Bible Stories
+
+### Building APKs Locally
 
 #### Cross-Platform Compatibility ✨
-All build scripts are designed to work seamlessly across **Windows**, **macOS**, and **Linux** without any modifications.
+All build scripts work seamlessly across **Windows**, **macOS**, and **Linux**.
 
 #### Debug Build (Development)
 ```bash
-# Build debug APK (works on all platforms)
+# Build debug APK
 npm run build:android:debug
 
 # Install debug APK on connected device
 npm run install:android:debug
 ```
 
-The debug APK will be located at:
-`android/app/build/outputs/apk/debug/app-debug.apk`
-
 #### Release Build (Production)
 ```bash
-# Clean previous builds (works on all platforms)
+# Clean previous builds
 npm run build:android:clean
 
-# Build release APK (works on all platforms)
+# Build release APK
 npm run build:android:release
 
 # Install release APK on connected device
@@ -173,45 +198,6 @@ npm run install:android:release
 
 The release APK will be located at:
 `android/app/build/outputs/apk/release/app-release.apk`
-
-#### Manual Build Commands
-
-If you prefer to use Gradle directly:
-
-**On Windows:**
-```bash
-# Navigate to android directory
-cd android
-
-# Debug build
-gradlew.bat assembleDebug
-
-# Release build
-gradlew.bat assembleRelease
-
-# Clean build
-gradlew.bat clean
-```
-
-**On macOS/Linux:**
-```bash
-# Navigate to android directory
-cd android
-
-# Debug build
-./gradlew assembleDebug
-
-# Release build
-./gradlew assembleRelease
-
-# Clean build
-./gradlew clean
-```
-
-**Install on device via ADB (all platforms):**
-```bash
-adb install app/build/outputs/apk/debug/app-debug.apk
-```
 
 ### Project Structure Details
 
@@ -227,7 +213,7 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 - **StoryManager**: Manages individual story data and reading progress
 - **DatabaseManager**: SQLite operations and data persistence
 - **Navigation**: File-based routing with Expo Router
-- **UI Components**: Reusable components in `app/components/`
+- **UI Components**: Reusable components with NativeWind styling
 
 #### Database Schema
 - **Collections**: Metadata about downloaded story collections
@@ -269,9 +255,8 @@ npx tsc --noEmit
 
 #### Common Issues
 
-**"No ViewManager found for class RNSScreenContentWrapper"**
-- This is resolved by calling `enableScreens()` in the root layout
-- Already implemented in `app/_layout.tsx`
+**Dependencies not found (expo-linear-gradient, expo-file-system)**
+- ✅ **Fixed**: Both dependencies are now properly installed
 
 **Build failures**
 - Clean the build: `npm run build:android:clean`
@@ -295,7 +280,22 @@ The app integrates with the Door43 Content Service (DCS) API:
 - **Catalog Endpoints**: For discovering available content
 - **Repository Endpoints**: For downloading content packages
 
-See `docs/implementation-details.md` for detailed API documentation.
+## 🚀 Distribution Strategy
+
+### For Ministry Organizations
+
+1. **Build APK** using GitHub Actions (manual or release)
+2. **Test** with your ministry team
+3. **Distribute** APK file to partners
+4. **Support** with included installation guides
+
+### Perfect Distribution Scenarios
+
+- **Church Ministry**: Share APK with congregation
+- **Mission Fields**: Offline Bible stories for remote areas
+- **Translation Partners**: Beta test new language versions
+- **Bible Study Groups**: Engaging illustrated stories
+- **Family Ministry**: Children's Bible story time
 
 ## 📄 License
 
@@ -310,12 +310,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/your-repo/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-repo/discussions)
+- **Issues**: [GitHub Issues](https://github.com/abelpz/my-expo-app/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/abelpz/my-expo-app/discussions)
+- **Workflow Documentation**: [`.github/README.md`](.github/README.md)
 - **Email**: support@unfoldingword.org
 
 ---
 
 <div align="center">
+  <strong>Ready to share God's Word worldwide! 📱📖✨</strong><br/>
   Made with ❤️ by the unfoldingWord community
 </div>

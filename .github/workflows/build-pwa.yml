@@ -1,0 +1,387 @@
+name: Build Progressive Web App (PWA)
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_bump:
+        description: 'Version bump type'
+        required: false
+        default: 'patch'
+        type: choice
+        options:
+        - patch
+        - minor
+        - major
+        - none
+
+jobs:
+  build-pwa:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 🏗 Setup repo
+      uses: actions/checkout@v4
+      
+    - name: 🏗 Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 18.x
+        cache: npm
+        
+    - name: 📦 Install dependencies
+      run: npm ci
+      
+    - name: 🔧 Setup Expo CLI
+      run: npm install -g @expo/cli@latest
+      
+    - name: 🔢 Update version (optional)
+      if: ${{ github.event.inputs.version_bump != 'none' }}
+      run: |
+        if [ "${{ github.event.inputs.version_bump }}" != "none" ]; then
+          npm version ${{ github.event.inputs.version_bump }} --no-git-tag-version
+          
+          # Update version in app.json
+          VERSION=$(node -p "require('./package.json').version")
+          node -e "
+            const fs = require('fs');
+            const appConfig = JSON.parse(fs.readFileSync('app.json', 'utf8'));
+            appConfig.expo.version = '$VERSION';
+            fs.writeFileSync('app.json', JSON.stringify(appConfig, null, 2));
+          "
+          
+          echo "Updated version to: $VERSION"
+        fi
+        
+    - name: 🌐 Configure for PWA
+      run: |
+        # Update app.json for PWA support
+        node -e "
+          const fs = require('fs');
+          const appConfig = JSON.parse(fs.readFileSync('app.json', 'utf8'));
+          
+          // Add PWA configuration
+          appConfig.expo.web = appConfig.expo.web || {};
+          appConfig.expo.web.favicon = './assets/favicon.png';
+          appConfig.expo.web.name = appConfig.expo.name;
+          appConfig.expo.web.shortName = appConfig.expo.name;
+          appConfig.expo.web.lang = 'en';
+          appConfig.expo.web.scope = '/';
+          appConfig.expo.web.themeColor = '#006a78';
+          appConfig.expo.web.backgroundColor = '#006a78';
+          appConfig.expo.web.display = 'standalone';
+          appConfig.expo.web.orientation = 'portrait';
+          appConfig.expo.web.startUrl = '/';
+          
+          // Configure for iOS PWA
+          appConfig.expo.web.meta = {
+            'apple-mobile-web-app-capable': 'yes',
+            'apple-mobile-web-app-status-bar-style': 'default',
+            'apple-mobile-web-app-title': appConfig.expo.name,
+            'mobile-web-app-capable': 'yes'
+          };
+          
+          fs.writeFileSync('app.json', JSON.stringify(appConfig, null, 2));
+        "
+        
+    - name: 🏗 Build for web
+      run: |
+        # Export for web/PWA
+        expo export --platform web
+        
+    - name: 📱 Generate PWA manifest and service worker
+      run: |
+        VERSION=$(node -p "require('./package.json').version")
+        APP_NAME=$(node -p "require('./app.json').expo.name")
+        APP_DESCRIPTION=$(node -p "require('./app.json').expo.description")
+        
+        # Create web manifest for PWA
+        cat > dist/manifest.json << EOF
+        {
+          "name": "${APP_NAME}",
+          "short_name": "${APP_NAME}",
+          "description": "${APP_DESCRIPTION}",
+          "version": "${VERSION}",
+          "start_url": "/",
+          "scope": "/",
+          "display": "standalone",
+          "orientation": "portrait-primary",
+          "theme_color": "#006a78",
+          "background_color": "#006a78",
+          "icons": [
+            {
+              "src": "assets/icon.png",
+              "sizes": "192x192",
+              "type": "image/png",
+              "purpose": "any maskable"
+            },
+            {
+              "src": "assets/icon.png", 
+              "sizes": "512x512",
+              "type": "image/png",
+              "purpose": "any maskable"
+            }
+          ]
+        }
+        EOF
+        
+        # Create service worker for offline support
+        cat > dist/sw.js << EOF
+        const CACHE_NAME = '${APP_NAME}-v${VERSION}';
+        const urlsToCache = [
+          '/',
+          '/static/js/bundle.js',
+          '/static/css/main.css',
+          '/assets/icon.png',
+          '/manifest.json'
+        ];
+
+        self.addEventListener('install', (event) => {
+          event.waitUntil(
+            caches.open(CACHE_NAME)
+              .then((cache) => cache.addAll(urlsToCache))
+          );
+        });
+
+        self.addEventListener('fetch', (event) => {
+          event.respondWith(
+            caches.match(event.request)
+              .then((response) => {
+                if (response) {
+                  return response;
+                }
+                return fetch(event.request);
+              }
+            )
+          );
+        });
+        EOF
+        
+        # Update index.html to include PWA features
+        cat > dist/install.html << EOF
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Install ${APP_NAME}</title>
+            <link rel="manifest" href="/manifest.json">
+            <meta name="theme-color" content="#006a78">
+            <meta name="apple-mobile-web-app-capable" content="yes">
+            <meta name="apple-mobile-web-app-status-bar-style" content="default">
+            <meta name="apple-mobile-web-app-title" content="${APP_NAME}">
+            <link rel="apple-touch-icon" href="/assets/icon.png">
+            <style>
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    margin: 0;
+                    padding: 20px;
+                    background: linear-gradient(135deg, #006a78, #4a9da8);
+                    color: white;
+                    min-height: 100vh;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    text-align: center;
+                }
+                .container {
+                    max-width: 400px;
+                    background: rgba(255, 255, 255, 0.1);
+                    padding: 30px;
+                    border-radius: 20px;
+                    backdrop-filter: blur(10px);
+                    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+                }
+                .app-icon {
+                    width: 80px;
+                    height: 80px;
+                    border-radius: 16px;
+                    margin: 0 auto 20px;
+                    background: white;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 40px;
+                }
+                .install-button {
+                    display: inline-block;
+                    background: white;
+                    color: #006a78;
+                    padding: 12px 24px;
+                    border-radius: 25px;
+                    text-decoration: none;
+                    font-weight: 600;
+                    margin: 20px 0;
+                    transition: transform 0.2s;
+                }
+                .install-button:hover {
+                    transform: translateY(-2px);
+                }
+                .instructions {
+                    background: rgba(255, 255, 255, 0.1);
+                    padding: 20px;
+                    border-radius: 10px;
+                    margin-top: 20px;
+                    text-align: left;
+                }
+                .step {
+                    margin: 10px 0;
+                    padding-left: 20px;
+                    position: relative;
+                }
+                .step::before {
+                    content: "•";
+                    position: absolute;
+                    left: 0;
+                    color: #4a9da8;
+                    font-weight: bold;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="app-icon">📖</div>
+                <h1>${APP_NAME}</h1>
+                <p>Version ${VERSION}</p>
+                <p>Install this app on your device for the best experience!</p>
+                
+                <a href="/" class="install-button" onclick="installPWA(event)">
+                    Install App
+                </a>
+                
+                <div class="instructions">
+                    <h3>📱 iOS Installation:</h3>
+                    <div class="step">Open this page in Safari</div>
+                    <div class="step">Tap the Share button</div>
+                    <div class="step">Select "Add to Home Screen"</div>
+                    <div class="step">Tap "Add" to install</div>
+                    
+                    <h3>🤖 Android Installation:</h3>
+                    <div class="step">Tap "Install App" button above</div>
+                    <div class="step">Or use browser menu → "Install app"</div>
+                </div>
+            </div>
+
+            <script>
+                // Register service worker
+                if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.register('/sw.js');
+                }
+
+                // PWA install prompt
+                let deferredPrompt;
+                
+                window.addEventListener('beforeinstallprompt', (e) => {
+                    e.preventDefault();
+                    deferredPrompt = e;
+                });
+
+                function installPWA(e) {
+                    e.preventDefault();
+                    
+                    if (deferredPrompt) {
+                        deferredPrompt.prompt();
+                        deferredPrompt.userChoice.then((choiceResult) => {
+                            deferredPrompt = null;
+                        });
+                    } else {
+                        // Fallback: redirect to app
+                        window.location.href = '/';
+                    }
+                }
+            </script>
+        </body>
+        </html>
+        EOF
+        
+    - name: 📁 Prepare distribution package
+      run: |
+        VERSION=$(node -p "require('./package.json').version")
+        
+        # Create build info
+        cat > dist/build-info.json << EOF
+        {
+          "type": "PWA",
+          "version": "${VERSION}",
+          "buildDate": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+          "commit": "${{ github.sha }}",
+          "branch": "${{ github.ref_name }}",
+          "platform": "web"
+        }
+        EOF
+        
+        # Create deployment instructions
+        cat > dist/DEPLOYMENT.md << EOF
+        # PWA Deployment Instructions
+
+        ## Quick Deploy Options:
+
+        ### 1. GitHub Pages (Free)
+        - Go to repository Settings → Pages
+        - Select source branch
+        - Upload dist/ contents to your pages branch
+
+        ### 2. Netlify (Free)
+        - Drag and drop the dist/ folder to netlify.com/drop
+        - Or connect your GitHub repo for auto-deployment
+
+        ### 3. Vercel (Free)
+        - Import your GitHub repo at vercel.com
+        - Auto-deploys on every push
+
+        ### 4. Firebase Hosting (Free)
+        \`\`\`bash
+        npm install -g firebase-tools
+        firebase login
+        firebase init hosting
+        firebase deploy
+        \`\`\`
+
+        ## Installation:
+        Once deployed, users can:
+        - **iOS**: Open in Safari → Share → Add to Home Screen
+        - **Android**: Visit site → Install prompt appears
+        - **Desktop**: Install via browser prompt
+
+        ## Benefits:
+        ✅ No Apple Developer account needed
+        ✅ Works on iOS, Android, and Desktop
+        ✅ Automatic updates
+        ✅ Offline support
+        ✅ App-like experience
+        EOF
+        
+    - name: 📤 Upload PWA artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: pwa-build-${{ github.run_number }}
+        path: |
+          dist/
+        retention-days: 30
+        
+    - name: 📋 Build Summary
+      run: |
+        echo "## 🌐 PWA Build Completed Successfully!" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Build Details:" >> $GITHUB_STEP_SUMMARY
+        echo "- **Type:** Progressive Web App" >> $GITHUB_STEP_SUMMARY
+        echo "- **Version:** $(node -p "require('./package.json').version")" >> $GITHUB_STEP_SUMMARY
+        echo "- **Build Number:** ${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📱 Installation:" >> $GITHUB_STEP_SUMMARY
+        echo "**No Apple Developer account needed!**" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "1. Download and extract the artifacts" >> $GITHUB_STEP_SUMMARY
+        echo "2. Deploy to any web hosting service (GitHub Pages, Netlify, Vercel)" >> $GITHUB_STEP_SUMMARY
+        echo "3. Users can install via:" >> $GITHUB_STEP_SUMMARY
+        echo "   - **iOS**: Safari → Share → Add to Home Screen" >> $GITHUB_STEP_SUMMARY
+        echo "   - **Android**: Browser install prompt" >> $GITHUB_STEP_SUMMARY
+        echo "   - **Desktop**: Browser install prompt" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### ✨ Benefits:" >> $GITHUB_STEP_SUMMARY
+        echo "- Works on iOS, Android, and Desktop" >> $GITHUB_STEP_SUMMARY
+        echo "- No app store approval needed" >> $GITHUB_STEP_SUMMARY
+        echo "- Automatic updates" >> $GITHUB_STEP_SUMMARY
+        echo "- Offline support" >> $GITHUB_STEP_SUMMARY
+        echo "- App-like experience when installed" >> $GITHUB_STEP_SUMMARY 
