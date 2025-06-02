@@ -254,7 +254,14 @@ repository-root/
 ![Image Description](image-url) Text content for frame 1.
 
 ![Image Description](image-url) Text content for frame 2.
+
+_A story from Genesis 1-5_
 ```
+
+**Source Reference Extraction:**
+- The app automatically extracts source references from the last non-blank line
+- Text between underscores (e.g., `_A story from Genesis 1-5_`) is saved as `sourceReference` in story metadata
+- This provides biblical context for each story
 
 **Unsupported Scenarios:**
 - Missing `content/` directory

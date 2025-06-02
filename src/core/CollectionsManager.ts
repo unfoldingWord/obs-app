@@ -427,6 +427,12 @@ export class CollectionsManager {
     return dbStory ? this.convertDbToStory(dbStory) : null;
   }
 
+  // Get source reference for a specific story
+  async getStorySourceReference(collectionId: string, storyNumber: number): Promise<string | null> {
+    const story = await this.getStory(collectionId, storyNumber);
+    return story?.metadata?.sourceReference || null;
+  }
+
   // Frame Operations
   async getStoryFrames(collectionId: string, storyNumber: number): Promise<Frame[]> {
     if (!this.initialized) await this.initialize();
@@ -503,6 +509,37 @@ export class CollectionsManager {
   private highlightSearchTerm(text: string, term: string): string {
     const regex = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
     return text.replace(regex, '<mark>$1</mark>');
+  }
+
+  // Helper method to extract source reference from content
+  private extractSourceReference(content: string): { sourceReference: string | null; cleanedContent: string } {
+    const lines = content.split('\n');
+    let sourceReference: string | null = null;
+    let lastNonBlankLineIndex = -1;
+    
+    // Find the last non-blank line
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const line = lines[i].trim();
+      if (line) {
+        lastNonBlankLineIndex = i;
+        // Check if the line contains text between underscores
+        const sourceReferenceMatch = line.match(/_([^_]+)_/);
+        if (sourceReferenceMatch) {
+          sourceReference = sourceReferenceMatch[1].trim();
+        }
+        break; // Stop at the first non-blank line from the end
+      }
+    }
+    
+    // If we found a source reference, remove that line from the content
+    let cleanedContent = content;
+    if (sourceReference !== null && lastNonBlankLineIndex >= 0) {
+      const modifiedLines = [...lines];
+      modifiedLines[lastNonBlankLineIndex] = ''; // Remove the line with source reference
+      cleanedContent = modifiedLines.join('\n').trim();
+    }
+    
+    return { sourceReference, cleanedContent };
   }
 
   // Delete Operations
@@ -789,6 +826,7 @@ export class CollectionsManager {
       const storyFileRegex = /(?:^|\/)(?:content\/)?(\d+)\.md$/i;
       const frameParseRegex =
         /!\[[^\]]*?\]\(([^)]+?)\)\s*([\s\S]*?)(?=(?:!\[[^\]]*?\]\([^)]+?\))|$)/g;
+      const referenceParseRegex = /\[(.*?)\]\((.*?)\)/g;
 
       for (const [fullPath, zipEntry] of filesToProcess) {
         if (zipEntry.dir) continue;
@@ -814,18 +852,28 @@ export class CollectionsManager {
 
           const title = titleFromContent || storyMatch[1] || `Story ${storyNumber}`;
 
+          // Extract source reference from the content
+          const { sourceReference, cleanedContent } = this.extractSourceReference(content);
+          
+          // Prepare story metadata
+          const storyMetadata: Record<string, any> = {};
+          if (sourceReference) {
+            storyMetadata.sourceReference = sourceReference;
+          }
+
           const storyData = this.convertStoryToDb({
             collectionId: collection.id,
             storyNumber,
             title,
             isFavorite: false,
+            metadata: Object.keys(storyMetadata).length > 0 ? storyMetadata : undefined,
           });
           await this.databaseManager.saveStory(storyData);
 
           let frameNumber = 0;
           let match;
           frameParseRegex.lastIndex = 0;
-          while ((match = frameParseRegex.exec(content)) !== null) {
+          while ((match = frameParseRegex.exec(cleanedContent)) !== null) {
             frameNumber++;
             const imageUrl = match[1].trim();
             const frameText = match[2].trim();

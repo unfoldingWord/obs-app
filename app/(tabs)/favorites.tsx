@@ -10,6 +10,7 @@ import {
   useColorScheme,
   Image,
   FlatList,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -290,35 +291,56 @@ export default function FavoritesScreen() {
     }
   };
 
-  const renderFavoriteStory = ({ item }: { item: FavoriteStory }) => (
-    <TouchableOpacity
-      onPress={() => navigateToFavoriteStory(item)}
-      className={`mx-4 mb-6 overflow-hidden rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-lg border ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
-      <View className="relative">
-        <Image source={{ uri: item.thumbnailUrl }} className="h-48 w-full" resizeMode="cover" />
-        {/* Story badge with icon and number */}
-        <View className={`absolute top-3 ${item.isRTL ? 'left-3' : 'right-3'} flex-row items-center rounded-full px-3 py-2 ${isDark ? 'bg-blue-600/90' : 'bg-blue-500/90'}`}>
-          <MaterialIcons name="menu-book" size={16} color="#FFFFFF" />
-          <Text className="ml-1 text-sm font-bold text-white">
-            {item.storyNumber}
+  const renderFavoriteStory = ({ item }: { item: FavoriteStory }) => {
+    const sourceReference = item.metadata?.sourceReference;
+    
+    return (
+      <TouchableOpacity
+        onPress={() => navigateToFavoriteStory(item)}
+        className={`mx-4 mb-6 overflow-hidden rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-lg border ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
+        <View className="relative">
+          <Image source={{ uri: item.thumbnailUrl }} className="h-48 w-full" resizeMode="cover" />
+          {/* Story badge with icon and number */}
+          <View className={`absolute top-3 ${item.isRTL ? 'left-3' : 'right-3'} flex-row items-center rounded-full px-3 py-2 ${isDark ? 'bg-blue-600/90' : 'bg-blue-500/90'}`}>
+            <MaterialIcons name="menu-book" size={16} color="#FFFFFF" />
+            <Text className="ml-1 text-sm font-bold text-white">
+              {item.storyNumber}
+            </Text>
+          </View>
+        </View>
+        <View className="p-4">
+          <Text
+            className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}
+            style={{ textAlign: item.isRTL ? 'right' : 'left' }}
+            numberOfLines={1}>
+            {item.title}
+          </Text>
+          
+          {/* Source Reference */}
+          {sourceReference && (
+            <TouchableOpacity
+              onLongPress={() => {
+                Alert.alert('', sourceReference, [{ text: 'OK' }]);
+              }}
+              activeOpacity={0.7}>
+              <Text
+                className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'} mt-1`}
+                style={{ textAlign: item.isRTL ? 'right' : 'left' }}
+                numberOfLines={1}>
+                {sourceReference}
+              </Text>
+            </TouchableOpacity>
+          )}
+          
+          <Text
+            className={`${sourceReference ? 'mt-1' : 'mt-2'} text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
+            style={{ textAlign: item.isRTL ? 'right' : 'left' }}>
+            {item.collectionDisplayName}
           </Text>
         </View>
-      </View>
-      <View className="p-4">
-        <Text
-          className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}
-          style={{ textAlign: item.isRTL ? 'right' : 'left' }}
-          numberOfLines={1}>
-          {item.title}
-        </Text>
-        <Text
-          className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
-          style={{ textAlign: item.isRTL ? 'right' : 'left' }}>
-          {item.collectionDisplayName}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   const renderFavoriteFrame = ({ item }: { item: FavoriteFrame }) => (
     <TouchableOpacity

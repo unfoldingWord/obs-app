@@ -233,6 +233,7 @@ export default function StoriesScreen() {
 
   const renderStoryItem = ({ item }: { item: CollectionStory }) => {
     const progressPercent = getProgressPercentage(item.storyNumber);
+    const sourceReference = item.metadata?.sourceReference;
 
     return (
       <TouchableOpacity
@@ -286,6 +287,22 @@ export default function StoriesScreen() {
               style={{ textAlign: isRTL ? 'right' : 'left' }}>
               {item.title}
             </Text>
+            
+            {/* Source Reference - Simplified */}
+            {sourceReference && (
+              <TouchableOpacity
+                onLongPress={() => {
+                  Alert.alert('', sourceReference, [{ text: 'OK' }]);
+                }}
+                activeOpacity={0.7}>
+                <Text
+                  className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'} mt-1`}
+                  style={{ textAlign: isRTL ? 'right' : 'left' }}
+                  numberOfLines={1}>
+                  {sourceReference}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Progress Bar */}
