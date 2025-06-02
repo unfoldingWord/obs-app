@@ -17,6 +17,11 @@ import { UnifiedLanguagesManager } from '../core/UnifiedLanguagesManager';
 import { hashStringToNumber } from '../core/hashStringToNumber';
 import { useObsImage } from '../hooks/useObsImage';
 
+// Extended Collection interface to match the one in [language].tsx
+interface CollectionWithValidation extends Collection {
+  isValid: boolean;
+}
+
 // Icon-based Delete Confirmation Modal Component
 interface DeleteConfirmationModalProps {
   visible: boolean;
@@ -75,7 +80,7 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
 );
 
 interface CollectionInfoModalProps {
-  collection: Collection | null;
+  collection: CollectionWithValidation | null;
   visible: boolean;
   onClose: () => void;
   onCollectionDeleted?: () => void;
@@ -194,7 +199,7 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
     } catch (error) {
       console.error('Error deleting collection:', error);
       setShowDeleteConfirmation(false);
-      Alert.alert('Error', 'Failed to delete collection. Please try again.', [{ text: 'OK' }]);
+      // Silent failure - no alert message for icon-based UI
     }
   };
 
@@ -204,13 +209,16 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
 
   const handleExportCollection = () => {
     // TODO: Implement export functionality
-    Alert.alert('Export Collection', 'Export functionality will be implemented soon.', [
-      { text: 'OK' },
-    ]);
+    // Silent - no alert message for icon-based UI
   };
 
   const handleDownloadCollection = async () => {
     if (!collection || downloading) return;
+
+    // Check if collection is valid before attempting download - silent return
+    if (!collection.isValid) {
+      return;
+    }
 
     try {
       setDownloading(true);
@@ -236,11 +244,7 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
       onClose(); // Close modal after successful download
     } catch (error) {
       console.error('Error downloading collection:', error);
-      Alert.alert(
-        'Download Failed',
-        'There was an error downloading this collection. Please try again.',
-        [{ text: 'OK' }]
-      );
+      // Silent failure - no alert messages, just remove loading state
     } finally {
       setDownloading(false);
     }
@@ -312,6 +316,10 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
                     <View className="flex-row items-center self-start rounded-full bg-green-500/20 px-3 py-2">
                       <MaterialIcons name="check-circle" size={16} color="#10B981" />
                     </View>
+                  ) : !collection.isValid ? (
+                    <View className={`flex-row items-center self-start rounded-full px-3 py-2 ${isDark ? 'bg-yellow-600/20' : 'bg-yellow-500/20'}`}>
+                      <MaterialIcons name="construction" size={16} color={isDark ? '#FCD34D' : '#F59E0B'} />
+                    </View>
                   ) : (
                     <View className="flex-row items-center self-start rounded-full bg-blue-500/20 px-3 py-2">
                       <MaterialIcons
@@ -332,7 +340,7 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
               {/* Story Count */}
               <InfoCard
                 icon="library-books"
-                value={`${collectionStats?.storyCount || 50} Stories`}
+                value={`${collectionStats?.storyCount || 50}`}
                 isDark={isDark}
               />
 
@@ -400,18 +408,29 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
               </View>
             ) : (
               /* Available Collection Action */
-              <TouchableOpacity
-                onPress={handleDownloadCollection}
-                disabled={downloading}
-                className={`rounded-xl p-4 ${isDark ? 'bg-blue-600' : 'bg-blue-500'} shadow-lg ${downloading ? 'opacity-50' : ''}`}>
-                <View className="flex-row items-center justify-center">
-                  {downloading ? (
-                    <ActivityIndicator size="small" color="white" />
-                  ) : (
-                    <MaterialIcons name="download" size={24} color="white" />
-                  )}
-                </View>
-              </TouchableOpacity>
+              <View>
+                                
+                <TouchableOpacity
+                  onPress={handleDownloadCollection}
+                  disabled={downloading || !collection.isValid}
+                  className={`rounded-xl p-4 shadow-lg ${
+                    !collection.isValid 
+                      ? isDark ? 'bg-yellow-600' : 'bg-yellow-500'
+                      : downloading
+                      ? `${isDark ? 'bg-blue-600' : 'bg-blue-500'} opacity-50`
+                      : `${isDark ? 'bg-blue-600' : 'bg-blue-500'}`
+                  }`}>
+                  <View className="flex-row items-center justify-center">
+                    {downloading ? (
+                      <ActivityIndicator size="small" color="white" />
+                    ) : !collection.isValid ? (
+                      <MaterialIcons name="schedule" size={24} color="white" />
+                    ) : (
+                      <MaterialIcons name="download" size={24} color="white" />
+                    )}
+                  </View>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
 

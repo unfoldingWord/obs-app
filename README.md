@@ -65,6 +65,27 @@ Open Bible Stories is a free and open-source Bible app that allows you to read i
 - **👨‍👩‍👧‍👦 Family Devotions**: Engaging stories for children
 - **📖 Bible Study Groups**: Illustrated Bible stories
 
+### 📋 Collection Compatibility
+
+The app supports **Open Bible Stories** collections with the following structure:
+
+**✅ Supported Collections:**
+- 🔵 Collections with proper `content/` directory structure
+- 🔵 Markdown files numbered sequentially (01.md, 02.md, etc.)
+- 🔵 Collections following Door43 OBS format standards
+
+**🟡 Unsupported Collections:**
+- 🟡 Collections missing the required `content/` directory
+- 🟡 Collections with non-standard file structures
+- 🟡 Legacy format collections that haven't been updated
+
+**How to Identify:** Collections marked with 🔧 (construction) and ⏱️ (schedule) icons are not currently supported but may become available in future updates.
+
+**Need Help?** If you encounter collections that should be supported but show as unavailable, or if you can't find expected collections for your language, please [contact the developers](https://github.com/unfoldingword/obs-app/issues) with:
+- 📝 Language name and code
+- 🔗 Collection repository URL (if known)
+- 📖 Expected story titles or collection details
+
 ## 🛠️ For Developers
 
 ### Tech Stack
@@ -207,6 +228,40 @@ The release APK will be located at:
 3. **Local Storage**: Content is extracted and stored in SQLite database
 4. **Offline Access**: Stories are read from local storage
 
+#### Collection Format Validation
+
+The app automatically validates collection structures before allowing downloads:
+
+**Required Structure:**
+```
+repository-root/
+└── content/
+    ├── 01.md    # Story 1
+    ├── 02.md    # Story 2
+    ├── ...
+    └── 50.md    # Story 50
+```
+
+**Validation Process:**
+- Collections are validated via `CollectionsManager.validateCollectionStructure()`
+- The `getRemoteCollectionsByLanguage()` method returns validation status for each collection
+- Invalid collections are marked with `isValid: false` and displayed with 🔧⏱️ icons
+
+**Supported Content Format:**
+```markdown
+# Story Title
+
+![Image Description](image-url) Text content for frame 1.
+
+![Image Description](image-url) Text content for frame 2.
+```
+
+**Unsupported Scenarios:**
+- Missing `content/` directory
+- Non-sequential file numbering
+- Non-markdown content files
+- Empty or malformed markdown files
+
 #### Key Components
 
 - **CollectionsManager**: Handles downloading and managing story collections
@@ -314,6 +369,25 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Discussions**: [GitHub Discussions](https://github.com/abelpz/my-expo-app/discussions)
 - **Workflow Documentation**: [`.github/README.md`](.github/README.md)
 - **Email**: support@unfoldingword.org
+
+### 🔧 Collection Support Issues
+
+**Missing or Unsupported Collections?**  
+If you experience issues with collections not being available or showing as unsupported:
+
+1. **📋 Create an Issue** on [GitHub Issues](https://github.com/abelpz/my-expo-app/issues)
+2. **📝 Include Details**:
+   - Language name and ISO code (e.g., "Spanish (es)")
+   - Expected collection/repository name
+   - URL of the collection repository (if known)
+   - Screenshot of the issue (if applicable)
+
+3. **⚡ Quick Response**: Our team will investigate and work to add support for valid OBS collections
+
+**Why Some Collections Are Unsupported:**
+- Repository structure doesn't match OBS standards
+- Missing required `content/` directory with numbered markdown files
+- Legacy formats that need updating by content creators
 
 ---
 

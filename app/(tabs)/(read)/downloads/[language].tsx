@@ -90,18 +90,23 @@ interface Language {
   pk: number;
 }
 
+// Extended Collection interface to include validation status from API
+interface CollectionWithValidation extends Collection {
+  isValid: boolean;
+}
+
 export default function LanguageScreen() {
   const params = useLocalSearchParams();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [collections, setCollections] = useState<Collection[]>([]);
+  const [collections, setCollections] = useState<CollectionWithValidation[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [collectionsManager, setCollectionsManager] = useState<CollectionsManager | null>(null);
-  const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);
+  const [selectedCollection, setSelectedCollection] = useState<CollectionWithValidation | null>(null);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
-  const [collectionToDelete, setCollectionToDelete] = useState<Collection | null>(null);
+  const [collectionToDelete, setCollectionToDelete] = useState<CollectionWithValidation | null>(null);
   const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -150,14 +155,26 @@ export default function LanguageScreen() {
         localCollectionsPromise,
       ]);
 
-      // Extract just the collections from the remote collections with owner data
-      const remoteCollections = remoteCollectionsWithOwners.map(({ collection }) => collection);
+      // Convert local collections to include isValid: true (since they're already downloaded)
+      const localCollectionsWithValidation: CollectionWithValidation[] = localCollections.map(collection => ({
+        ...collection,
+        isValid: true,
+      }));
 
-      const localCollectionIds = new Set(localCollections.map((lc) => lc.id));
+      // Extract remote collections with their validation status
+      const remoteCollectionsWithValidation: CollectionWithValidation[] = remoteCollectionsWithOwners.map(
+        ({ collection, isValid }) => ({
+          ...collection,
+          isValid,
+        })
+      );
 
-      const allCollections: Collection[] = [
-        ...localCollections,
-        ...remoteCollections.filter((rc) => !localCollectionIds.has(rc.id)),
+      const localCollectionIds = new Set(localCollectionsWithValidation.map((lc) => lc.id));
+
+      // Combine local and remote collections, filtering out duplicates
+      const allCollections: CollectionWithValidation[] = [
+        ...localCollectionsWithValidation,
+        ...remoteCollectionsWithValidation.filter((rc) => !localCollectionIds.has(rc.id)),
       ];
 
       setCollections(allCollections);
@@ -170,7 +187,7 @@ export default function LanguageScreen() {
     }
   };
 
-  const handleSelectCollection = (collection: Collection) => {
+  const handleSelectCollection = (collection: CollectionWithValidation) => {
     if (collection.isDownloaded) {
       // Navigate to stories screen for downloaded collections
       router.push(`/stories?collectionId=${encodeURIComponent(collection.id)}`);
@@ -180,8 +197,14 @@ export default function LanguageScreen() {
     }
   };
 
-  const handleDownload = async (collection: Collection) => {
+  const handleDownload = async (collection: CollectionWithValidation) => {
     if (!collectionsManager) return;
+
+    // Check validation status before download - no text, just return silently
+    if (!collection.isValid) {
+      return;
+    }
+
     try {
       setDownloadingId(collection.id);
 
@@ -191,23 +214,19 @@ export default function LanguageScreen() {
       await loadCollections(); // Refresh the list
     } catch (err) {
       console.error('Download failed:', err);
-      Alert.alert(
-        'Download Failed',
-        'There was an error downloading this collection. Please try again.',
-        [{ text: 'OK' }]
-      );
+      // No alert message - just silently fail and remove loading state
     } finally {
       setDownloadingId(null);
     }
   };
 
-  const handleDeleteCollection = async (collection: Collection) => {
+  const handleDeleteCollection = async (collection: CollectionWithValidation) => {
     if (!collectionsManager) return;
     setCollectionToDelete(collection);
     setShowDeleteConfirmation(true);
   };
 
-  const handleShowInfo = (collection: Collection) => {
+  const handleShowInfo = (collection: CollectionWithValidation) => {
     setSelectedCollection(collection);
     setShowInfoModal(true);
   };
@@ -234,8 +253,8 @@ export default function LanguageScreen() {
       setShowDeleteConfirmation(false);
       setCollectionToDelete(null);
       Alert.alert(
-        'Delete Failed',
-        'There was an error deleting this collection. Please try again.',
+        '', // No title for icon-based UI
+        'Delete failed. Please try again.',
         [{ text: 'OK' }]
       );
     } finally {
@@ -260,9 +279,37 @@ export default function LanguageScreen() {
   const downloadedCollections = filteredCollections.filter((c) => c.isDownloaded);
   const notDownloadedCollections = filteredCollections.filter((c) => !c.isDownloaded);
 
-  const renderCollectionItem = ({ item }: { item: Collection }) => {
+  const renderCollectionItem = ({ item }: { item: CollectionWithValidation }) => {
     const storyNumber = hashStringToNumber(item.id);
     const fallbackImageUrl = `https://cdn.door43.org/obs/jpg/360px/obs-en-${String(storyNumber).padStart(2, '0')}-01.jpg`;
+
+    // Determine status icon and color based on download status and validation
+    const getStatusInfo = () => {
+      if (item.isDownloaded) {
+        return {
+          icon: 'check-circle' as const,
+          color: '#10B981',
+          bgColor: 'bg-green-500/20',
+        };
+      }
+
+      if (!item.isValid) {
+        return {
+          icon: 'construction' as const,
+          color: isDark ? '#FCD34D' : '#F59E0B',
+          bgColor: isDark ? 'bg-yellow-600/20' : 'bg-yellow-500/20',
+        };
+      }
+
+      // Valid and available for download
+      return {
+        icon: 'cloud-download' as const,
+        color: isDark ? '#60A5FA' : '#3B82F6',
+        bgColor: isDark ? 'bg-blue-600/20' : 'bg-blue-500/20',
+      };
+    };
+
+    const statusInfo = getStatusInfo();
 
     return (
       <TouchableOpacity
@@ -296,19 +343,9 @@ export default function LanguageScreen() {
 
               {/* Status Badge */}
               <View className="mt-2 flex-row items-center">
-                {item.isDownloaded ? (
-                  <View className="rounded-full bg-green-500/20 px-2 py-1">
-                    <MaterialIcons name="check-circle" size={16} color="#10B981" />
-                  </View>
-                ) : (
-                  <View className="rounded-full bg-blue-500/20 px-2 py-1">
-                    <MaterialIcons
-                      name="cloud-download"
-                      size={16}
-                      color={isDark ? '#60A5FA' : '#3B82F6'}
-                    />
-                  </View>
-                )}
+                <View className={`rounded-full p-2 ${statusInfo.bgColor}`}>
+                  <MaterialIcons name={statusInfo.icon} size={16} color={statusInfo.color} />
+                </View>
               </View>
             </View>
 
@@ -331,10 +368,16 @@ export default function LanguageScreen() {
                     e.stopPropagation();
                     handleDownload(item);
                   }}
-                  className="rounded-full bg-blue-600 p-3 shadow-lg"
-                  disabled={downloadingId === item.id}>
+                  className={`rounded-full p-3 shadow-lg ${
+                    !item.isValid 
+                      ? isDark ? 'bg-yellow-600' : 'bg-yellow-500'
+                      : 'bg-blue-600'
+                  }`}
+                  disabled={downloadingId === item.id || !item.isValid}>
                   {downloadingId === item.id ? (
                     <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : !item.isValid ? (
+                    <MaterialIcons name="schedule" size={18} color="#FFFFFF" />
                   ) : (
                     <MaterialIcons name="download" size={18} color="#FFFFFF" />
                   )}
@@ -362,7 +405,7 @@ export default function LanguageScreen() {
   };
 
   const renderSection = (
-    data: Collection[],
+    data: CollectionWithValidation[],
     iconName: 'check-circle' | 'cloud-download',
     badgeColor: string
   ) => {

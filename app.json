@@ -6,12 +6,12 @@
     "version": "1.0.0",
     "owner": "unfoldingword",
     "scheme": "obs-app",
+    "newArchEnabled": true,
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "experiments": {
-      "tsconfigPaths": true,
-      "newArchEnabled": true
+      "tsconfigPaths": true
     },
     "plugins": [
       "expo-router",

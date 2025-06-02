@@ -57,6 +57,7 @@ interface RemoteCollection {
   language: string;
   title: string;
   description?: string;
+  contents_url: string;
   release?: {
     tag_name: string;
     published_at: string;
@@ -236,7 +237,7 @@ export class CollectionsManager {
 
   async getRemoteCollectionsByLanguage(
     language: string
-  ): Promise<{ collection: Collection; ownerData: any }[]> {
+  ): Promise<{ collection: Collection; ownerData: any; isValid: boolean }[]> {
     try {
       const params = new URLSearchParams({
         subject: 'Open Bible Stories',
@@ -250,7 +251,27 @@ export class CollectionsManager {
       }
 
       const { data } = await response.json();
-      return (data || []).map((item: RemoteCollection) => this.convertRemoteToCollection(item));
+      
+      // Process collections asynchronously, keeping both valid and invalid
+      const collectionPromises = (data || []).map((item: RemoteCollection) => 
+        this.convertRemoteToCollection(item)
+      );
+      
+      const collectionResults = await Promise.all(collectionPromises);
+      
+      // All collections are returned now (both valid and invalid)
+      const allCollections = collectionResults as {
+        collection: Collection;
+        ownerData: any;
+        isValid: boolean;
+      }[];
+      
+      const validCount = allCollections.filter(result => result.isValid).length;
+      const invalidCount = allCollections.length - validCount;
+      
+      console.log(`✅ Found ${validCount} valid and ${invalidCount} invalid collections out of ${data?.length || 0} total for language: ${language}`);
+      
+      return allCollections;
     } catch (error) {
       warn(
         `Error searching collections: ${error instanceof Error ? error.message : String(error)}`
@@ -262,11 +283,11 @@ export class CollectionsManager {
   /**
    * Convenience method to get just the collections without owner data.
    * @param language - Language code to search for
-   * @returns Array of Collection objects only
+   * @returns Array of Collection objects with validation status
    */
-  async getRemoteCollectionsOnly(language: string): Promise<Collection[]> {
+  async getRemoteCollectionsOnly(language: string): Promise<{ collection: Collection; isValid: boolean }[]> {
     const collectionsWithOwners = await this.getRemoteCollectionsByLanguage(language);
-    return collectionsWithOwners.map(({ collection }) => collection);
+    return collectionsWithOwners.map(({ collection, isValid }) => ({ collection, isValid }));
   }
 
   // Local Collection Operations using DatabaseManager
@@ -674,11 +695,55 @@ export class CollectionsManager {
     }
   }
 
-  private convertRemoteToCollection(remote: RemoteCollection): {
+  // Validation method to check if collection has required structure
+  private async validateCollectionStructure(contentsUrl: string): Promise<boolean> {
+    try {
+      console.log(`Validating collection structure for: ${contentsUrl}`);
+      
+      const response = await fetch(contentsUrl);
+      if (!response.ok) {
+        warn(`Failed to fetch contents for validation: ${response.status}`);
+        return false;
+      }
+
+      const contents = await response.json();
+      if (!Array.isArray(contents)) {
+        warn('Contents response is not an array');
+        return false;
+      }
+
+      // Look for an item with path="content" and type="dir"
+      const hasContentDir = contents.some(item => 
+        item.path === 'content' && item.type === 'dir'
+      );
+
+      if (!hasContentDir) {
+        warn('Collection does not have required "content" directory structure');
+        return false;
+      }
+
+      console.log('✅ Collection has valid structure with "content" directory');
+      return true;
+    } catch (error) {
+      warn(`Error validating collection structure: ${error instanceof Error ? error.message : String(error)}`);
+      return false;
+    }
+  }
+
+  private async convertRemoteToCollection(remote: RemoteCollection): Promise<{
     collection: Collection;
     ownerData: any;
-  } {
+    isValid: boolean;
+  }> {
     const collectionId = `${remote.owner}/${remote.name}`;
+
+    console.log({ remote });
+
+    // Validate collection structure before processing
+    const isValid = await this.validateCollectionStructure(remote.contents_url);
+    if (!isValid) {
+      console.log(`⚠️ Collection ${collectionId} has invalid structure - will show as unavailable`);
+    }
 
     const ownerData = remote.repo?.owner;
 
@@ -707,7 +772,7 @@ export class CollectionsManager {
       },
     };
 
-    return { collection, ownerData };
+    return { collection, ownerData, isValid };
   }
 
   // ZIP Processing and Storage
@@ -856,9 +921,31 @@ export class CollectionsManager {
     }
   }
 
+  // Method to check if a collection can be downloaded (has valid structure)
+  async canDownloadCollection(collection: Collection): Promise<boolean> {
+    try {
+      // For remote collections, we need to check the structure
+      // Since we don't store validation status in DB, we need to re-validate
+      const [owner, repoName] = collection.id.split('/');
+      const contentsUrl = `https://git.door43.org/api/v1/repos/${owner}/${repoName}/contents?ref=${collection.version}`;
+      
+      return await this.validateCollectionStructure(contentsUrl);
+    } catch (error) {
+      warn(`Error checking if collection ${collection.id} can be downloaded: ${error instanceof Error ? error.message : String(error)}`);
+      return false;
+    }
+  }
+
   // Download Operations
   async downloadRemoteCollection(collection: Collection, languageData?: any): Promise<void> {
     if (!this.initialized) await this.initialize();
+    
+    // Check if collection can be downloaded (has valid structure)
+    const canDownload = await this.canDownloadCollection(collection);
+    if (!canDownload) {
+      throw new Error(`Cannot download collection ${collection.id}: Invalid structure - missing required "content" directory`);
+    }
+    
     try {
       // Save language data FIRST to satisfy foreign key constraints
       await this.saveLanguageData(collection.language, languageData);
