@@ -19,9 +19,9 @@ export default function TabLayout() {
         tabBarActiveTintColor: isDark ? '#2563EB' : '#3B82F6',
         tabBarInactiveTintColor: isDark ? '#6B7280' : '#9CA3AF',
         tabBarStyle: {
-          backgroundColor: isDark ? '#000000' : '#FFFFFF',
-          borderTopWidth: 1,
-          borderTopColor: isDark ? '#4B5563' : '#F3F4F6',
+          backgroundColor: isDark ? '#111827' : '#FFFFFF',
+          borderTopWidth: isDark ? 0 : 1,
+          borderTopColor: isDark ? '#111827' : '#F3F4F6',
           height: 65,
           paddingBottom: 8,
           paddingTop: 8,
@@ -33,43 +33,49 @@ export default function TabLayout() {
           backgroundColor: isDark ? '#1F2937' : '#FFFFFF',
         },
         headerTintColor: isDark ? '#FFFFFF' : '#000000',
-    }}>
+      }}>
       <Tabs.Screen
         name="(read)"
         options={{
-          tabBarIcon: ({ color, size, focused }: { color: string; size: number; focused: boolean }) => (
-            <MaterialIcons
-              name="auto-stories"
-              size={focused ? 28 : 24}
-              color={color}
-            />
-          ),
+          tabBarIcon: ({
+            color,
+            size,
+            focused,
+          }: {
+            color: string;
+            size: number;
+            focused: boolean;
+          }) => <MaterialIcons name="auto-stories" size={focused ? 28 : 24} color={color} />,
           headerShown: false,
         }}
       />
       <Tabs.Screen
         name="favorites"
         options={{
-          tabBarIcon: ({ color, size, focused }: { color: string; size: number; focused: boolean }) => (
-            <MaterialIcons
-              name="favorite"
-              size={focused ? 28 : 24}
-              color={color}
-            />
-          ),
+          tabBarIcon: ({
+            color,
+            size,
+            focused,
+          }: {
+            color: string;
+            size: number;
+            focused: boolean;
+          }) => <MaterialIcons name="favorite" size={focused ? 28 : 24} color={color} />,
           headerShown: false,
         }}
       />
       <Tabs.Screen
         name="search"
         options={{
-          tabBarIcon: ({ color, size, focused }: { color: string; size: number; focused: boolean }) => (
-            <MaterialIcons
-              name="search"
-              size={focused ? 28 : 24}
-              color={color}
-            />
-          ),
+          tabBarIcon: ({
+            color,
+            size,
+            focused,
+          }: {
+            color: string;
+            size: number;
+            focused: boolean;
+          }) => <MaterialIcons name="search" size={focused ? 28 : 24} color={color} />,
           headerShown: false,
         }}
       />
