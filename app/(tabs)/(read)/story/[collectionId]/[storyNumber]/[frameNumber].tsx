@@ -16,6 +16,8 @@ import {
   Alert,
   Modal,
   TextInput,
+  Animated,
+  PanResponder,
 } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -33,6 +35,8 @@ import { StoryManager, UserMarker } from '../../../../../../src/core/storyManage
 import { useObsImage } from '../../../../../../src/hooks/useObsImage';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+type ReadingMode = 'horizontal' | 'vertical';
 
 // Icon-based Bookmark Naming Modal
 interface BookmarkModalProps {
@@ -72,6 +76,7 @@ export default function StoryFrameScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const [preferredReadingMode, setPreferredReadingMode] = useState<ReadingMode>('horizontal');
 
   // Update the ref whenever currentFrameNumber changes
   useEffect(() => {
@@ -134,6 +139,7 @@ export default function StoryFrameScreen() {
   useEffect(() => {
     loadStoryData();
     loadFontSizePreference();
+    loadReadingModePreference();
   }, [collectionId, storyNumber]);
 
   // Effect to update when frame number changes
@@ -355,7 +361,7 @@ export default function StoryFrameScreen() {
             const nextStory = getNextStory();
             if (nextStory) {
               console.log('Navigating to next story first frame');
-              router.push(`/story/${encodeURIComponent(collectionId)}/${nextStory.storyNumber}/1`);
+              navigateToNextStory(nextStory);
             }
           }
           return; // Don't process auxiliary frames as regular frames
@@ -416,7 +422,7 @@ export default function StoryFrameScreen() {
       console.log('🚀 END: User reached end, navigating to next story');
       const nextStory = getNextStory();
       if (nextStory) {
-        router.push(`/story/${encodeURIComponent(collectionId)}/${nextStory.storyNumber}/1`);
+        navigateToNextStory(nextStory);
       }
     }
   }, [currentFrameNumberRef.current, totalFrames]);
@@ -520,7 +526,7 @@ export default function StoryFrameScreen() {
           const nextStory = getNextStory();
           if (nextStory) {
             console.log(`Navigating to next story ${nextStory.storyNumber}, frame 1`);
-            router.push(`/story/${encodeURIComponent(collectionId)}/${nextStory.storyNumber}/1`);
+            navigateToNextStory(nextStory);
           }
         }
       }
@@ -752,7 +758,7 @@ export default function StoryFrameScreen() {
       // Try to go to next story
       const nextStory = getNextStory();
       if (nextStory) {
-        router.push(`/story/${encodeURIComponent(collectionId)}/${nextStory.storyNumber}/1`);
+        navigateToNextStory(nextStory);
       }
     }
   };
@@ -873,6 +879,37 @@ export default function StoryFrameScreen() {
                 </View>
               </View>
             )}
+
+            {/* Action buttons overlaid on image */}
+            <View className={`absolute bottom-3 ${isRTL ? 'left-3' : 'right-3'}`}>
+              <View
+                style={{
+                  flexDirection: isRTL ? 'row-reverse' : 'row',
+                  gap: 8,
+                }}>
+                <TouchableOpacity
+                  onPress={() => {
+                    const storyManager = StoryManager.getInstance();
+                    addMarker();
+                  }}
+                  className={`rounded-full p-2 ${isDark ? 'bg-black/70' : 'bg-white/90'} border shadow-lg ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+                  <MaterialIcons
+                    name={frameMarkers.length > 0 ? 'bookmark' : 'bookmark-border'}
+                    size={20}
+                    color={frameMarkers.length > 0 ? '#F59E0B' : isDark ? '#9CA3AF' : '#6B7280'}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => toggleFavorite()}
+                  className={`rounded-full p-2 ${isDark ? 'bg-black/70' : 'bg-white/90'} border shadow-lg ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+                  <MaterialIcons
+                    name={frame.isFavorite ? 'favorite' : 'favorite-border'}
+                    size={20}
+                    color={frame.isFavorite ? '#EF4444' : isDark ? '#9CA3AF' : '#6B7280'}
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
 
           <View className="p-4">
@@ -1031,6 +1068,27 @@ export default function StoryFrameScreen() {
     );
   };
 
+  // Load reading mode preference
+  const loadReadingModePreference = useCallback(async () => {
+    try {
+      const savedMode = await AsyncStorage.getItem('readingModePreference');
+      if (savedMode === 'horizontal' || savedMode === 'vertical') {
+        setPreferredReadingMode(savedMode);
+      }
+    } catch (error) {
+      console.error('Error loading reading mode preference:', error);
+    }
+  }, []);
+
+  // Helper function to navigate to next story with correct reading mode
+  const navigateToNextStory = useCallback((nextStory: Story) => {
+    if (preferredReadingMode === 'vertical') {
+      router.push(`/story/${encodeURIComponent(collectionId)}/${nextStory.storyNumber}/vertical?frame=1`);
+    } else {
+      router.push(`/story/${encodeURIComponent(collectionId)}/${nextStory.storyNumber}/1`);
+    }
+  }, [preferredReadingMode, collectionId, router]);
+
   if (loading) {
     return (
       <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
@@ -1090,7 +1148,7 @@ export default function StoryFrameScreen() {
 
         {/* Modern Header */}
         <View
-          className={`border-b px-4 py-3 ${isDark ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-white'}`}
+          className={`border-b px-4 py-4 ${isDark ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-white'}`}
           style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 12 }}>
           <TouchableOpacity
             onPress={() => router.push(`/stories?collection=${encodeURIComponent(collectionId)}`)}
@@ -1102,10 +1160,11 @@ export default function StoryFrameScreen() {
             />
           </TouchableOpacity>
 
-          <View style={{ flex: 1 }}>
+          <View style={{ flex: 1, paddingHorizontal: 8 }}>
             <Text
-              className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}
-              style={{ textAlign: isRTL ? 'right' : 'left' }}>
+              className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}
+              style={{ textAlign: isRTL ? 'right' : 'left' }}
+              numberOfLines={2}>
               {story?.title || `Story ${storyNumber}`}
             </Text>
           </View>
@@ -1118,22 +1177,13 @@ export default function StoryFrameScreen() {
               <MaterialIcons name="text-fields" size={20} color={isDark ? '#9CA3AF' : '#6B7280'} />
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={handleBookmarkPress}
+              onPress={() => {
+                // Save vertical mode preference and navigate to vertical
+                AsyncStorage.setItem('readingModePreference', 'vertical').catch(console.error);
+                router.push(`/story/${encodeURIComponent(collectionId)}/${storyNumber}/vertical?frame=${currentFrameNumber}`);
+              }}
               className={`rounded-full p-2 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
-              <MaterialIcons
-                name={markers.length > 0 ? 'bookmark' : 'bookmark-border'}
-                size={20}
-                color={markers.length > 0 ? '#F59E0B' : isDark ? '#9CA3AF' : '#6B7280'}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={toggleFavorite}
-              className={`rounded-full p-2 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
-              <MaterialIcons
-                name={currentFrame?.isFavorite ? 'favorite' : 'favorite-border'}
-                size={20}
-                color={currentFrame?.isFavorite ? '#EF4444' : isDark ? '#9CA3AF' : '#6B7280'}
-              />
+              <MaterialIcons name="view-stream" size={20} color={isDark ? '#9CA3AF' : '#6B7280'} />
             </TouchableOpacity>
           </View>
         </View>

@@ -15,24 +15,38 @@ import {
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { CollectionItem } from '../../../src/components/CollectionItem';
 import { ContinueReading } from '../../../src/components/ContinueReading';
 import { CollectionsManager, Collection } from '../../../src/core/CollectionsManager';
 import { StoryManager, UserProgress } from '../../../src/core/storyManager';
 import { useObsImage } from '../../../src/hooks/useObsImage';
+import { useStoryNavigation } from '../../../src/hooks/useStoryNavigation';
+
+type ReadingMode = 'horizontal' | 'vertical';
 
 export default function ReadScreen() {
   const [loading, setLoading] = useState(true);
   const [collections, setCollections] = useState<Collection[]>([]);
   const [lastReadProgress, setLastReadProgress] = useState<UserProgress | null>(null);
+  const [preferredReadingMode, setPreferredReadingMode] = useState<ReadingMode>('horizontal');
   const router = useRouter();
+  const { navigateToStory } = useStoryNavigation();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
   // Get aesthetic image for empty state
   const aestheticImage = useObsImage({
     reference: { story: 28, frame: 10 },
+  });
+
+  // Get continue reading image (will be null if no lastReadProgress)
+  const continueReadingImage = useObsImage({
+    reference: lastReadProgress ? {
+      story: lastReadProgress.storyNumber,
+      frame: lastReadProgress.frameNumber
+    } : { story: 1, frame: 1 },
   });
 
   const loadData = useCallback(async () => {
@@ -125,8 +139,10 @@ export default function ReadScreen() {
 
   const handleContinueReading = () => {
     if (lastReadProgress) {
-      router.push(
-        `/story/${encodeURIComponent(lastReadProgress.collectionId)}/${lastReadProgress.storyNumber}/${lastReadProgress.frameNumber}`
+      navigateToStory(
+        lastReadProgress.collectionId,
+        lastReadProgress.storyNumber,
+        lastReadProgress.frameNumber
       );
     }
   };
@@ -223,11 +239,15 @@ export default function ReadScreen() {
                     </Text>
                   </View>
                 </View>
-                <ContinueReading
-                  lastReadProgress={lastReadProgress}
-                  onPress={handleContinueReading}
-                  isDark={isDark}
-                />
+
+                {/* Continue Reading Card */}
+                <View className="relative">
+                  <ContinueReading
+                    lastReadProgress={lastReadProgress}
+                    onPress={handleContinueReading}
+                    isDark={isDark}
+                  />
+                </View>
               </View>
             ) : null}
           </View>
@@ -246,7 +266,7 @@ export default function ReadScreen() {
                 <View className="mb-6 flex-row items-center justify-between">
                   <View className="flex-row items-center">
                     <MaterialIcons
-                      name="library-books"
+                      name="local-library"
                       size={28}
                       color={isDark ? '#FFFFFF' : '#000000'}
                     />
@@ -258,16 +278,22 @@ export default function ReadScreen() {
                       </Text>
                     </View>
                   </View>
+
                   <TouchableOpacity
                     onPress={() => router.push('/downloads')}
-                    className={`rounded-full p-3 ${isDark ? 'bg-gray-900' : 'bg-gray-100'}`}>
-                    <MaterialIcons name="add" size={24} color={isDark ? '#FFFFFF' : '#000000'} />
+                    className={`rounded-full p-2 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                    <MaterialIcons
+                      name="add"
+                      size={24}
+                      color={isDark ? '#9CA3AF' : '#6B7280'}
+                    />
                   </TouchableOpacity>
                 </View>
 
-                {/* Collections Grid */}
-                <View className="space-y-4">
-                  {collections.map((item) => (
+                <FlatList
+                  data={collections}
+                  keyExtractor={(item) => item.id}
+                  renderItem={({ item }) => (
                     <CollectionItem
                       key={item.id}
                       item={item}
@@ -275,49 +301,12 @@ export default function ReadScreen() {
                       onCollectionDeleted={refreshData}
                       isDark={isDark}
                     />
-                  ))}
-                </View>
+                  )}
+                  showsVerticalScrollIndicator={false}
+                />
               </View>
             </>
           )}
-
-          {/* Empty State for Collections when there's reading progress */}
-          {collections.length === 0 && lastReadProgress && (
-            <>
-              {/* Divider */}
-              <View className="mb-8 px-6">
-                <View className={`h-px ${isDark ? 'bg-gray-800' : 'bg-gray-200'}`} />
-              </View>
-
-              <View className="px-6 pb-8">
-                <View className="items-center py-12">
-                  <View
-                    className={`mb-8 rounded-2xl p-6 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} border shadow-lg ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                    <MaterialIcons
-                      name="library-books"
-                      size={48}
-                      color={isDark ? '#9CA3AF' : '#6B7280'}
-                    />
-                  </View>
-                  <TouchableOpacity
-                    onPress={() => router.push('/downloads')}
-                    className={`rounded-xl px-6 py-3 ${isDark ? 'bg-blue-600' : 'bg-blue-500'} shadow-lg`}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 8,
-                    }}>
-                    <MaterialIcons name="download" size={20} color="white" />
-                    <Text className="font-semibold text-white">Download Collections</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </>
-          )}
-
-          {/* Bottom spacing */}
-          <View className="h-8" />
         </ScrollView>
       )}
     </SafeAreaView>

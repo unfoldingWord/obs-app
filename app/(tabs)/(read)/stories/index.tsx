@@ -1,5 +1,5 @@
 import { FontAwesome, MaterialIcons } from '@expo/vector-icons';
-import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState, useCallback } from 'react';
 import {
@@ -11,8 +11,10 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   useColorScheme,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
   CollectionsManager,
@@ -22,20 +24,24 @@ import {
 import { UnifiedLanguagesManager } from '../../../../src/core/UnifiedLanguagesManager';
 import { StoryManager, UserProgress } from '../../../../src/core/storyManager';
 import { useObsImage } from '../../../../src/hooks/useObsImage';
+import { useStoryNavigation } from '../../../../src/hooks/useStoryNavigation';
+
+type ReadingMode = 'horizontal' | 'vertical';
 
 export default function StoriesScreen() {
-  const [currentCollection, setCurrentCollection] = useState<Collection | null>(null);
-  const [collections, setCollections] = useState<Collection[]>([]);
-  const [stories, setStories] = useState<CollectionStory[]>([]);
+  const { collectionId: collectionIdParam } = useLocalSearchParams();
   const [loading, setLoading] = useState(true);
-  const [storiesLoading, setStoriesLoading] = useState(false);
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [currentCollection, setCurrentCollection] = useState<Collection | null>(null);
+  const [stories, setStories] = useState<CollectionStory[]>([]);
   const [showCollectionSelector, setShowCollectionSelector] = useState(false);
   const [progressMap, setProgressMap] = useState<Map<number, UserProgress>>(new Map());
   const [isRTL, setIsRTL] = useState(false);
-
+  const [preferredReadingMode, setPreferredReadingMode] = useState<ReadingMode>('horizontal');
+  const router = useRouter();
+  const { navigateToStoryStart } = useStoryNavigation();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const { collectionId } = useLocalSearchParams();
 
   const loadProgress = useCallback(async (collectionId: string, storiesList: CollectionStory[]) => {
     try {
@@ -72,7 +78,7 @@ export default function StoriesScreen() {
   const loadStories = useCallback(
     async (collectionId: string) => {
       try {
-        setStoriesLoading(true);
+        setLoading(true);
         const collectionsManager = CollectionsManager.getInstance();
         await collectionsManager.initialize();
         const collectionStories = await collectionsManager.getCollectionStories(collectionId);
@@ -83,7 +89,7 @@ export default function StoriesScreen() {
       } catch (error) {
         console.error('Error loading stories:', error);
       } finally {
-        setStoriesLoading(false);
+        setLoading(false);
       }
     },
     [loadProgress]
@@ -105,8 +111,8 @@ export default function StoriesScreen() {
         let selectedCollection = downloaded[0]; // Default to first
 
         // Check if a specific collection was requested via query parameter
-        if (collectionId && typeof collectionId === 'string') {
-          const requestedCollection = downloaded.find((c) => c.id === collectionId);
+        if (collectionIdParam && typeof collectionIdParam === 'string') {
+          const requestedCollection = downloaded.find((c) => c.id === collectionIdParam);
           if (requestedCollection) {
             selectedCollection = requestedCollection;
           }
@@ -169,6 +175,11 @@ export default function StoriesScreen() {
     return Math.round((progress.frameNumber / progress.totalFrames) * 100);
   };
 
+  const navigateToStory = (item: CollectionStory) => {
+    const collectionIdParam = encodeURIComponent(currentCollection?.id || '');
+    navigateToStoryStart(collectionIdParam, item.storyNumber);
+  };
+
   const toggleStoryFavorite = async (story: CollectionStory) => {
     if (!currentCollection) return;
 
@@ -225,17 +236,13 @@ export default function StoriesScreen() {
 
     return (
       <TouchableOpacity
+        onPress={() => navigateToStory(item)}
         className={`mb-4 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-white'} border shadow-lg ${isDark ? 'border-gray-700' : 'border-gray-100'}`}
         style={{
           flexDirection: isRTL ? 'row-reverse' : 'row',
           alignItems: 'center',
           padding: 16,
-        }}
-        onPress={() =>
-          router.push(
-            `/story/${encodeURIComponent(currentCollection?.id || '')}/${item.storyNumber}/1`
-          )
-        }>
+        }}>
         {/* Story Thumbnail */}
         <StoryThumbnail storyNumber={item.storyNumber} />
 
@@ -273,7 +280,7 @@ export default function StoriesScreen() {
           </View>
 
           {/* Story Title */}
-          <View style={{ marginBottom: progressPercent > 0 ? 12 : 0 }}>
+          <View style={{ marginBottom: progressPercent > 0 ? 12 : 8 }}>
             <Text
               className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'} leading-6`}
               style={{ textAlign: isRTL ? 'right' : 'left' }}>
@@ -288,6 +295,7 @@ export default function StoriesScreen() {
                 flexDirection: isRTL ? 'row-reverse' : 'row',
                 alignItems: 'center',
                 gap: 10,
+                marginBottom: 8,
               }}>
               <View
                 className={`h-2 flex-1 rounded-full ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}
@@ -368,6 +376,31 @@ export default function StoriesScreen() {
     </View>
   );
 
+  // Reading mode preference management
+  const loadReadingModePreference = useCallback(async () => {
+    try {
+      const savedMode = await AsyncStorage.getItem('readingModePreference');
+      if (savedMode === 'horizontal' || savedMode === 'vertical') {
+        setPreferredReadingMode(savedMode);
+      }
+    } catch (error) {
+      console.error('Error loading reading mode preference:', error);
+    }
+  }, []);
+
+  const saveReadingModePreference = useCallback(async (mode: ReadingMode) => {
+    try {
+      await AsyncStorage.setItem('readingModePreference', mode);
+      setPreferredReadingMode(mode);
+    } catch (error) {
+      console.error('Error saving reading mode preference:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadReadingModePreference();
+  }, [loadReadingModePreference]);
+
   if (loading) {
     return (
       <SafeAreaView
@@ -376,9 +409,6 @@ export default function StoriesScreen() {
         <ActivityIndicator size="large" color={isDark ? '#60A5FA' : '#3B82F6'} />
         <View className="mt-4 items-center">
           <MaterialIcons name="auto-stories" size={48} color={isDark ? '#4B5563' : '#9CA3AF'} />
-          <Text className={`mt-2 text-base ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            Loading...
-          </Text>
         </View>
       </SafeAreaView>
     );
@@ -424,13 +454,26 @@ export default function StoriesScreen() {
           </View>
           <MaterialIcons name="expand-more" size={24} color={isDark ? '#9CA3AF' : '#6B7280'} />
         </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => {
+            const newMode = preferredReadingMode === 'horizontal' ? 'vertical' : 'horizontal';
+            saveReadingModePreference(newMode);
+          }}
+          className={`rounded-full p-2 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+          <MaterialIcons
+            name={preferredReadingMode === 'vertical' ? 'view-stream' : 'view-carousel'}
+            size={20}
+            color={isDark ? '#9CA3AF' : '#6B7280'}
+          />
+        </TouchableOpacity>
       </View>
 
       {showCollectionSelector && renderCollectionSelector()}
 
       {/* Stories List */}
       <ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }}>
-        {storiesLoading ? (
+        {loading ? (
           <View className="flex-1 items-center justify-center py-20">
             <ActivityIndicator size="large" color={isDark ? '#60A5FA' : '#3B82F6'} />
             <View className="mt-6 items-center">
@@ -451,7 +494,6 @@ export default function StoriesScreen() {
               onPress={() => router.push('/downloads')}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <MaterialIcons name="download" size={20} color="white" />
-                <Text className="font-semibold text-white">Download Collections</Text>
               </View>
             </TouchableOpacity>
           </View>
