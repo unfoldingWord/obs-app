@@ -458,16 +458,6 @@ export default function LanguageScreen() {
                   {language.ang} ({language.lc})
                 </Text>
               )}
-              {language.gw && (
-                <View className="mt-1 flex-row items-center"
-                      style={{ justifyContent: language.ld === 'rtl' ? 'flex-end' : 'flex-start' }}>
-                  <View className="rounded-full bg-blue-500/20 px-2 py-1">
-                    <Text className={`text-xs font-medium ${isDark ? 'text-blue-300' : 'text-blue-600'}`}>
-                      GW
-                    </Text>
-                  </View>
-                </View>
-              )}
             </View>
           </View>
         </View>

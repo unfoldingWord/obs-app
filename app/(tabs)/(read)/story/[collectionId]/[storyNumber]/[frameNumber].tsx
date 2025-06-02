@@ -578,7 +578,7 @@ export default function StoryFrameScreen() {
       console.log(
         `Navigating to previous story ${previousStory.storyNumber}, frame ${lastFrameNumber}`
       );
-      router.push(
+      router.replace(
         `/story/${encodeURIComponent(collectionId)}/${previousStory.storyNumber}/${lastFrameNumber}`
       );
     } catch (error) {
@@ -785,7 +785,7 @@ export default function StoryFrameScreen() {
             previousStory.storyNumber
           );
           const lastFrameNumber = previousStoryFrames.length;
-          router.push(
+          router.replace(
             `/story/${encodeURIComponent(collectionId)}/${previousStory.storyNumber}/${lastFrameNumber}`
           );
         } catch (error) {
@@ -889,8 +889,7 @@ export default function StoryFrameScreen() {
                 }}>
                 <TouchableOpacity
                   onPress={() => {
-                    const storyManager = StoryManager.getInstance();
-                    addMarker();
+                    handleBookmarkPress();
                   }}
                   className={`rounded-full p-2 ${isDark ? 'bg-black/70' : 'bg-white/90'} border shadow-lg ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
                   <MaterialIcons
@@ -1083,9 +1082,9 @@ export default function StoryFrameScreen() {
   // Helper function to navigate to next story with correct reading mode
   const navigateToNextStory = useCallback((nextStory: Story) => {
     if (preferredReadingMode === 'vertical') {
-      router.push(`/story/${encodeURIComponent(collectionId)}/${nextStory.storyNumber}/vertical?frame=1`);
+      router.replace(`/story/${encodeURIComponent(collectionId)}/${nextStory.storyNumber}/vertical?frame=1`);
     } else {
-      router.push(`/story/${encodeURIComponent(collectionId)}/${nextStory.storyNumber}/1`);
+      router.replace(`/story/${encodeURIComponent(collectionId)}/${nextStory.storyNumber}/1`);
     }
   }, [preferredReadingMode, collectionId, router]);
 
@@ -1180,7 +1179,7 @@ export default function StoryFrameScreen() {
               onPress={() => {
                 // Save vertical mode preference and navigate to vertical
                 AsyncStorage.setItem('readingModePreference', 'vertical').catch(console.error);
-                router.push(`/story/${encodeURIComponent(collectionId)}/${storyNumber}/vertical?frame=${currentFrameNumber}`);
+                router.replace(`/story/${encodeURIComponent(collectionId)}/${storyNumber}/vertical?frame=${currentFrameNumber}`);
               }}
               className={`rounded-full p-2 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
               <MaterialIcons name="view-stream" size={20} color={isDark ? '#9CA3AF' : '#6B7280'} />

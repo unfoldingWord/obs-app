@@ -376,14 +376,14 @@ export default function VerticalReadingScreen() {
   const navigateToNextStory = () => {
     const nextStory = getNextStory();
     if (nextStory) {
-      router.push(`/story/${encodeURIComponent(collectionId)}/${nextStory.storyNumber}/vertical`);
+      router.replace(`/story/${encodeURIComponent(collectionId)}/${nextStory.storyNumber}/vertical`);
     }
   };
 
   const navigateToPreviousStory = () => {
     const previousStory = getPreviousStory();
     if (previousStory) {
-      router.push(`/story/${encodeURIComponent(collectionId)}/${previousStory.storyNumber}/vertical`);
+      router.replace(`/story/${encodeURIComponent(collectionId)}/${previousStory.storyNumber}/vertical`);
     }
   };
 
@@ -415,7 +415,6 @@ export default function VerticalReadingScreen() {
             <FrameBadge
               storyNumber={parseInt(storyNumber as string, 10)}
               frameNumber={frame.frameNumber}
-              isFavorite={frame.isFavorite}
               isRTL={isRTL}
             />
           </View>
@@ -537,11 +536,11 @@ export default function VerticalReadingScreen() {
     isRTL,
     selectedFrame,
   }) => {
-    const [bookmarkNote, setBookmarkNote] = useState('');
+    const [bookmarkName, setBookmarkName] = useState('');
 
     const handleAddBookmark = () => {
-      onAddBookmark(selectedFrame, bookmarkNote.trim() || undefined);
-      setBookmarkNote('');
+      onAddBookmark(selectedFrame, bookmarkName.trim() || undefined);
+      setBookmarkName('');
       onClose();
     };
 
@@ -550,6 +549,7 @@ export default function VerticalReadingScreen() {
         <View className="flex-1 items-center justify-center bg-black/50">
           <View
             className={`mx-6 w-80 overflow-hidden rounded-3xl ${isDark ? 'bg-gray-800' : 'bg-white'} border shadow-2xl ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+            {/* Header */}
             <View className="items-center p-6">
               <View
                 className={`mb-4 rounded-full p-4 ${isDark ? 'bg-yellow-600/20' : 'bg-yellow-500/10'} border ${isDark ? 'border-yellow-600/30' : 'border-yellow-500/20'}`}>
@@ -559,41 +559,42 @@ export default function VerticalReadingScreen() {
                   color={isDark ? '#FCD34D' : '#F59E0B'}
                 />
               </View>
-              <Text className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                Frame {selectedFrame}
-              </Text>
             </View>
 
+            {/* Input Section */}
             <View className="px-6 pb-4">
               <TextInput
-                value={bookmarkNote}
-                onChangeText={setBookmarkNote}
-                placeholder="Add a note (optional)"
-                placeholderTextColor={isDark ? '#9CA3AF' : '#6B7280'}
+                value={bookmarkName}
+                onChangeText={setBookmarkName}
                 className={`rounded-2xl px-4 py-3 text-base ${isDark ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-gray-50 text-gray-900'} border`}
                 style={{ textAlign: isRTL ? 'right' : 'left' }}
                 multiline
-                maxLength={200}
+                maxLength={100}
+                autoFocus={false}
               />
             </View>
 
+            {/* Action buttons */}
             <View
               className="flex-row border-t"
               style={{ borderColor: isDark ? '#374151' : '#E5E7EB' }}>
+              {/* Cancel button */}
               <TouchableOpacity
                 onPress={onClose}
                 className={`flex-1 items-center justify-center py-4 ${isDark ? 'bg-gray-700' : 'bg-gray-50'}`}
                 style={{ borderRightWidth: 1, borderRightColor: isDark ? '#374151' : '#E5E7EB' }}>
-                <Text className={`font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                  Cancel
-                </Text>
+                <MaterialIcons name="close" size={24} color={isDark ? '#9CA3AF' : '#6B7280'} />
               </TouchableOpacity>
+
+              {/* Add bookmark button */}
               <TouchableOpacity
                 onPress={handleAddBookmark}
                 className="flex-1 items-center justify-center py-4">
-                <Text className={`font-medium ${isDark ? 'text-yellow-400' : 'text-yellow-600'}`}>
-                  Add Bookmark
-                </Text>
+                <MaterialIcons
+                  name="bookmark-add"
+                  size={24}
+                  color={isDark ? '#FCD34D' : '#F59E0B'}
+                />
               </TouchableOpacity>
             </View>
           </View>
@@ -663,7 +664,7 @@ export default function VerticalReadingScreen() {
         className={`border-b px-4 py-3 ${isDark ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-white'}`}
         style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center', gap: 12 }}>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => router.push(`/stories?collectionId=${encodeURIComponent(collectionId)}`)}
           className={`rounded-full p-2 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
           <MaterialIcons
             name={isRTL ? 'arrow-forward' : 'arrow-back'}
@@ -691,7 +692,7 @@ export default function VerticalReadingScreen() {
             onPress={() => {
               // Save horizontal mode preference and navigate to horizontal
               AsyncStorage.setItem('readingModePreference', 'horizontal').catch(console.error);
-              router.push(`/story/${encodeURIComponent(collectionId)}/${storyNumber}/${currentVisibleFrame}`);
+              router.replace(`/story/${encodeURIComponent(collectionId)}/${storyNumber}/${currentVisibleFrame}`);
             }}
             className={`rounded-full p-2 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
             <MaterialIcons name="view-carousel" size={20} color={isDark ? '#9CA3AF' : '#6B7280'} />

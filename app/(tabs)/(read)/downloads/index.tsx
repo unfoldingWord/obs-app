@@ -149,13 +149,6 @@ export default function DownloadsScreen() {
                     {item.lc.toUpperCase()}
                   </Text>
                 </View>
-                {item.gw && (
-                  <View className="ml-2 rounded-full bg-blue-500/20 px-2 py-1">
-                    <Text className={`text-xs font-medium ${isDark ? 'text-blue-300' : 'text-blue-600'}`}>
-                      GW
-                    </Text>
-                  </View>
-                )}
               </View>
             </View>
           </View>

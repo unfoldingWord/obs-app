@@ -257,10 +257,7 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
               <MaterialIcons name="info" size={28} color={isDark ? '#60A5FA' : '#3B82F6'} />
               {languageInfo?.isGateway && (
                 <View className="ml-3 rounded-full bg-blue-500/20 px-2 py-1">
-                  <Text
-                    className={`text-xs font-medium ${isDark ? 'text-blue-300' : 'text-blue-600'}`}>
-                    GW
-                  </Text>
+                  <MaterialIcons name="language" size={12} color={isDark ? '#60A5FA' : '#3B82F6'} />
                 </View>
               )}
             </View>
@@ -304,10 +301,7 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
                   </Text>
                   {languageInfo?.isRTL && (
                     <View className="ml-2 rounded-full bg-orange-500/20 px-2 py-1">
-                      <Text
-                        className={`text-xs font-medium ${isDark ? 'text-orange-300' : 'text-orange-600'}`}>
-                        RTL
-                      </Text>
+                      <MaterialIcons name="format-textdirection-r-to-l" size={12} color={isDark ? '#FB923C' : '#EA580C'} />
                     </View>
                   )}
                 </View>
@@ -317,7 +311,6 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
                   {collection.isDownloaded ? (
                     <View className="flex-row items-center self-start rounded-full bg-green-500/20 px-3 py-2">
                       <MaterialIcons name="check-circle" size={16} color="#10B981" />
-                      <Text className="ml-2 text-sm font-medium text-green-600">Downloaded</Text>
                     </View>
                   ) : (
                     <View className="flex-row items-center self-start rounded-full bg-blue-500/20 px-3 py-2">
@@ -326,10 +319,6 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
                         size={16}
                         color={isDark ? '#60A5FA' : '#3B82F6'}
                       />
-                      <Text
-                        className={`ml-2 text-sm font-medium ${isDark ? 'text-blue-300' : 'text-blue-600'}`}>
-                        Available
-                      </Text>
                     </View>
                   )}
                 </View>
