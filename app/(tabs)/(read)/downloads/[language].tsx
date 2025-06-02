@@ -103,10 +103,14 @@ export default function LanguageScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [collectionsManager, setCollectionsManager] = useState<CollectionsManager | null>(null);
-  const [selectedCollection, setSelectedCollection] = useState<CollectionWithValidation | null>(null);
+  const [selectedCollection, setSelectedCollection] = useState<CollectionWithValidation | null>(
+    null
+  );
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
-  const [collectionToDelete, setCollectionToDelete] = useState<CollectionWithValidation | null>(null);
+  const [collectionToDelete, setCollectionToDelete] = useState<CollectionWithValidation | null>(
+    null
+  );
   const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -156,18 +160,19 @@ export default function LanguageScreen() {
       ]);
 
       // Convert local collections to include isValid: true (since they're already downloaded)
-      const localCollectionsWithValidation: CollectionWithValidation[] = localCollections.map(collection => ({
-        ...collection,
-        isValid: true,
-      }));
-
-      // Extract remote collections with their validation status
-      const remoteCollectionsWithValidation: CollectionWithValidation[] = remoteCollectionsWithOwners.map(
-        ({ collection, isValid }) => ({
+      const localCollectionsWithValidation: CollectionWithValidation[] = localCollections.map(
+        (collection) => ({
           ...collection,
-          isValid,
+          isValid: true,
         })
       );
+
+      // Extract remote collections with their validation status
+      const remoteCollectionsWithValidation: CollectionWithValidation[] =
+        remoteCollectionsWithOwners.map(({ collection, isValid }) => ({
+          ...collection,
+          isValid,
+        }));
 
       const localCollectionIds = new Set(localCollectionsWithValidation.map((lc) => lc.id));
 
@@ -369,9 +374,7 @@ export default function LanguageScreen() {
                     handleDownload(item);
                   }}
                   className={`rounded-full p-3 shadow-lg ${
-                    !item.isValid 
-                      ? isDark ? 'bg-yellow-600' : 'bg-yellow-500'
-                      : 'bg-blue-600'
+                    !item.isValid ? (isDark ? 'bg-yellow-600' : 'bg-yellow-500') : 'bg-blue-600'
                   }`}
                   disabled={downloadingId === item.id || !item.isValid}>
                   {downloadingId === item.id ? (
