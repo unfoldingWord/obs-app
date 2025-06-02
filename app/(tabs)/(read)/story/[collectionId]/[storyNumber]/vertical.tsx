@@ -618,9 +618,9 @@ export default function VerticalReadingScreen() {
         <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" color={isDark ? '#60A5FA' : '#3B82F6'} />
-          <Text className={`mt-4 text-lg ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            Loading story...
-          </Text>
+          <View className="mt-6 items-center">
+            <MaterialIcons name="auto-stories" size={64} color={isDark ? '#4B5563' : '#9CA3AF'} />
+          </View>
         </View>
       </SafeAreaView>
     );

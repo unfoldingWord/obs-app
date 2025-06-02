@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { SearchBar } from '../../../components/SearchBar';
+import { SearchBar } from '../../../../src/components/SearchBar';
 /**
  * Represents a language in the Door43 catalog
  * @interface Language

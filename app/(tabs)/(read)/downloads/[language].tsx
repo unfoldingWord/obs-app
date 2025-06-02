@@ -16,12 +16,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CollectionInfoModal } from '../../../../src/components/CollectionInfoModal';
-import {
-  CollectionsManager,
-  Collection,
-} from '../../../../src/core/CollectionsManager';
+import { SearchBar } from '../../../../src/components/SearchBar';
+import { CollectionsManager, Collection } from '../../../../src/core/CollectionsManager';
 import { hashStringToNumber } from '../../../../src/core/hashStringToNumber';
-import { SearchBar } from '../../../components/SearchBar';
 
 // Icon-based Delete Confirmation Modal Component
 interface DeleteConfirmationModalProps {
@@ -41,16 +38,20 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
 }) => (
   <Modal visible={visible} transparent animationType="fade">
     <View className="flex-1 items-center justify-center bg-black/50">
-      <View className={`mx-6 overflow-hidden rounded-3xl ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-2xl border ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+      <View
+        className={`mx-6 overflow-hidden rounded-3xl ${isDark ? 'bg-gray-800' : 'bg-white'} border shadow-2xl ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
         {/* Header with warning icon */}
         <View className="items-center p-6">
-          <View className={`mb-4 rounded-full p-4 ${isDark ? 'bg-red-600/20' : 'bg-red-500/10'} border ${isDark ? 'border-red-600/30' : 'border-red-500/20'}`}>
+          <View
+            className={`mb-4 rounded-full p-4 ${isDark ? 'bg-red-600/20' : 'bg-red-500/10'} border ${isDark ? 'border-red-600/30' : 'border-red-500/20'}`}>
             <MaterialIcons name="warning" size={32} color={isDark ? '#F87171' : '#EF4444'} />
           </View>
 
           {/* Collection info */}
-          <View className="items-center max-w-64">
-            <Text className={`text-center text-base font-medium ${isDark ? 'text-white' : 'text-gray-900'}`} numberOfLines={2}>
+          <View className="max-w-64 items-center">
+            <Text
+              className={`text-center text-base font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}
+              numberOfLines={2}>
               {collectionName}
             </Text>
           </View>
@@ -67,9 +68,7 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
           </TouchableOpacity>
 
           {/* Delete button */}
-          <TouchableOpacity
-            onPress={onConfirm}
-            className="flex-1 items-center justify-center py-4">
+          <TouchableOpacity onPress={onConfirm} className="flex-1 items-center justify-center py-4">
             <MaterialIcons name="delete" size={24} color={isDark ? '#F87171' : '#EF4444'} />
           </TouchableOpacity>
         </View>
@@ -118,7 +117,7 @@ export default function LanguageScreen() {
     lr: (params.lr as string) || '',
     pk: parseInt((params.pk as string) || '0', 10),
     alt: params.alt ? JSON.parse(params.alt as string) : [],
-    cc: params.cc ? JSON.parse(params.cc as string) : []
+    cc: params.cc ? JSON.parse(params.cc as string) : [],
   };
 
   useEffect(() => {
@@ -144,9 +143,7 @@ export default function LanguageScreen() {
         language.lc
       );
 
-      const localCollectionsPromise = collectionsManager.getLocalCollectionsByLanguage(
-        language.lc
-      );
+      const localCollectionsPromise = collectionsManager.getLocalCollectionsByLanguage(language.lc);
 
       const [remoteCollectionsWithOwners, localCollections] = await Promise.all([
         remoteCollectionsPromise,
@@ -286,12 +283,14 @@ export default function LanguageScreen() {
 
             {/* Collection Info */}
             <View className="flex-1">
-              <Text className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}
-                    numberOfLines={2}>
+              <Text
+                className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}
+                numberOfLines={2}>
                 {item.displayName}
               </Text>
-              <Text className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
-                    numberOfLines={1}>
+              <Text
+                className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
+                numberOfLines={1}>
                 {item.owner.fullName || item.owner.username}
               </Text>
 
@@ -303,7 +302,11 @@ export default function LanguageScreen() {
                   </View>
                 ) : (
                   <View className="rounded-full bg-blue-500/20 px-2 py-1">
-                    <MaterialIcons name="cloud-download" size={16} color={isDark ? '#60A5FA' : '#3B82F6'} />
+                    <MaterialIcons
+                      name="cloud-download"
+                      size={16}
+                      color={isDark ? '#60A5FA' : '#3B82F6'}
+                    />
                   </View>
                 )}
               </View>
@@ -358,7 +361,11 @@ export default function LanguageScreen() {
     );
   };
 
-  const renderSection = (data: Collection[], iconName: "check-circle" | "cloud-download", badgeColor: string) => {
+  const renderSection = (
+    data: Collection[],
+    iconName: 'check-circle' | 'cloud-download',
+    badgeColor: string
+  ) => {
     if (data.length === 0) return null;
 
     return (
@@ -384,7 +391,8 @@ export default function LanguageScreen() {
       <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
         <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
         <View className="flex-1 items-center justify-center">
-          <View className={`rounded-2xl p-8 ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-xl border ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+          <View
+            className={`rounded-2xl p-8 ${isDark ? 'bg-gray-800' : 'bg-white'} border shadow-xl ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
             <ActivityIndicator size="large" color={isDark ? '#60A5FA' : '#3B82F6'} />
             <MaterialIcons
               name="library-books"
@@ -404,7 +412,8 @@ export default function LanguageScreen() {
         <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
         <View className="flex-1 items-center justify-center p-6">
           <View className="items-center">
-            <View className={`mb-6 rounded-3xl p-6 ${isDark ? 'bg-red-600/20' : 'bg-red-500/10'} border ${isDark ? 'border-red-600/30' : 'border-red-500/20'}`}>
+            <View
+              className={`mb-6 rounded-3xl p-6 ${isDark ? 'bg-red-600/20' : 'bg-red-500/10'} border ${isDark ? 'border-red-600/30' : 'border-red-500/20'}`}>
               <MaterialIcons
                 name="error-outline"
                 size={48}
@@ -433,7 +442,8 @@ export default function LanguageScreen() {
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       {/* Language Header */}
-      <View className={`px-6 py-4 ${isDark ? 'bg-gray-900' : 'bg-white'} border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+      <View
+        className={`px-6 py-4 ${isDark ? 'bg-gray-900' : 'bg-white'} border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
         <View className="flex-row items-center">
           <TouchableOpacity
             onPress={() => router.back()}
@@ -443,18 +453,20 @@ export default function LanguageScreen() {
 
           <View className="flex-1 flex-row items-center">
             <MaterialIcons
-              name={language.gw ? "language" : "translate"}
+              name={language.gw ? 'language' : 'translate'}
               size={28}
               color={isDark ? '#60A5FA' : '#3B82F6'}
             />
             <View className="ml-3 flex-1">
-              <Text className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}
-                    style={{ textAlign: language.ld === 'rtl' ? 'right' : 'left' }}>
+              <Text
+                className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}
+                style={{ textAlign: language.ld === 'rtl' ? 'right' : 'left' }}>
                 {language.ln || language.ang || language.lc}
               </Text>
               {language.ln && language.ang && language.ln !== language.ang && (
-                <Text className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}
-                      style={{ textAlign: language.ld === 'rtl' ? 'right' : 'left' }}>
+                <Text
+                  className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}
+                  style={{ textAlign: language.ld === 'rtl' ? 'right' : 'left' }}>
                   {language.ang} ({language.lc})
                 </Text>
               )}
@@ -465,11 +477,7 @@ export default function LanguageScreen() {
 
       {/* Search */}
       <View className={`px-6 py-4 ${isDark ? 'bg-gray-900/50' : 'bg-white/50'}`}>
-        <SearchBar
-          placeholder=""
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
+        <SearchBar placeholder="" value={searchQuery} onChangeText={setSearchQuery} />
       </View>
 
       <FlatList
@@ -477,8 +485,16 @@ export default function LanguageScreen() {
         renderItem={null}
         ListHeaderComponent={
           <View className="py-4">
-            {renderSection(downloadedCollections, "check-circle", isDark ? 'bg-green-600/20' : 'bg-green-500/10')}
-            {renderSection(notDownloadedCollections, "cloud-download", isDark ? 'bg-blue-600/20' : 'bg-blue-500/10')}
+            {renderSection(
+              downloadedCollections,
+              'check-circle',
+              isDark ? 'bg-green-600/20' : 'bg-green-500/10'
+            )}
+            {renderSection(
+              notDownloadedCollections,
+              'cloud-download',
+              isDark ? 'bg-blue-600/20' : 'bg-blue-500/10'
+            )}
           </View>
         }
         keyExtractor={() => Math.random().toString()}
@@ -488,7 +504,8 @@ export default function LanguageScreen() {
         ListEmptyComponent={
           !filteredCollections.length ? (
             <View className="mt-12 items-center px-6">
-              <View className={`mb-6 rounded-3xl p-6 ${isDark ? 'bg-gray-600/20' : 'bg-gray-500/10'} border ${isDark ? 'border-gray-600/30' : 'border-gray-500/20'}`}>
+              <View
+                className={`mb-6 rounded-3xl p-6 ${isDark ? 'bg-gray-600/20' : 'bg-gray-500/10'} border ${isDark ? 'border-gray-600/30' : 'border-gray-500/20'}`}>
                 <MaterialIcons name="search-off" size={48} color={isDark ? '#6B7280' : '#9CA3AF'} />
               </View>
               <TouchableOpacity
