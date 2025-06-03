@@ -67,13 +67,10 @@ jobs:
           echo "Updated Open Bible Stories to version: $VERSION"
         fi
         
-    - name: 🏗 Setup Expo CLI
-      run: npm install -g @expo/cli@latest
-      
     - name: 🏗 Prebuild for Android
       run: |
         echo "Prebuilding Open Bible Stories for Android..."
-        expo prebuild --platform android --clean
+        npx expo prebuild --platform android --clean
         
     - name: 🔑 Make Gradle wrapper executable
       run: chmod +x android/gradlew
