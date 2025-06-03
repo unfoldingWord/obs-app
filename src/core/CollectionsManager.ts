@@ -214,27 +214,6 @@ export class CollectionsManager {
   }
 
   // Remote Operations (keeping existing implementation)
-  async getRemoteLanguages(): Promise<any[]> {
-    try {
-      const response = await fetch(
-        'https://git.door43.org/api/v1/catalog/list/languages?subject=Open Bible Stories&stage=prod'
-      );
-      if (!response.ok) {
-        throw new Error(`Failed to fetch languages: ${response.status}`);
-      }
-
-      const { data } = await response.json();
-      const languages = new Set<any>(data);
-
-      return Array.from(languages).sort();
-    } catch (error) {
-      warn(
-        `Error fetching available languages: ${error instanceof Error ? error.message : String(error)}`
-      );
-      return [];
-    }
-  }
-
   async getRemoteCollectionsByLanguage(
     language: string
   ): Promise<{ collection: Collection; ownerData: any; isValid: boolean }[]> {
@@ -278,16 +257,6 @@ export class CollectionsManager {
       );
       return [];
     }
-  }
-
-  /**
-   * Convenience method to get just the collections without owner data.
-   * @param language - Language code to search for
-   * @returns Array of Collection objects with validation status
-   */
-  async getRemoteCollectionsOnly(language: string): Promise<{ collection: Collection; isValid: boolean }[]> {
-    const collectionsWithOwners = await this.getRemoteCollectionsByLanguage(language);
-    return collectionsWithOwners.map(({ collection, isValid }) => ({ collection, isValid }));
   }
 
   // Local Collection Operations using DatabaseManager
@@ -371,13 +340,6 @@ export class CollectionsManager {
     }
   }
 
-  async getLocalLanguages(): Promise<string[]> {
-    if (!this.initialized) await this.initialize();
-    const collections = await this.databaseManager.getAllCollections();
-    const languages = new Set(collections.map((c) => c.language));
-    return Array.from(languages).sort();
-  }
-
   async getCollection(id: string): Promise<Collection | null> {
     if (!this.initialized) await this.initialize();
 
@@ -425,12 +387,6 @@ export class CollectionsManager {
     if (!this.initialized) await this.initialize();
     const dbStory = await this.databaseManager.getStory(collectionId, storyNumber);
     return dbStory ? this.convertDbToStory(dbStory) : null;
-  }
-
-  // Get source reference for a specific story
-  async getStorySourceReference(collectionId: string, storyNumber: number): Promise<string | null> {
-    const story = await this.getStory(collectionId, storyNumber);
-    return story?.metadata?.sourceReference || null;
   }
 
   // Frame Operations
@@ -554,7 +510,7 @@ export class CollectionsManager {
       await this.databaseManager.deleteCollection(id);
 
       // Clean up thumbnails
-      await this.deleteCollectionThumbnail(id);
+      await this.imagesManager.deleteCollectionThumbnail(id);
 
       // Note: We intentionally keep repository owner records in the database
       // since they may be shared by other collections and contain valuable metadata
@@ -572,22 +528,6 @@ export class CollectionsManager {
   async markAsDownloaded(id: string, downloaded: boolean): Promise<void> {
     if (!this.initialized) await this.initialize();
     await this.databaseManager.markCollectionAsDownloaded(id, downloaded);
-  }
-
-  // Thumbnail Management Methods
-  async getCollectionThumbnail(id: string): Promise<string | null> {
-    if (!this.initialized) await this.initialize();
-    return this.imagesManager.getCollectionThumbnail(id);
-  }
-
-  async saveCollectionThumbnail(id: string, imageData: string): Promise<void> {
-    if (!this.initialized) await this.initialize();
-    await this.imagesManager.saveCollectionThumbnail(id, imageData);
-  }
-
-  private async deleteCollectionThumbnail(id: string): Promise<void> {
-    if (!this.initialized) await this.initialize();
-    await this.imagesManager.deleteCollectionThumbnail(id);
   }
 
   // Keep remaining methods that don't directly interact with database...
@@ -939,7 +879,7 @@ export class CollectionsManager {
       reader.readAsDataURL(blob);
       const base64 = await base64Promise;
 
-      await this.saveCollectionThumbnail(collection.id, base64);
+      await this.imagesManager.saveCollectionThumbnail(collection.id, base64);
     } catch (error) {
       warn(
         `Error downloading thumbnail for ${collection.id}: ${error instanceof Error ? error.message : String(error)}`
@@ -974,27 +914,14 @@ export class CollectionsManager {
     }
   }
 
-  // Method to check if a collection can be downloaded (has valid structure)
-  async canDownloadCollection(collection: Collection): Promise<boolean> {
-    try {
-      // For remote collections, we need to check the structure
-      // Since we don't store validation status in DB, we need to re-validate
-      const [owner, repoName] = collection.id.split('/');
-      const contentsUrl = `https://git.door43.org/api/v1/repos/${owner}/${repoName}/contents?ref=${collection.version}`;
-
-      return await this.validateCollectionStructure(contentsUrl);
-    } catch (error) {
-      warn(`Error checking if collection ${collection.id} can be downloaded: ${error instanceof Error ? error.message : String(error)}`);
-      return false;
-    }
-  }
-
   // Download Operations
   async downloadRemoteCollection(collection: Collection, languageData?: any): Promise<void> {
     if (!this.initialized) await this.initialize();
 
     // Check if collection can be downloaded (has valid structure)
-    const canDownload = await this.canDownloadCollection(collection);
+    const [owner, repoName] = collection.id.split('/');
+    const contentsUrl = `https://git.door43.org/api/v1/repos/${owner}/${repoName}/contents?ref=${collection.version}`;
+    const canDownload = await this.validateCollectionStructure(contentsUrl);
     if (!canDownload) {
       throw new Error(`Cannot download collection ${collection.id}: Invalid structure - missing required directory (must have either "content" or "ingredients" directory)`);
     }
@@ -1100,239 +1027,5 @@ export class CollectionsManager {
       );
       // Don't throw error here as owner data saving is not critical for collection download
     }
-  }
-
-  // Method to fetch additional owner information from API
-  async fetchRepositoryOwnerInfo(ownerUsername: string): Promise<any> {
-    try {
-      const response = await fetch(`https://git.door43.org/api/v1/users/${ownerUsername}`);
-      if (!response.ok) {
-        // Try organization endpoint if user endpoint fails
-        const orgResponse = await fetch(`https://git.door43.org/api/v1/orgs/${ownerUsername}`);
-        if (orgResponse.ok) {
-          return await orgResponse.json();
-        }
-        throw new Error(`Failed to fetch owner info: ${response.status}`);
-      }
-      return await response.json();
-    } catch (error) {
-      warn(
-        `Error fetching owner info for ${ownerUsername}: ${error instanceof Error ? error.message : String(error)}`
-      );
-      return null;
-    }
-  }
-
-  // Enhanced method to download with full owner information
-  async downloadRemoteCollectionWithOwnerInfo(
-    collection: Collection,
-    languageData?: any
-  ): Promise<void> {
-    // Since Collection already has owner data embedded, just use the standard method
-    await this.downloadRemoteCollection(collection, languageData);
-  }
-
-  // Owner Information Methods
-  async getOwnerDisplayName(ownerUsername: string): Promise<string> {
-    if (!this.initialized) await this.initialize();
-
-    try {
-      const owner = await this.databaseManager.getRepositoryOwner(ownerUsername);
-      if (owner && owner.fullName && owner.fullName.trim() !== '') {
-        return owner.fullName;
-      }
-      return ownerUsername; // Fallback to username
-    } catch (error) {
-      warn(
-        `Error getting owner display name for ${ownerUsername}: ${error instanceof Error ? error.message : String(error)}`
-      );
-      return ownerUsername; // Fallback to username
-    }
-  }
-
-  /**
-   * Maintenance method to clean up orphaned owner records that have no associated collections.
-   * This is optional and can be run periodically to keep the database clean.
-   * @returns Number of orphaned owner records that were removed
-   */
-  async cleanupOrphanedOwners(): Promise<number> {
-    if (!this.initialized) await this.initialize();
-
-    try {
-      // Get all owners
-      const allOwners = await this.databaseManager.searchRepositoryOwners('');
-      let removedCount = 0;
-
-      for (const owner of allOwners) {
-        // Check if this owner has any collections
-        const collections = await this.databaseManager.getCollectionsByOwner(owner.username);
-
-        if (collections.length === 0) {
-          // This owner has no collections, remove them
-          await this.databaseManager.deleteRepositoryOwner(owner.username);
-          removedCount++;
-        }
-      }
-
-      if (removedCount > 0) {
-        warn(`🧹 Cleaned up ${removedCount} orphaned owner records`);
-      }
-
-      return removedCount;
-    } catch (error) {
-      warn(
-        `Error cleaning up orphaned owners: ${error instanceof Error ? error.message : String(error)}`
-      );
-      return 0;
-    }
-  }
-
-  async getOwnerInfo(ownerUsername: string): Promise<{
-    username: string;
-    displayName: string;
-    avatarUrl?: string;
-    website?: string;
-    description?: string;
-    ownerType: 'user' | 'organization';
-    repositoryLanguages: string[];
-    repositorySubjects: string[];
-  }> {
-    if (!this.initialized) await this.initialize();
-
-    try {
-      const owner = await this.databaseManager.getRepositoryOwner(ownerUsername);
-
-      if (owner) {
-        return {
-          username: owner.username,
-          displayName:
-            owner.fullName && owner.fullName.trim() !== '' ? owner.fullName : owner.username,
-          avatarUrl: owner.avatarUrl || undefined,
-          website: owner.website || undefined,
-          description: owner.description || undefined,
-          ownerType: (owner.ownerType === 'organization' ? 'organization' : 'user') as
-            | 'user'
-            | 'organization',
-          repositoryLanguages: owner.repositoryLanguages,
-          repositorySubjects: owner.repositorySubjects,
-        };
-      } else {
-        // Return minimal info if owner not found
-        return {
-          username: ownerUsername,
-          displayName: ownerUsername,
-          ownerType: 'user',
-          repositoryLanguages: [],
-          repositorySubjects: [],
-        };
-      }
-    } catch (error) {
-      warn(
-        `Error getting owner info for ${ownerUsername}: ${error instanceof Error ? error.message : String(error)}`
-      );
-      return {
-        username: ownerUsername,
-        displayName: ownerUsername,
-        ownerType: 'user',
-        repositoryLanguages: [],
-        repositorySubjects: [],
-      };
-    }
-  }
-
-  async searchOwners(query: string): Promise<
-    {
-      username: string;
-      displayName: string;
-      description?: string;
-      ownerType: 'user' | 'organization';
-      collectionsCount: number;
-    }[]
-  > {
-    if (!this.initialized) await this.initialize();
-
-    try {
-      const owners = await this.databaseManager.searchRepositoryOwners(query);
-      const results = [];
-
-      for (const owner of owners) {
-        // Count collections for this owner
-        const collections = await this.databaseManager.getCollectionsByOwner(owner.username);
-
-        results.push({
-          username: owner.username,
-          displayName:
-            owner.fullName && owner.fullName.trim() !== '' ? owner.fullName : owner.username,
-          description: owner.description || undefined,
-          ownerType: (owner.ownerType === 'organization' ? 'organization' : 'user') as
-            | 'user'
-            | 'organization',
-          collectionsCount: collections.length,
-        });
-      }
-
-      return results;
-    } catch (error) {
-      warn(`Error searching owners: ${error instanceof Error ? error.message : String(error)}`);
-      return [];
-    }
-  }
-
-  async getCollectionsByOwner(ownerUsername: string): Promise<Collection[]> {
-    if (!this.initialized) await this.initialize();
-
-    try {
-      const collections = await this.databaseManager.getCollectionsByOwner(ownerUsername);
-      const collectionsWithOwnerData: Collection[] = [];
-
-      for (const collection of collections) {
-        const owner = await this.databaseManager.getRepositoryOwner(collection.owner);
-
-        collectionsWithOwnerData.push({
-          id: collection.id,
-          owner: {
-            username: collection.owner,
-            fullName: owner?.fullName || undefined,
-            avatarUrl: owner?.avatarUrl || undefined,
-            description: owner?.description || undefined,
-            website: owner?.website || undefined,
-            location: owner?.location || undefined,
-            type: owner?.ownerType as 'user' | 'organization' | undefined,
-            repositoryLanguages: owner?.repositoryLanguages || [],
-            repositorySubjects: owner?.repositorySubjects || [],
-          },
-          language: collection.language,
-          displayName: collection.displayName,
-          version: collection.version,
-          imageSetId: collection.imageSetId,
-          lastUpdated: new Date(collection.lastUpdated),
-          isDownloaded: collection.isDownloaded,
-          metadata: collection.metadata || undefined,
-        });
-      }
-
-      return collectionsWithOwnerData;
-    } catch (error) {
-      console.error('Error getting collections by owner:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Downloads a remote collection using owner data already available from the catalog response.
-   * Since Collection objects always have owner data embedded, this is now just an alias
-   * to the standard downloadRemoteCollection method.
-   *
-   * @param collection - Collection to download
-   * @param ownerData - Owner data from the catalog response (not used since Collection has embedded data)
-   * @param languageData - Optional language data
-   */
-  async downloadRemoteCollectionFromCatalog(
-    collection: Collection,
-    ownerData: any,
-    languageData?: any
-  ): Promise<void> {
-    // Since Collection already has owner data embedded, just use the standard method
-    await this.downloadRemoteCollection(collection, languageData);
   }
 }
