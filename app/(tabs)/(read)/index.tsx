@@ -13,6 +13,7 @@ import {
   Alert,
   ScrollView,
   Image,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -35,6 +36,9 @@ export default function ReadScreen() {
   const { navigateToStory } = useStoryNavigation();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+
+  // Get screen dimensions
+  const { height: screenHeight } = Dimensions.get('window');
 
   // Get aesthetic image for empty state
   const aestheticImage = useObsImage({
@@ -289,7 +293,7 @@ export default function ReadScreen() {
         }
         ListEmptyComponent={
           collections.length === 0 && !lastReadProgress ? (
-            <View className="relative" style={{ height: 600 }}>
+            <View className="relative" style={{ height: screenHeight, marginHorizontal: -24 }}>
               {/* Gradient Background */}
               <LinearGradient
                 colors={
@@ -336,9 +340,9 @@ export default function ReadScreen() {
             </View>
           ) : null
         }
-        contentContainerStyle={{ 
+        contentContainerStyle={{
           paddingHorizontal: collections.length > 0 ? 24 : 0,
-          paddingBottom: 32 
+          paddingBottom: 32
         }}
       />
     </SafeAreaView>
