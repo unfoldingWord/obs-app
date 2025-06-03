@@ -44,13 +44,19 @@ Each story file should follow this structure:
 ```markdown
 # Story Title
 
-![Image Description](image-url) Text content for frame 1.
+![Image Description](image-url)
 
-![Image Description](image-url) Text content for frame 2.
+Text content for frame 1.
 
-![Image Description](image-url) Text content for frame 3.
+![Image Description](image-url)
 
-_A story from Genesis 1-5_
+Text content for frame 2.
+
+![Image Description](image-url)
+
+Text content for frame 3.
+
+_Story source reference_
 ```
 
 #### 3. Frame Structure

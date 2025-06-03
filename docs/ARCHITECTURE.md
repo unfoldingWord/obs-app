@@ -216,11 +216,19 @@ repository-root/
 ```markdown
 # Story Title
 
-![Image Description](image-url) Text content for frame 1.
+![Image Description](image-url)
 
-![Image Description](image-url) Text content for frame 2.
+Text content for frame 1.
 
-_A story from Genesis 1-5_
+![Image Description](image-url)
+
+Text content for frame 2.
+
+![Image Description](image-url)
+
+Text content for frame 3.
+
+_Story source reference_
 ```
 
 #### Source Reference Extraction
