@@ -172,7 +172,7 @@ npm run format
 
 ### 🚀 Automated Builds with GitHub Actions
 
-This project uses GitHub Actions for automated Android builds. See [`.github/README.md`](.github/README.md) for complete workflow documentation.
+This project uses GitHub Actions for automated Android builds. See [`.github/DISTRIBUTION.md`](.github/DISTRIBUTION.md) for complete workflow documentation.
 
 #### Quick Build Guide
 
@@ -374,7 +374,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **Issues**: [GitHub Issues](https://github.com/abelpz/my-expo-app/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/abelpz/my-expo-app/discussions)
-- **Workflow Documentation**: [`.github/README.md`](.github/README.md)
+- **Workflow Documentation**: [`.github/DISTRIBUTION.md`](.github/DISTRIBUTION.md)
 - **Email**: support@unfoldingword.org
 
 ### 🔧 Collection Support Issues
