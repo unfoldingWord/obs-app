@@ -7,11 +7,23 @@ The Open Bible Stories app supports collections that follow the **Door43 OBS for
 ## ✅ Supported Collections
 
 ### Required Structure
-Collections must have the following directory structure:
+Collections must have one of the following directory structures:
 
+**Standard Format (content directory):**
 ```
 repository-root/
 └── content/
+    ├── 01.md    # Story 1: The Creation
+    ├── 02.md    # Story 2: Sin Enters the World
+    ├── 03.md    # Story 3: The Flood
+    ├── ...
+    └── 50.md    # Story 50: Jesus Returns
+```
+
+**Burrito Format (ingredients directory):**
+```
+repository-root/
+└── ingredients/
     ├── 01.md    # Story 1: The Creation
     ├── 02.md    # Story 2: Sin Enters the World
     ├── 03.md    # Story 3: The Flood
@@ -57,17 +69,18 @@ _A story from Genesis 1-5_
 
 ### Common Issues
 
-#### Missing `content/` Directory
+#### Missing Required Directory
 ```
 ❌ repository-root/
     ├── 01.md     # Wrong: files in root
     ├── 02.md
     └── ...
 ```
+**Note:** Must have either a `content/` or `ingredients/` directory.
 
 #### Non-Sequential File Numbering
 ```
-❌ content/
+❌ content/    # or ingredients/
     ├── 1.md      # Wrong: not zero-padded
     ├── 2.md
     ├── story3.md # Wrong: different naming
@@ -76,7 +89,7 @@ _A story from Genesis 1-5_
 
 #### Non-Markdown Files
 ```
-❌ content/
+❌ content/    # or ingredients/
     ├── 01.txt    # Wrong: not markdown
     ├── 02.docx   # Wrong: not markdown
     └── ...
@@ -84,7 +97,7 @@ _A story from Genesis 1-5_
 
 #### Incomplete Collection
 ```
-❌ content/
+❌ content/    # or ingredients/
     ├── 01.md
     ├── 02.md
     └── 03.md     # Wrong: missing stories 4-50
@@ -95,7 +108,7 @@ _A story from Genesis 1-5_
 ### Automatic Validation
 The app automatically validates collections before allowing downloads:
 
-1. **Structure Check**: Verifies `content/` directory exists
+1. **Structure Check**: Verifies `content/` or `ingredients/` directory exists
 2. **File Count**: Ensures all 50 stories are present
 3. **Naming Convention**: Validates sequential numbering (01.md-50.md)
 4. **Content Format**: Checks for proper markdown structure
@@ -133,13 +146,13 @@ Collections typically follow this pattern:
 
 #### Old Repository Structure
 Some older repositories may have:
-- Stories in root directory instead of `content/`
+- Stories in root directory instead of `content/` or `ingredients/`
 - Different file naming conventions
 - Non-standard markdown formatting
 
 #### Migration Requirements
 Legacy collections need updating by content creators:
-1. Move files to `content/` directory
+1. Move files to `content/` or `ingredients/` directory
 2. Rename files to use zero-padded numbering
 3. Ensure all 50 stories are present
 4. Validate markdown formatting
@@ -149,7 +162,7 @@ Legacy collections need updating by content creators:
 ### Collection Not Showing Up
 
 #### Check Repository Structure
-1. Verify the repository has a `content/` directory
+1. Verify the repository has a `content/` or `ingredients/` directory
 2. Count files - should be exactly 50 markdown files
 3. Check file naming: 01.md, 02.md, ..., 50.md
 
@@ -162,14 +175,14 @@ Legacy collections need updating by content creators:
 ### Collection Shows as Unsupported
 
 #### Common Fixes
-1. **Add missing `content/` directory**
+1. **Add missing required directory** (either `content/` or `ingredients/`)
 2. **Rename files** to use zero-padded numbers (01.md not 1.md)
 3. **Add missing stories** - all 50 must be present
 4. **Convert to markdown** if using other formats
 
 #### Repository Owner Actions
 If you're a repository owner:
-1. Follow the required structure guidelines
+1. Follow the required structure guidelines (use either format)
 2. Test with the OBS app before publishing
 3. Update legacy repositories to new format
 4. Contact support if validation still fails
@@ -189,7 +202,7 @@ If you encounter a collection that should work but shows as unsupported:
 #### For Content Creators
 If you're creating or maintaining OBS collections:
 
-1. **Follow Structure Guidelines**: Use the exact format shown above
+1. **Follow Structure Guidelines**: Use either the `content/` or `ingredients/` format shown above
 2. **Test Before Publishing**: Download with the app to verify
 3. **Check Examples**: Look at working collections for reference
 4. **Contact Support**: Reach out if you need assistance
@@ -214,4 +227,4 @@ For the most up-to-date example of proper structure, check the official English 
 ### Version Management
 - Collections can include version metadata
 - App tracks download timestamps
-- Users can manage storage by removing old collections 
+- Users can manage storage by removing old collections

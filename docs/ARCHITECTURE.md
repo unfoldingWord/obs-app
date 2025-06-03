@@ -183,6 +183,9 @@ FrameComments {
 ### Content Validation
 
 #### Required Collection Structure
+Collections can follow either of these directory structures:
+
+**Standard Format:**
 ```
 repository-root/
 └── content/
@@ -192,11 +195,22 @@ repository-root/
     └── 50.md    # Story 50
 ```
 
+**Burrito Format (ingredients directory):**
+```
+repository-root/
+└── ingredients/
+    ├── 01.md    # Story 1
+    ├── 02.md    # Story 2
+    ├── ...
+    └── 50.md    # Story 50
+```
+
 #### Validation Process
 1. Collections validated via `CollectionsManager.validateCollectionStructure()`
-2. `getRemoteCollectionsByLanguage()` returns validation status
-3. Invalid collections marked with `isValid: false`
-4. UI displays validation status with icons (🔧⏱️ for invalid)
+2. Checks for either `content/` or `ingredients/` directory
+3. `getRemoteCollectionsByLanguage()` returns validation status
+4. Invalid collections marked with `isValid: false`
+5. UI displays validation status with icons (🔧⏱️ for invalid)
 
 #### Supported Content Format
 ```markdown
@@ -249,4 +263,4 @@ obs-app://search                                           # Tab navigation
 ### Background Processing
 - Collection downloads happen in background
 - Reading progress saved asynchronously
-- Non-blocking UI updates during data operations 
+- Non-blocking UI updates during data operations

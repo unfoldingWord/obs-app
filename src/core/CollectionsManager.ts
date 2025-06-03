@@ -251,26 +251,26 @@ export class CollectionsManager {
       }
 
       const { data } = await response.json();
-      
+
       // Process collections asynchronously, keeping both valid and invalid
-      const collectionPromises = (data || []).map((item: RemoteCollection) => 
+      const collectionPromises = (data || []).map((item: RemoteCollection) =>
         this.convertRemoteToCollection(item)
       );
-      
+
       const collectionResults = await Promise.all(collectionPromises);
-      
+
       // All collections are returned now (both valid and invalid)
       const allCollections = collectionResults as {
         collection: Collection;
         ownerData: any;
         isValid: boolean;
       }[];
-      
+
       const validCount = allCollections.filter(result => result.isValid).length;
       const invalidCount = allCollections.length - validCount;
-      
+
       console.log(`✅ Found ${validCount} valid and ${invalidCount} invalid collections out of ${data?.length || 0} total for language: ${language}`);
-      
+
       return allCollections;
     } catch (error) {
       warn(
@@ -516,7 +516,7 @@ export class CollectionsManager {
     const lines = content.split('\n');
     let sourceReference: string | null = null;
     let lastNonBlankLineIndex = -1;
-    
+
     // Find the last non-blank line
     for (let i = lines.length - 1; i >= 0; i--) {
       const line = lines[i].trim();
@@ -530,7 +530,7 @@ export class CollectionsManager {
         break; // Stop at the first non-blank line from the end
       }
     }
-    
+
     // If we found a source reference, remove that line from the content
     let cleanedContent = content;
     if (sourceReference !== null && lastNonBlankLineIndex >= 0) {
@@ -538,7 +538,7 @@ export class CollectionsManager {
       modifiedLines[lastNonBlankLineIndex] = ''; // Remove the line with source reference
       cleanedContent = modifiedLines.join('\n').trim();
     }
-    
+
     return { sourceReference, cleanedContent };
   }
 
@@ -736,7 +736,7 @@ export class CollectionsManager {
   private async validateCollectionStructure(contentsUrl: string): Promise<boolean> {
     try {
       console.log(`Validating collection structure for: ${contentsUrl}`);
-      
+
       const response = await fetch(contentsUrl);
       if (!response.ok) {
         warn(`Failed to fetch contents for validation: ${response.status}`);
@@ -749,17 +749,21 @@ export class CollectionsManager {
         return false;
       }
 
-      // Look for an item with path="content" and type="dir"
-      const hasContentDir = contents.some(item => 
-        item.path === 'content' && item.type === 'dir'
+      // Look for an item with path="content" or path="ingredients" and type="dir"
+      const hasContentDir = contents.some(item =>
+        (item.path === 'content' || item.path === 'ingredients') && item.type === 'dir'
       );
 
       if (!hasContentDir) {
-        warn('Collection does not have required "content" directory structure');
+        warn('Collection does not have required directory structure (missing "content" or "ingredients" directory)');
         return false;
       }
 
-      console.log('✅ Collection has valid structure with "content" directory');
+      const foundDirType = contents.find(item =>
+        (item.path === 'content' || item.path === 'ingredients') && item.type === 'dir'
+      )?.path;
+
+      console.log(`✅ Collection has valid structure with "${foundDirType}" directory`);
       return true;
     } catch (error) {
       warn(`Error validating collection structure: ${error instanceof Error ? error.message : String(error)}`);
@@ -823,7 +827,8 @@ export class CollectionsManager {
       const loadedZip = await zip.loadAsync(zipData);
       const filesToProcess = Object.entries(loadedZip.files);
 
-      const storyFileRegex = /(?:^|\/)(?:content\/)?(\d+)\.md$/i;
+      // Updated regex to match both content/ and ingredients/ directories
+      const storyFileRegex = /(?:^|\/)(?:content\/|ingredients\/)?(\d+)\.md$/i;
       const frameParseRegex =
         /!\[[^\]]*?\]\(([^)]+?)\)\s*([\s\S]*?)(?=(?:!\[[^\]]*?\]\([^)]+?\))|$)/g;
       const referenceParseRegex = /\[(.*?)\]\((.*?)\)/g;
@@ -854,7 +859,7 @@ export class CollectionsManager {
 
           // Extract source reference from the content
           const { sourceReference, cleanedContent } = this.extractSourceReference(content);
-          
+
           // Prepare story metadata
           const storyMetadata: Record<string, any> = {};
           if (sourceReference) {
@@ -976,7 +981,7 @@ export class CollectionsManager {
       // Since we don't store validation status in DB, we need to re-validate
       const [owner, repoName] = collection.id.split('/');
       const contentsUrl = `https://git.door43.org/api/v1/repos/${owner}/${repoName}/contents?ref=${collection.version}`;
-      
+
       return await this.validateCollectionStructure(contentsUrl);
     } catch (error) {
       warn(`Error checking if collection ${collection.id} can be downloaded: ${error instanceof Error ? error.message : String(error)}`);
@@ -987,13 +992,13 @@ export class CollectionsManager {
   // Download Operations
   async downloadRemoteCollection(collection: Collection, languageData?: any): Promise<void> {
     if (!this.initialized) await this.initialize();
-    
+
     // Check if collection can be downloaded (has valid structure)
     const canDownload = await this.canDownloadCollection(collection);
     if (!canDownload) {
-      throw new Error(`Cannot download collection ${collection.id}: Invalid structure - missing required "content" directory`);
+      throw new Error(`Cannot download collection ${collection.id}: Invalid structure - missing required directory (must have either "content" or "ingredients" directory)`);
     }
-    
+
     try {
       // Save language data FIRST to satisfy foreign key constraints
       await this.saveLanguageData(collection.language, languageData);
