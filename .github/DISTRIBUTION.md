@@ -20,7 +20,7 @@ Create releases with APKs automatically attached:
    - Includes build info and release notes
 
 3. **Download Ready**:
-   - Go to [Releases page](https://github.com/abelpz/my-expo-app/releases)
+   - Go to [Releases page](https://github.com/unfoldingword/obs-app/releases)
    - Download `obs-app-v1.2.3.apk` directly from the release
 
 ### Manual Builds
@@ -36,7 +36,7 @@ For testing or custom builds:
 ## 📱 Installation Guide
 
 ### For Users
-1. **Download APK**: Go to [Releases](https://github.com/abelpz/my-expo-app/releases) and download the latest `obs-app-v*.*.*.apk`
+1. **Download APK**: Go to [Releases](https://github.com/unfoldingword/obs-app/releases) and download the latest `obs-app-v*.*.*.apk`
 2. **Enable Unknown Sources**: Android Settings → Security → Unknown Sources → Enable
 3. **Install**: Tap the APK file and follow installation prompts
 4. **Launch**: Find "Open Bible Stories" in your app drawer
@@ -142,9 +142,9 @@ When running manually, you can automatically bump the version:
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/abelpz/my-expo-app/issues)
+- **Issues**: [GitHub Issues](https://github.com/unfoldingword/obs-app/issues)
 - **Documentation**: [Main README](../README.md)
-- **Releases**: [Download APKs](https://github.com/abelpz/my-expo-app/releases)
+- **Releases**: [Download APKs](https://github.com/unfoldingword/obs-app/releases)
 
 ---
 

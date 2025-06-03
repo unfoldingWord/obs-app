@@ -152,8 +152,8 @@ jobs:
         - **Commit**: ${{ github.sha }}
         
         ## 📞 Support
-        - **Issues**: [GitHub Issues](https://github.com/abelpz/my-expo-app/issues)
-        - **Documentation**: [README](https://github.com/abelpz/my-expo-app#readme)
+        - **Issues**: [GitHub Issues](https://github.com/unfoldingword/obs-app/issues)
+        - **Documentation**: [README](https://github.com/unfoldingword/obs-app#readme)
         
         ---
         **Built with ❤️ for global Bible translation and distribution by unfoldingWord**
@@ -218,13 +218,13 @@ jobs:
         echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         
-        if [[ "${{ github.ref_type }}" == "tag" ]]; then
+        if [[ "${{ github.ref }}" == refs/tags/* ]]; then
           echo "### 🎊 GitHub Release Created!" >> $GITHUB_STEP_SUMMARY
-          echo "- **Release**: [Open Bible Stories v${{ env.VERSION }}](https://github.com/abelpz/my-expo-app/releases/tag/${{ github.ref_name }})" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release**: [Open Bible Stories v${{ env.VERSION }}](https://github.com/unfoldingword/obs-app/releases/tag/${{ github.ref_name }})" >> $GITHUB_STEP_SUMMARY
           echo "- **APK Download**: Ready on the release page" >> $GITHUB_STEP_SUMMARY
         elif [[ "${{ github.event.inputs.create_release }}" == "true" ]]; then
           echo "### 🎊 GitHub Release Created!" >> $GITHUB_STEP_SUMMARY
-          echo "- **Release**: [Open Bible Stories v${{ env.VERSION }}](https://github.com/abelpz/my-expo-app/releases/tag/v${{ env.VERSION }})" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release**: [Open Bible Stories v${{ env.VERSION }}](https://github.com/unfoldingword/obs-app/releases/tag/v${{ env.VERSION }})" >> $GITHUB_STEP_SUMMARY
           echo "- **APK Download**: Ready on the release page" >> $GITHUB_STEP_SUMMARY
         else
           echo "### 📥 Download from Artifacts:" >> $GITHUB_STEP_SUMMARY

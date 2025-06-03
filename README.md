@@ -23,41 +23,86 @@ Open Bible Stories is a free and open-source Bible app that allows you to read i
 - **📱 Offline Reading**: Download stories for offline access
 - **🔍 Search & Discovery**: Find stories and browse by language/owner
 - **❤️ Favorites**: Save your favorite stories for quick access
+- **📝 Notes**: Add personal notes and reflections to stories
+- **📖 Reading Modes**: Switch between horizontal or vertical reading layouts
 - **🌙 Dark Mode**: Comfortable reading in any lighting condition
 - **📊 Progress Tracking**: Keep track of your reading progress
 
+## 📱 Installation
 
-## 📱 For Users
+### 🤖 Android
 
-### 🤖 Android Installation
-
-#### Option 1: Download from GitHub Releases (Recommended)
-1. Go to the [Releases](https://github.com/abelpz/my-expo-app/releases) page
+#### Download APK (Recommended)
+1. Go to the [Releases](https://github.com/unfoldingword/obs-app/releases) page
 2. Download the latest `obs-app-release.apk` file
 3. Enable "Install from unknown sources" in your Android settings
 4. Install the APK on your device
 
-#### Option 2: GitHub Actions Builds
-1. Go to the [Actions](https://github.com/abelpz/my-expo-app/actions) tab
-2. Click on a completed "Build Android Release" workflow
-3. Download the build artifacts
-4. Extract and install the APK
+#### GitHub Actions Build
+1. Go to the [Actions](https://github.com/unfoldingword/obs-app/actions) tab
+2. Download the latest build artifacts
+3. Extract and install the APK
 
-### Getting Started
+### 🍎 iOS
+iOS version coming soon!
 
-1. **Launch the app** and complete the onboarding process
-2. **Select a language** from the available options
+## 🚀 Quick Start
+
+1. **Launch the app** and complete onboarding
+2. **Select a language** from available options
 3. **Download stories** for offline reading
-4. **Start reading** by selecting any of the 50 stories
-5. **Navigate** through story frames by swiping or using navigation buttons
+4. **Start reading** any of the 50 stories
+5. **Navigate** with swipe gestures or buttons
 
 ### App Structure
-
 - **📖 Read Tab**: Browse and read downloaded stories
-- **❤️ Favorites Tab**: Access your saved favorite stories
-- **🔍 Search Tab**: Discover new content and manage downloads
+- **❤️ Favorites Tab**: Access saved favorite stories
+- **🔍 Search Tab**: Find words and phrases within downloaded stories
 
-### Perfect For Ministry Use
+## 🛠️ For Developers
+
+### Quick Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/unfoldingword/obs-app.git
+cd obs-app
+
+# Install dependencies
+npm install
+
+# Start development server
+npm start
+
+# Run on Android
+npm run android
+```
+
+### Tech Stack
+- **Framework**: React Native 0.76.9 with Expo 52
+- **Navigation**: Expo Router (file-based routing)
+- **Styling**: NativeWind (Tailwind CSS for React Native)
+- **Database**: Expo SQLite with Drizzle ORM
+- **Language**: TypeScript
+
+### 📚 Documentation
+
+- **[Development Guide](docs/DEVELOPMENT.md)** - Detailed setup and development workflow
+- **[Architecture Guide](docs/ARCHITECTURE.md)** - Project structure and technical details
+- **[Collection Compatibility](docs/COLLECTIONS.md)** - Supported content formats
+- **[Distribution Guide](.github/DISTRIBUTION.md)** - Building and distributing APKs
+- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues and solutions
+
+### 🚀 Build & Deploy
+
+This project uses GitHub Actions for automated builds. See [Distribution Guide](.github/DISTRIBUTION.md) for complete workflow documentation.
+
+**Quick Build:**
+1. Go to **Actions** → **"Build Android Release"**
+2. Click **"Run workflow"**
+3. Download APK from artifacts
+
+## 🌍 Perfect for Ministry
 
 - **🌏 Missionaries**: Offline access in remote areas
 - **⛪ Churches**: Share with congregation members
@@ -65,336 +110,40 @@ Open Bible Stories is a free and open-source Bible app that allows you to read i
 - **👨‍👩‍👧‍👦 Family Devotions**: Engaging stories for children
 - **📖 Bible Study Groups**: Illustrated Bible stories
 
-### 📋 Collection Compatibility
-
-The app supports **Open Bible Stories** collections with the following structure:
-
-**✅ Supported Collections:**
-- 🔵 Collections with proper `content/` directory structure
-- 🔵 Markdown files numbered sequentially (01.md, 02.md, etc.)
-- 🔵 Collections following Door43 OBS format standards
-
-**🟡 Unsupported Collections:**
-- 🟡 Collections missing the required `content/` directory
-- 🟡 Collections with non-standard file structures
-- 🟡 Legacy format collections that haven't been updated
-
-**How to Identify:** Collections marked with 🔧 (construction) and ⏱️ (schedule) icons are not currently supported but may become available in future updates.
-
-**Need Help?** If you encounter collections that should be supported but show as unavailable, or if you can't find expected collections for your language, please [contact the developers](https://github.com/unfoldingword/obs-app/issues) with:
-- 📝 Language name and code
-- 🔗 Collection repository URL (if known)
-- 📖 Expected story titles or collection details
-
-## 🛠️ For Developers
-
-### Tech Stack
-
-- **Framework**: React Native 0.76.9 with Expo 52
-- **Navigation**: Expo Router (file-based routing)
-- **Styling**: NativeWind (Tailwind CSS for React Native)
-- **Database**: Expo SQLite with Drizzle ORM
-- **State Management**: React hooks and context
-- **Language**: TypeScript
-- **Build System**: GitHub Actions with native Android builds
-
-### Architecture
-
-```
-app/
-├── (tabs)/                 # Tab-based navigation
-│   ├── (read)/            # Reading interface
-│   ├── favorites.tsx      # Favorites management
-│   └── search.tsx         # Content discovery
-├── components/            # Reusable UI components
-├── _layout.tsx           # Root layout with navigation
-├── languages.tsx         # Language selection
-├── stories.tsx          # Story listing
-├── about.tsx           # App information
-└── settings.tsx        # App settings
-
-src/                      # Business logic
-├── managers/            # Data management classes
-├── models/             # Data models and types
-└── utils/              # Utility functions
-
-android/                 # Native Android project
-```
-
-### Development Setup
-
-#### Prerequisites
-
-- **Node.js** 18+ and npm
-- **Android Studio** with Android SDK
-- **Java Development Kit (JDK)** 17+
-- **Git**
-
-#### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/abelpz/my-expo-app.git
-   cd my-expo-app
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Set up Android development environment**
-   - Install Android Studio
-   - Set up Android SDK (API level 34+)
-   - Create an Android Virtual Device (AVD) or connect a physical device
-
-4. **Generate native projects** (if needed)
-   ```bash
-   npm run prebuild
-   ```
-
-#### Development Commands
-
-```bash
-# Start development server
-npm start
-
-# Run on Android device/emulator
-npm run android
-
-# Run in web browser (for testing)
-npm run web
-
-# Lint and format code
-npm run lint
-npm run format
-```
-
-### 🚀 Automated Builds with GitHub Actions
-
-This project uses GitHub Actions for automated Android builds. See [`.github/DISTRIBUTION.md`](.github/DISTRIBUTION.md) for complete workflow documentation.
-
-#### Quick Build Guide
-
-**Manual Build:**
-1. Go to **Actions** → **"Build Android Release"**
-2. Click **"Run workflow"**
-3. Download APK from artifacts
-
-**Automatic Build:**
-1. Create a new GitHub release
-2. APK is automatically built and attached
-
-#### Build Features
-- ✅ **No complex setup** - Uses your existing build scripts
-- ✅ **Manual or automatic** triggers
-- ✅ **Professional APKs** ready for distribution
-- ✅ **Ministry-focused** - Perfect for Open Bible Stories
-
-### Building APKs Locally
-
-#### Cross-Platform Compatibility ✨
-All build scripts work seamlessly across **Windows**, **macOS**, and **Linux**.
-
-#### Debug Build (Development)
-```bash
-# Build debug APK
-npm run build:android:debug
-
-# Install debug APK on connected device
-npm run install:android:debug
-```
-
-#### Release Build (Production)
-```bash
-# Clean previous builds
-npm run build:android:clean
-
-# Build release APK
-npm run build:android:release
-
-# Install release APK on connected device
-npm run install:android:release
-```
-
-The release APK will be located at:
-`android/app/build/outputs/apk/release/app-release.apk`
-
-### Project Structure Details
-
-#### Data Flow
-1. **Content Discovery**: App discovers available collections via DCS API
-2. **Download Management**: Collections are downloaded as ZIP files
-3. **Local Storage**: Content is extracted and stored in SQLite database
-4. **Offline Access**: Stories are read from local storage
-
-#### Collection Format Validation
-
-The app automatically validates collection structures before allowing downloads:
-
-**Required Structure:**
-```
-repository-root/
-└── content/
-    ├── 01.md    # Story 1
-    ├── 02.md    # Story 2
-    ├── ...
-    └── 50.md    # Story 50
-```
-
-**Validation Process:**
-- Collections are validated via `CollectionsManager.validateCollectionStructure()`
-- The `getRemoteCollectionsByLanguage()` method returns validation status for each collection
-- Invalid collections are marked with `isValid: false` and displayed with 🔧⏱️ icons
-
-**Supported Content Format:**
-```markdown
-# Story Title
-
-![Image Description](image-url) Text content for frame 1.
-
-![Image Description](image-url) Text content for frame 2.
-
-_A story from Genesis 1-5_
-```
-
-**Source Reference Extraction:**
-- The app automatically extracts source references from the last non-blank line
-- Text between underscores (e.g., `_A story from Genesis 1-5_`) is saved as `sourceReference` in story metadata
-- This provides biblical context for each story
-
-**Unsupported Scenarios:**
-- Missing `content/` directory
-- Non-sequential file numbering
-- Non-markdown content files
-- Empty or malformed markdown files
-
-#### Key Components
-
-- **CollectionsManager**: Handles downloading and managing story collections
-- **StoryManager**: Manages individual story data and reading progress
-- **DatabaseManager**: SQLite operations and data persistence
-- **Navigation**: File-based routing with Expo Router
-- **UI Components**: Reusable components with NativeWind styling
-
-#### Database Schema
-- **Collections**: Metadata about downloaded story collections
-- **Stories**: Individual story data and content
-- **Progress**: Reading progress and bookmarks
-- **Favorites**: User's favorite stories
-
-### Contributing
-
-1. **Fork the repository**
-2. **Create a feature branch**: `git checkout -b feature/amazing-feature`
-3. **Make your changes** and ensure tests pass
-4. **Commit your changes**: `git commit -m 'Add amazing feature'`
-5. **Push to the branch**: `git push origin feature/amazing-feature`
-6. **Open a Pull Request**
-
-#### Code Style
-
-- Use TypeScript for all new code
-- Follow the existing code style (ESLint + Prettier)
-- Use meaningful component and variable names
-- Add comments for complex logic
-- Ensure responsive design works on various screen sizes
-
-#### Testing
-
-```bash
-# Run linting
-npm run lint
-
-# Format code
-npm run format
-
-# Type checking
-npx tsc --noEmit
-```
-
-### Troubleshooting
-
-#### Common Issues
-
-**Dependencies not found (expo-linear-gradient, expo-file-system)**
-- ✅ **Fixed**: Both dependencies are now properly installed
-
-**Build failures**
-- Clean the build: `npm run build:android:clean`
-- Ensure Android SDK is properly configured
-- Check that all dependencies are installed
-
-**Metro bundler issues**
-- Clear Metro cache: `npx expo start --clear`
-- Reset node modules: `rm -rf node_modules && npm install`
-
-**Android emulator not detected**
-- Ensure Android Studio is installed and AVD is running
-- Check that `adb` is in your PATH
-- Verify USB debugging is enabled on physical devices
-
-### API Documentation
-
-The app integrates with the Door43 Content Service (DCS) API:
-
-- **Base URL**: `https://git.door43.org/api/v1/`
-- **Catalog Endpoints**: For discovering available content
-- **Repository Endpoints**: For downloading content packages
-
-## 🚀 Distribution Strategy
-
-### For Ministry Organizations
-
-1. **Build APK** using GitHub Actions (manual or release)
-2. **Test** with your ministry team
-3. **Distribute** APK file to partners
-4. **Support** with included installation guides
-
-### Perfect Distribution Scenarios
-
-- **Church Ministry**: Share APK with congregation
-- **Mission Fields**: Offline Bible stories for remote areas
-- **Translation Partners**: Beta test new language versions
-- **Bible Study Groups**: Engaging illustrated stories
-- **Family Ministry**: Children's Bible story time
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Make your changes and ensure tests pass
+4. Commit: `git commit -m 'Add amazing feature'`
+5. Push: `git push origin feature/amazing-feature`
+6. Open a Pull Request
 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🤝 Acknowledgments
-
-- [unfoldingWord](https://unfoldingword.org/) for the Open Bible Stories content
-- [Door43](https://door43.org/) for the content distribution platform
-- All the translators and organizations contributing stories in various languages
-- The React Native and Expo communities for excellent development tools
-
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/abelpz/my-expo-app/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/abelpz/my-expo-app/discussions)
-- **Workflow Documentation**: [`.github/DISTRIBUTION.md`](.github/DISTRIBUTION.md)
+- **Issues**: [GitHub Issues](https://github.com/unfoldingword/obs-app/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/unfoldingword/obs-app/discussions)
 - **Email**: support@unfoldingword.org
 
-### 🔧 Collection Support Issues
+### 🔧 Collection Issues
 
-**Missing or Unsupported Collections?**  
-If you experience issues with collections not being available or showing as unsupported:
+Missing or unsupported collections? [Create an issue](https://github.com/unfoldingword/obs-app/issues) with:
+- Language name and code
+- Expected collection details
+- Repository URL (if known)
 
-1. **📋 Create an Issue** on [GitHub Issues](https://github.com/abelpz/my-expo-app/issues)
-2. **📝 Include Details**:
-   - Language name and ISO code (e.g., "Spanish (es)")
-   - Expected collection/repository name
-   - URL of the collection repository (if known)
-   - Screenshot of the issue (if applicable)
+## 🤝 Acknowledgments
 
-3. **⚡ Quick Response**: Our team will investigate and work to add support for valid OBS collections
-
-**Why Some Collections Are Unsupported:**
-- Repository structure doesn't match OBS standards
-- Missing required `content/` directory with numbered markdown files
-- Legacy formats that need updating by content creators
+- **[unfoldingWord](https://unfoldingword.org/)** for the Open Bible Stories content and vision for global Bible translation
+- **[Door43](https://door43.org/)** for the robust content distribution platform that makes worldwide access possible
+- **All translators and organizations** contributing stories in diverse languages, bringing God's Word to every nation
+- **[Open Components Ecosystem](https://opencomponents.io/)** for providing innovative, reusable components that accelerate development
+- **React Native and Expo communities** for creating powerful, accessible mobile development tools
+- **Global ministry partners** who test, distribute, and share these stories in remote and underserved areas worldwide
 
 ---
 
