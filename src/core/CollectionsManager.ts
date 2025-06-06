@@ -4,6 +4,7 @@ import { DatabaseManager } from './DatabaseManager';
 import { LanguagesManager } from './LanguagesManager';
 import { ImageManager } from './imageManager';
 import { warn } from './utils';
+import { processAndStoreZipOptimized } from './ZipProcessingUtils';
 
 export interface Collection {
   id: string;
@@ -467,36 +468,7 @@ export class CollectionsManager {
     return text.replace(regex, '<mark>$1</mark>');
   }
 
-  // Helper method to extract source reference from content
-  private extractSourceReference(content: string): { sourceReference: string | null; cleanedContent: string } {
-    const lines = content.split('\n');
-    let sourceReference: string | null = null;
-    let lastNonBlankLineIndex = -1;
 
-    // Find the last non-blank line
-    for (let i = lines.length - 1; i >= 0; i--) {
-      const line = lines[i].trim();
-      if (line) {
-        lastNonBlankLineIndex = i;
-        // Check if the line contains text between underscores
-        const sourceReferenceMatch = line.match(/_([^_]+)_/);
-        if (sourceReferenceMatch) {
-          sourceReference = sourceReferenceMatch[1].trim();
-        }
-        break; // Stop at the first non-blank line from the end
-      }
-    }
-
-    // If we found a source reference, remove that line from the content
-    let cleanedContent = content;
-    if (sourceReference !== null && lastNonBlankLineIndex >= 0) {
-      const modifiedLines = [...lines];
-      modifiedLines[lastNonBlankLineIndex] = ''; // Remove the line with source reference
-      cleanedContent = modifiedLines.join('\n').trim();
-    }
-
-    return { sourceReference, cleanedContent };
-  }
 
   // Delete Operations
   async deleteCollection(id: string): Promise<void> {
@@ -756,93 +728,30 @@ export class CollectionsManager {
     return { collection, ownerData, isValid };
   }
 
-  // ZIP Processing and Storage
-  private async processAndStoreZip(collection: Collection, zipData: ArrayBuffer): Promise<void> {
+  // ZIP Processing and Storage - Now using optimized shared utility
+  private async processAndStoreZip(
+    collection: Collection,
+    zipData: ArrayBuffer,
+    onProgress?: (progress: number, status: string) => void
+  ): Promise<void> {
     try {
       // Save the collection record first
       const dbCollectionData = this.convertCollectionToDb(collection);
       await this.databaseManager.saveCollection(dbCollectionData);
 
-      const zip = new JSZip();
-      const loadedZip = await zip.loadAsync(zipData);
-      const filesToProcess = Object.entries(loadedZip.files);
-
-      // Updated regex to match both content/ and ingredients/ directories
-      const storyFileRegex = /(?:^|\/)(?:content\/|ingredients\/)?(\d+)\.md$/i;
-      const frameParseRegex =
-        /!\[[^\]]*?\]\(([^)]+?)\)\s*([\s\S]*?)(?=(?:!\[[^\]]*?\]\([^)]+?\))|$)/g;
-      const referenceParseRegex = /\[(.*?)\]\((.*?)\)/g;
-
-      for (const [fullPath, zipEntry] of filesToProcess) {
-        if (zipEntry.dir) continue;
-
-        const content = await zipEntry.async('string');
-        const storyMatch = fullPath.match(storyFileRegex);
-
-        if (storyMatch) {
-          const storyNumber = parseInt(storyMatch[1], 10);
-          if (isNaN(storyNumber)) {
-            warn(`Skipping file with invalid story number: ${fullPath}`);
-            continue;
-          }
-
-          let titleFromContent = '';
-          const contentLines = content.split('\n');
-          if (contentLines.length > 0) {
-            const firstLine = contentLines[0].trim();
-            if (firstLine.startsWith('# ')) {
-              titleFromContent = firstLine.substring(2).trim();
-            }
-          }
-
-          const title = titleFromContent || storyMatch[1] || `Story ${storyNumber}`;
-
-          // Extract source reference from the content
-          const { sourceReference, cleanedContent } = this.extractSourceReference(content);
-
-          // Prepare story metadata
-          const storyMetadata: Record<string, any> = {};
-          if (sourceReference) {
-            storyMetadata.sourceReference = sourceReference;
-          }
-
-          const storyData = this.convertStoryToDb({
-            collectionId: collection.id,
-            storyNumber,
-            title,
-            isFavorite: false,
-            metadata: Object.keys(storyMetadata).length > 0 ? storyMetadata : undefined,
-          });
-          await this.databaseManager.saveStory(storyData);
-
-          let frameNumber = 0;
-          let match;
-          frameParseRegex.lastIndex = 0;
-          while ((match = frameParseRegex.exec(cleanedContent)) !== null) {
-            frameNumber++;
-            const imageUrl = match[1].trim();
-            const frameText = match[2].trim();
-            if (!imageUrl || !frameText) {
-              warn(
-                `Skipping empty frame ${frameNumber} in story ${storyNumber} of ${collection.id}`
-              );
-              continue;
-            }
-
-            const frameData = this.convertFrameToDb({
-              collectionId: collection.id,
-              storyNumber,
-              frameNumber,
-              imageUrl,
-              text: frameText,
-              isFavorite: false,
-            });
-            await this.databaseManager.saveFrame(frameData);
-          }
+      // Use the optimized ZIP processing utility with progress reporting
+      await processAndStoreZipOptimized(zipData, collection.id, {
+        isBase64: false,
+        onProgress: (stage: string, progress: number, status: string) => {
+          // Map the detailed progress to the outer progress callback
+          // ZIP processing takes up 25-95% of the total download progress
+          const mappedProgress = 25 + Math.floor((progress / 100) * 70);
+          console.log(`Download progress: ${mappedProgress}% - ${status}`);
+          onProgress?.(mappedProgress, status);
         }
-      }
+      });
 
-      warn(`Processed and stored files from zip for collection ${collection.id}`);
+      warn(`Successfully processed and stored ZIP for collection ${collection.id} using optimized method`);
     } catch (error) {
       warn(
         `Error processing ZIP for collection ${collection.id}: ${error instanceof Error ? error.message : String(error)}`
@@ -915,7 +824,11 @@ export class CollectionsManager {
   }
 
   // Download Operations
-  async downloadRemoteCollection(collection: Collection, languageData?: any): Promise<void> {
+  async downloadRemoteCollection(
+    collection: Collection,
+    languageData?: any,
+    onProgress?: (progress: number, status: string) => void
+  ): Promise<void> {
     if (!this.initialized) await this.initialize();
 
     // Check if collection can be downloaded (has valid structure)
@@ -926,9 +839,14 @@ export class CollectionsManager {
       throw new Error(`Cannot download collection ${collection.id}: Invalid structure - missing required directory (must have either "content" or "ingredients" directory)`);
     }
 
-    try {
+        try {
+      console.log(`Download progress: 0% - Preparing download...`);
+      onProgress?.(0, 'Preparing download...');
+
       // Save language data FIRST to satisfy foreign key constraints
       await this.saveLanguageData(collection.language, languageData);
+      console.log(`Download progress: 5% - Saving language data...`);
+      onProgress?.(5, 'Saving language data...');
 
       // Use the owner data that's already embedded in the Collection object
       const ownerData = {
@@ -945,24 +863,35 @@ export class CollectionsManager {
 
       // Save repository owner data using the embedded owner data
       await this.saveRepositoryOwnerData(collection.owner.username, ownerData);
+      console.log(`Download progress: 10% - Saving repository owner data...`);
+      onProgress?.(10, 'Saving repository owner data...');
 
       const [owner, repoName] = collection.id.split('/');
       const zipballUrl = `https://git.door43.org/${owner}/${repoName}/archive/${collection.version}.zip`;
+
+      console.log(`Download progress: 15% - Downloading collection archive...`);
+      onProgress?.(15, 'Downloading collection archive...');
       const response = await fetch(zipballUrl);
 
       if (!response.ok) {
         throw new Error(`Failed to download collection ${collection.id}: ${response.status}`);
       }
 
+      console.log(`Download progress: 25% - Downloaded archive, processing...`);
+      onProgress?.(25, 'Downloaded archive, processing...');
       const zipData = await response.arrayBuffer();
 
-      await this.processAndStoreZip(collection, zipData);
+      await this.processAndStoreZip(collection, zipData, onProgress);
 
       if (collection.metadata?.thumbnail) {
+        console.log(`Download progress: 95% - Downloading thumbnail...`);
+        onProgress?.(95, 'Downloading thumbnail...');
         await this.downloadThumbnail(collection);
       }
 
       await this.markAsDownloaded(collection.id, true);
+      console.log(`Download progress: 100% - Download complete!`);
+      onProgress?.(100, 'Download complete!');
     } catch (error) {
       warn(
         `Error downloading collection ${collection.id}: ${error instanceof Error ? error.message : String(error)}`
@@ -1027,5 +956,16 @@ export class CollectionsManager {
       );
       // Don't throw error here as owner data saving is not critical for collection download
     }
+  }
+
+  /**
+   * Test download with progress logging (similar to CollectionImportExportManager test methods)
+   */
+  async testDownloadWithProgress(collection: Collection, languageData?: any): Promise<void> {
+    console.log(`🚀 Starting test download for collection: ${collection.displayName} (${collection.id})`);
+
+    return this.downloadRemoteCollection(collection, languageData, (progress, status) => {
+      console.log(`Download progress: ${progress}% - ${status}`);
+    });
   }
 }

@@ -1,4 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -6,12 +9,12 @@ import {
   TouchableOpacity,
   Modal,
   ScrollView,
-  Alert,
   Image,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CollectionImportExportManager } from '../core/CollectionImportExportManager';
 import { Collection, CollectionsManager } from '../core/CollectionsManager';
 import { UnifiedLanguagesManager } from '../core/UnifiedLanguagesManager';
 import { hashStringToNumber } from '../core/hashStringToNumber';
@@ -79,6 +82,8 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
   </Modal>
 );
 
+
+
 interface CollectionInfoModalProps {
   collection: CollectionWithValidation | null;
   visible: boolean;
@@ -106,7 +111,14 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
     downloadDate: string | null;
   } | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+
+
+
+  // Modal states for icon-based feedback
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
 
   const image = useObsImage({
     reference: { story: hashStringToNumber(collection?.id || ''), frame: 1 },
@@ -207,10 +219,79 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
     setShowDeleteConfirmation(false);
   };
 
-  const handleExportCollection = () => {
-    // TODO: Implement export functionality
-    // Silent - no alert message for icon-based UI
+  const handleExportCollection = async () => {
+    if (!collection) return;
+    setExporting(true);
+
+    try {
+      const manager = CollectionImportExportManager.getInstance();
+      await manager.initialize();
+
+      // Get the collection data to log metadata
+      const collectionsManager = CollectionsManager.getInstance();
+      await collectionsManager.initialize();
+      const collectionData = await collectionsManager.getCollection(collection.id);
+      console.log('Collection metadata:', JSON.stringify(collectionData, null, 2));
+
+      const fileName = `${collection.id.replace('/', '-')}-${collection.version}.obs`;
+
+      // Use StorageAccessFramework for custom location
+      const documentsUri = await FileSystem.StorageAccessFramework.getUriForDirectoryInRoot('Documents');
+      const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync(documentsUri);
+      if (!permissions.granted) {
+        setExporting(false);
+        return; // User cancelled - silent return for icon-based UI
+      }
+
+      // Create a temporary file in the cache directory first
+      const tempPath = `${FileSystem.cacheDirectory}temp_export.zip`;
+
+      // Export to temporary file
+      const actualTempPath = await manager.exportCollection(
+        tempPath,
+        {
+          collectionId: collection.id,
+          compressionLevel: 6,
+        },
+        (progress, status) => {
+          console.log(`Export progress: ${progress}% - ${status}`);
+        }
+      );
+
+      // Read the temporary file as base64 (use the actual path returned)
+      const base64Data = await FileSystem.readAsStringAsync(actualTempPath, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      // Create the file in the selected directory
+      const fileUri = await FileSystem.StorageAccessFramework.createFileAsync(
+        permissions.directoryUri,
+        fileName,
+        'application/octet-stream'
+      );
+
+      // Write the data to the selected location
+      await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      // Clean up the temporary file
+      await FileSystem.deleteAsync(actualTempPath);
+
+      // Store the directory URI for future auto-discovery
+      await AsyncStorage.setItem('@custom_export_directory', permissions.directoryUri);
+
+      // Success - show minimal feedback
+      setShowSuccessModal(true);
+    } catch (error) {
+      console.error('Error exporting collection:', error);
+      setShowErrorModal(true);
+    } finally {
+      setExporting(false);
+    }
   };
+
+
 
   const handleDownloadCollection = async () => {
     if (!collection || downloading) return;
@@ -247,6 +328,51 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
       // Silent failure - no alert messages, just remove loading state
     } finally {
       setDownloading(false);
+    }
+  };
+
+  const handleShareCollection = async () => {
+    if (!collection) return;
+
+    try {
+      const manager = CollectionImportExportManager.getInstance();
+      await manager.initialize();
+
+      const fileName = `${collection.id.replace('/', '-')}-${collection.version}.obs`;
+      // Create a temporary file in the cache directory
+      const tempPath = `${FileSystem.cacheDirectory}${fileName}`;
+
+      // Export to temporary file
+      const actualTempPath = await manager.exportCollection(
+        tempPath,
+        {
+          collectionId: collection.id,
+          compressionLevel: 6,
+        },
+        (progress, status) => {
+          console.log(`Export progress: ${progress}% - ${status}`);
+        }
+      );
+
+      // Check if sharing is available
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (!isAvailable) {
+        setShowErrorModal(true);
+        return;
+      }
+
+      // Share the file
+      await Sharing.shareAsync(actualTempPath, {
+        mimeType: 'application/octet-stream',
+        dialogTitle: `Share ${collection.displayName}`,
+        UTI: 'public.data',
+      });
+
+      // Clean up the temporary file
+      await FileSystem.deleteAsync(tempPath);
+    } catch (error) {
+      console.error('Error sharing collection:', error);
+      setShowErrorModal(true);
     }
   };
 
@@ -305,7 +431,11 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
                   </Text>
                   {languageInfo?.isRTL && (
                     <View className="ml-2 rounded-full bg-orange-500/20 px-2 py-1">
-                      <MaterialIcons name="format-textdirection-r-to-l" size={12} color={isDark ? '#FB923C' : '#EA580C'} />
+                      <MaterialIcons
+                        name="format-textdirection-r-to-l"
+                        size={12}
+                        color={isDark ? '#FB923C' : '#EA580C'}
+                      />
                     </View>
                   )}
                 </View>
@@ -317,8 +447,13 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
                       <MaterialIcons name="check-circle" size={16} color="#10B981" />
                     </View>
                   ) : !collection.isValid ? (
-                    <View className={`flex-row items-center self-start rounded-full px-3 py-2 ${isDark ? 'bg-yellow-600/20' : 'bg-yellow-500/20'}`}>
-                      <MaterialIcons name="construction" size={16} color={isDark ? '#FCD34D' : '#F59E0B'} />
+                    <View
+                      className={`flex-row items-center self-start rounded-full px-3 py-2 ${isDark ? 'bg-yellow-600/20' : 'bg-yellow-500/20'}`}>
+                      <MaterialIcons
+                        name="construction"
+                        size={16}
+                        color={isDark ? '#FCD34D' : '#F59E0B'}
+                      />
                     </View>
                   ) : (
                     <View className="flex-row items-center self-start rounded-full bg-blue-500/20 px-3 py-2">
@@ -388,10 +523,23 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
           <View className="px-6 py-4">
             {collection.isDownloaded ? (
               /* Downloaded Collection Actions */
-              <View className="flex-row" style={{ gap: 12 }}>
+              <View className="flex-row" style={{ gap: 16 }}>
                 <TouchableOpacity
                   onPress={handleExportCollection}
-                  className={`flex-1 rounded-xl p-3 ${isDark ? 'bg-blue-600' : 'bg-blue-500'} shadow-lg`}>
+                  disabled={exporting}
+                  className={`flex-1 rounded-xl p-4 ${isDark ? 'bg-blue-600' : 'bg-blue-500'} shadow-lg ${exporting ? 'opacity-50' : ''}`}>
+                  <View className="flex-row items-center justify-center">
+                    {exporting ? (
+                      <ActivityIndicator size="small" color="white" />
+                    ) : (
+                      <MaterialIcons name="save" size={20} color="white" />
+                    )}
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={handleShareCollection}
+                  className={`flex-1 rounded-xl p-4 ${isDark ? 'bg-green-600' : 'bg-green-500'} shadow-lg`}>
                   <View className="flex-row items-center justify-center">
                     <MaterialIcons name="share" size={20} color="white" />
                   </View>
@@ -399,7 +547,7 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
 
                 <TouchableOpacity
                   onPress={handleDeleteCollection}
-                  className="flex-1 rounded-xl p-3 shadow-lg"
+                  className="flex-1 rounded-xl p-4 shadow-lg"
                   style={{ backgroundColor: isDark ? '#DC2626' : '#EF4444' }}>
                   <View className="flex-row items-center justify-center">
                     <MaterialIcons name="delete" size={20} color="white" />
@@ -409,13 +557,14 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
             ) : (
               /* Available Collection Action */
               <View>
-                                
                 <TouchableOpacity
                   onPress={handleDownloadCollection}
                   disabled={downloading || !collection.isValid}
                   className={`rounded-xl p-4 shadow-lg ${
-                    !collection.isValid 
-                      ? isDark ? 'bg-yellow-600' : 'bg-yellow-500'
+                    !collection.isValid
+                      ? isDark
+                        ? 'bg-yellow-600'
+                        : 'bg-yellow-500'
                       : downloading
                       ? `${isDark ? 'bg-blue-600' : 'bg-blue-500'} opacity-50`
                       : `${isDark ? 'bg-blue-600' : 'bg-blue-500'}`
@@ -448,6 +597,44 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
           isDark={isDark}
         />
       )}
+
+
+
+      {/* Success Modal */}
+      <Modal visible={showSuccessModal} animationType="fade" transparent onRequestClose={() => setShowSuccessModal(false)}>
+        <View className="flex-1 items-center justify-center bg-black/50">
+          <View className={`mx-6 rounded-2xl p-8 ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
+            <View className="items-center">
+              <View className={`mb-6 rounded-full p-4 ${isDark ? 'bg-green-600/20' : 'bg-green-500/10'}`}>
+                <MaterialIcons name="check-circle" size={48} color={isDark ? '#10B981' : '#059669'} />
+              </View>
+              <TouchableOpacity onPress={() => setShowSuccessModal(false)} className={`rounded-xl p-4 ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                <View className="items-center">
+                  <MaterialIcons name="close" size={24} color={isDark ? '#FFFFFF' : '#374151'} />
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Error Modal */}
+      <Modal visible={showErrorModal} animationType="fade" transparent onRequestClose={() => setShowErrorModal(false)}>
+        <View className="flex-1 items-center justify-center bg-black/50">
+          <View className={`mx-6 rounded-2xl p-8 ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
+            <View className="items-center">
+              <View className={`mb-6 rounded-full p-4 ${isDark ? 'bg-red-600/20' : 'bg-red-500/10'}`}>
+                <MaterialIcons name="error" size={48} color={isDark ? '#EF4444' : '#DC2626'} />
+              </View>
+              <TouchableOpacity onPress={() => setShowErrorModal(false)} className={`rounded-xl p-4 ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                <View className="items-center">
+                  <MaterialIcons name="close" size={24} color={isDark ? '#FFFFFF' : '#374151'} />
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </Modal>
   );
 };

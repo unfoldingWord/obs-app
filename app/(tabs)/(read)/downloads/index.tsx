@@ -15,20 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SearchBar } from '../../../../src/components/SearchBar';
-/**
- * Represents a language in the Door43 catalog
- * @interface Language
- * @property {string[]} alt - Alternative names for the language
- * @property {string} ang - English name of the language
- * @property {string[]} cc - Country codes where this language is spoken
- * @property {boolean} gw - Whether this is a Gateway language (commonly used for translation)
- * @property {string} hc - Home country code (primary country where the language is spoken)
- * @property {string} lc - Language code (ISO 639-3 code)
- * @property {'ltr' | 'rtl'} ld - Text direction (left-to-right or right-to-left)
- * @property {string} ln - Native name of the language
- * @property {string} lr - Language region (continent or region where the language is spoken)
- * @property {number} pk - Primary key in the database
- */
+
 interface Language {
   alt: string[];
   ang: string;
@@ -115,6 +102,8 @@ export default function DownloadsScreen() {
     router.push(`/downloads/${language.lc}?${languageParams.toString()}`);
   };
 
+
+
   const renderLanguageItem = ({ item }: { item: Language }) => (
     <TouchableOpacity
       onPress={() => handleLanguagePress(item)}
@@ -165,6 +154,8 @@ export default function DownloadsScreen() {
       </View>
     </TouchableOpacity>
   );
+
+
 
   if (loading) {
     return (
@@ -221,6 +212,7 @@ export default function DownloadsScreen() {
 
       {/* Header */}
       <View className={`px-6 py-4 ${isDark ? 'bg-gray-900' : 'bg-white'} border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+        <View className="flex-row items-center justify-between">
         <View className="flex-row items-center">
           <TouchableOpacity
             onPress={() => router.back()}
@@ -235,6 +227,9 @@ export default function DownloadsScreen() {
               </Text>
             </View>
           </View>
+          </View>
+
+
         </View>
       </View>
 
@@ -255,6 +250,8 @@ export default function DownloadsScreen() {
         showsVerticalScrollIndicator={false}
         className={`flex-1 ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}
       />
+
+
     </SafeAreaView>
   );
 }

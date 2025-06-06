@@ -1,4 +1,4 @@
-# OBS Reader App - UI Screens
+# OBS App App - UI Screens
 
 ## 1. Home Screen
 - **Purpose**: Entry point to the application

@@ -14,9 +14,11 @@ import {
   ScrollView,
   Image,
   Dimensions,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system';
 
 import { CollectionItem } from '../../../src/components/CollectionItem';
 import { ContinueReading } from '../../../src/components/ContinueReading';
@@ -24,6 +26,7 @@ import { CollectionsManager, Collection } from '../../../src/core/CollectionsMan
 import { StoryManager, UserProgress } from '../../../src/core/storyManager';
 import { useObsImage } from '../../../src/hooks/useObsImage';
 import { useStoryNavigation } from '../../../src/hooks/useStoryNavigation';
+import ImportModal from '../../../src/components/ImportModal';
 
 type ReadingMode = 'horizontal' | 'vertical';
 
@@ -32,6 +35,9 @@ export default function ReadScreen() {
   const [collections, setCollections] = useState<Collection[]>([]);
   const [lastReadProgress, setLastReadProgress] = useState<UserProgress | null>(null);
   const [preferredReadingMode, setPreferredReadingMode] = useState<ReadingMode>('horizontal');
+  // Import-related state
+  const [showImportModal, setShowImportModal] = useState(false);
+
   const router = useRouter();
   const { navigateToStory } = useStoryNavigation();
   const colorScheme = useColorScheme();
@@ -160,6 +166,15 @@ export default function ReadScreen() {
     }
   };
 
+  // Import functionality
+  const handleImportPress = () => {
+    setShowImportModal(true);
+  };
+
+  const handleImportSuccess = () => {
+    refreshData(); // Refresh the collections list
+  };
+
   if (loading) {
     return (
       <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
@@ -246,6 +261,19 @@ export default function ReadScreen() {
                         </View>
                       </View>
 
+                      <View className="flex-row space-x-3 gap-4">
+                        {/* Import Button */}
+                        <TouchableOpacity
+                          onPress={handleImportPress}
+                          className={`rounded-full p-2 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                          <MaterialIcons
+                            name="upload-file"
+                            size={24}
+                            color={isDark ? '#9CA3AF' : '#6B7280'}
+                          />
+                        </TouchableOpacity>
+
+                        {/* Download Button */}
                       <TouchableOpacity
                         onPress={() => router.push('/downloads')}
                         className={`rounded-full p-2 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
@@ -255,6 +283,7 @@ export default function ReadScreen() {
                           color={isDark ? '#9CA3AF' : '#6B7280'}
                         />
                       </TouchableOpacity>
+                      </View>
                     </View>
                   </View>
                 </>
@@ -278,6 +307,19 @@ export default function ReadScreen() {
                   </View>
                 </View>
 
+                <View className="flex-row space-x-3 gap-2">
+                                        {/* Import Button */}
+                      <TouchableOpacity
+                        onPress={handleImportPress}
+                        className={`rounded-full p-2 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+                        <MaterialIcons
+                          name="upload-file"
+                          size={24}
+                          color={isDark ? '#9CA3AF' : '#6B7280'}
+                        />
+                      </TouchableOpacity>
+
+                  {/* Download Button */}
                 <TouchableOpacity
                   onPress={() => router.push('/downloads')}
                   className={`rounded-full p-2 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
@@ -287,6 +329,7 @@ export default function ReadScreen() {
                     color={isDark ? '#9CA3AF' : '#6B7280'}
                   />
                 </TouchableOpacity>
+                </View>
               </View>
             </View>
           ) : null
@@ -322,8 +365,10 @@ export default function ReadScreen() {
                 }}
               />
 
-              {/* Centered Download Button */}
+              {/* Centered Action Buttons */}
               <View className="flex-1 items-center justify-center px-6">
+                <View className="items-center space-y-6 gap-4">
+                  {/* Download Button */}
                 <TouchableOpacity
                   onPress={() => router.push('/downloads')}
                   className={`rounded-full p-8 ${isDark ? 'bg-blue-600' : 'bg-blue-500'} shadow-2xl`}
@@ -336,6 +381,25 @@ export default function ReadScreen() {
                   }}>
                   <MaterialIcons name="download" size={48} color="white" />
                 </TouchableOpacity>
+
+                  {/* Import Button */}
+                  <TouchableOpacity
+                    onPress={handleImportPress}
+                    className={`rounded-full p-6 ${isDark ? 'bg-gray-700' : 'bg-gray-200'} shadow-xl`}
+                    style={{
+                      width: 80,
+                      height: 80,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      elevation: 10,
+                    }}>
+                    <MaterialIcons
+                      name="upload-file"
+                      size={32}
+                      color={isDark ? '#9CA3AF' : '#6B7280'}
+                    />
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           ) : null
@@ -344,6 +408,13 @@ export default function ReadScreen() {
           paddingHorizontal: collections.length > 0 ? 24 : 0,
           paddingBottom: 32
         }}
+      />
+
+      {/* Import Modal */}
+      <ImportModal
+        visible={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImportSuccess={handleImportSuccess}
       />
     </SafeAreaView>
   );
