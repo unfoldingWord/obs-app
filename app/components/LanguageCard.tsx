@@ -24,9 +24,8 @@ export const LanguageCard: React.FC<LanguageCardProps> = ({
   return (
     <TouchableOpacity
       onPress={onPress}
-      className={`p-4 mb-2 rounded-lg ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-sm`}
-    >
-      <View className="flex-row justify-between items-center">
+      className={`mb-2 rounded-lg p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-sm`}>
+      <View className="flex-row items-center justify-between">
         <Text className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
           {language}
         </Text>

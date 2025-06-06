@@ -5,5 +5,8 @@ declare module 'jszip-utils' {
    * @param callback Optional callback function
    * @returns A promise that resolves with the binary content
    */
-  export function getBinaryContent(url: string, callback?: (err: Error | null, data: any) => void): Promise<any>;
-} 
+  export function getBinaryContent(
+    url: string,
+    callback?: (err: Error | null, data: any) => void
+  ): Promise<any>;
+}

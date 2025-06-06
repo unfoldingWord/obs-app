@@ -18,7 +18,7 @@ export async function testLanguagesManager() {
       lr: 'North America',
       pk: 1,
       alt: ['English'],
-      cc: ['US', 'GB', 'CA']
+      cc: ['US', 'GB', 'CA'],
     };
 
     await languagesManager.saveLanguage(testLanguage);

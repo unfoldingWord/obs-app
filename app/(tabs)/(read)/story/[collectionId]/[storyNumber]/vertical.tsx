@@ -54,7 +54,9 @@ export default function VerticalReadingScreen() {
   const [selectedFrameForBookmark, setSelectedFrameForBookmark] = useState<number>(1);
   const [frameMarkers, setFrameMarkers] = useState<Record<number, UserMarker[]>>({});
   const [refreshing, setRefreshing] = useState(false);
-  const [currentVisibleFrame, setCurrentVisibleFrame] = useState<number>(frame ? parseInt(frame as string, 10) : 1);
+  const [currentVisibleFrame, setCurrentVisibleFrame] = useState<number>(
+    frame ? parseInt(frame as string, 10) : 1
+  );
   const scrollViewRef = useRef<ScrollView>(null);
   const framePositions = useRef<Record<number, { y: number; height: number }>>({});
   const hasScrolledToInitialFrame = useRef(false);
@@ -218,9 +220,9 @@ export default function VerticalReadingScreen() {
         frameNumber
       );
 
-      setFrameMarkers(prev => ({
+      setFrameMarkers((prev) => ({
         ...prev,
-        [frameNumber]: frameMarkers
+        [frameNumber]: frameMarkers,
       }));
     } catch (error) {
       console.error('Error adding marker:', error);
@@ -239,11 +241,9 @@ export default function VerticalReadingScreen() {
       );
 
       // Update the frame in our state
-      setFrames(prevFrames =>
-        prevFrames.map(frame =>
-          frame.frameNumber === frameNumber
-            ? { ...frame, isFavorite: !frame.isFavorite }
-            : frame
+      setFrames((prevFrames) =>
+        prevFrames.map((frame) =>
+          frame.frameNumber === frameNumber ? { ...frame, isFavorite: !frame.isFavorite } : frame
         )
       );
     } catch (error) {
@@ -263,9 +263,9 @@ export default function VerticalReadingScreen() {
         frameNumber
       );
 
-      setFrameMarkers(prev => ({
+      setFrameMarkers((prev) => ({
         ...prev,
-        [frameNumber]: updatedMarkers
+        [frameNumber]: updatedMarkers,
       }));
     } catch (error) {
       console.error('Error deleting marker:', error);
@@ -320,32 +320,35 @@ export default function VerticalReadingScreen() {
     }
   }, [loading, frames.length, frame, scrollToFrame]);
 
-  const handleScroll = useCallback((event: any) => {
-    const { contentOffset } = event.nativeEvent;
-    const scrollY = contentOffset.y;
+  const handleScroll = useCallback(
+    (event: any) => {
+      const { contentOffset } = event.nativeEvent;
+      const scrollY = contentOffset.y;
 
-    // Find which frame is currently most visible based on scroll position
-    let currentFrame = 1;
-    const viewportCenter = scrollY + 200; // Add some offset for better UX
+      // Find which frame is currently most visible based on scroll position
+      let currentFrame = 1;
+      const viewportCenter = scrollY + 200; // Add some offset for better UX
 
-    for (const frame of frames) {
-      const position = framePositions.current[frame.frameNumber];
-      if (position) {
-        const frameCenter = position.y + position.height / 2;
-        if (viewportCenter >= position.y && viewportCenter <= position.y + position.height) {
-          currentFrame = frame.frameNumber;
-          break;
-        } else if (viewportCenter > frameCenter) {
-          currentFrame = frame.frameNumber;
+      for (const frame of frames) {
+        const position = framePositions.current[frame.frameNumber];
+        if (position) {
+          const frameCenter = position.y + position.height / 2;
+          if (viewportCenter >= position.y && viewportCenter <= position.y + position.height) {
+            currentFrame = frame.frameNumber;
+            break;
+          } else if (viewportCenter > frameCenter) {
+            currentFrame = frame.frameNumber;
+          }
         }
       }
-    }
 
-    if (currentFrame !== currentVisibleFrame) {
-      setCurrentVisibleFrame(currentFrame);
-      saveReadingProgress(currentFrame);
-    }
-  }, [frames, currentVisibleFrame]);
+      if (currentFrame !== currentVisibleFrame) {
+        setCurrentVisibleFrame(currentFrame);
+        saveReadingProgress(currentFrame);
+      }
+    },
+    [frames, currentVisibleFrame]
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -376,14 +379,18 @@ export default function VerticalReadingScreen() {
   const navigateToNextStory = () => {
     const nextStory = getNextStory();
     if (nextStory) {
-      router.replace(`/story/${encodeURIComponent(collectionId)}/${nextStory.storyNumber}/vertical`);
+      router.replace(
+        `/story/${encodeURIComponent(collectionId)}/${nextStory.storyNumber}/vertical`
+      );
     }
   };
 
   const navigateToPreviousStory = () => {
     const previousStory = getPreviousStory();
     if (previousStory) {
-      router.replace(`/story/${encodeURIComponent(collectionId)}/${previousStory.storyNumber}/vertical`);
+      router.replace(
+        `/story/${encodeURIComponent(collectionId)}/${previousStory.storyNumber}/vertical`
+      );
     }
   };
 
@@ -405,8 +412,7 @@ export default function VerticalReadingScreen() {
     return (
       <View
         className={`mx-4 mb-6 overflow-hidden rounded-3xl ${isDark ? 'bg-gray-800' : 'bg-white'} border shadow-lg ${isDark ? 'border-gray-700' : 'border-gray-200'}`}
-        onLayout={handleLayout}
-      >
+        onLayout={handleLayout}>
         <View className="relative">
           <Image source={imageSource} style={{ width: '100%', height: 200 }} resizeMode="cover" />
 
@@ -692,7 +698,9 @@ export default function VerticalReadingScreen() {
             onPress={() => {
               // Save horizontal mode preference and navigate to horizontal
               AsyncStorage.setItem('readingModePreference', 'horizontal').catch(console.error);
-              router.replace(`/story/${encodeURIComponent(collectionId)}/${storyNumber}/${currentVisibleFrame}`);
+              router.replace(
+                `/story/${encodeURIComponent(collectionId)}/${storyNumber}/${currentVisibleFrame}`
+              );
             }}
             className={`rounded-full p-2 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
             <MaterialIcons name="view-carousel" size={20} color={isDark ? '#9CA3AF' : '#6B7280'} />
@@ -738,16 +746,13 @@ export default function VerticalReadingScreen() {
         showsVerticalScrollIndicator={false}
         onScroll={handleScroll}
         scrollEventThrottle={16}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         onTouchStart={() => setShowFontSizeMenu(false)}>
-
         {/* Story navigation header */}
         {getPreviousStory() && (
           <TouchableOpacity
             onPress={navigateToPreviousStory}
-            className={`mx-4 mt-4 mb-2 rounded-2xl p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} border ${isDark ? 'border-gray-700' : 'border-gray-200'} shadow-lg`}>
+            className={`mx-4 mb-2 mt-4 rounded-2xl p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} border ${isDark ? 'border-gray-700' : 'border-gray-200'} shadow-lg`}>
             <View
               style={{
                 flexDirection: isRTL ? 'row-reverse' : 'row',

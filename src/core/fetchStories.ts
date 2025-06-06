@@ -1,9 +1,8 @@
 import JSZip from 'jszip';
 import JSZipUtils from 'jszip-utils';
-import { parse } from 'yaml';
 
 import { warn } from './utils';
-import { StoriesData, ProcessedStory, StoryFrame } from '../types/index';
+import { StoriesData, ProcessedStory } from '../types/index';
 
 /**
  * Main function to fetch stories from a Git repository
@@ -65,7 +64,9 @@ const downloadAndExtractZip = async (url: string): Promise<Record<string, any> |
     await zip.loadAsync(data);
     return zip.files;
   } catch (error) {
-    warn(`Error downloading/extracting zip: ${error instanceof Error ? error.message : String(error)}`);
+    warn(
+      `Error downloading/extracting zip: ${error instanceof Error ? error.message : String(error)}`
+    );
     throw new Error('Failed to download or extract zip files');
   }
 };
@@ -73,13 +74,16 @@ const downloadAndExtractZip = async (url: string): Promise<Record<string, any> |
 /**
  * Process story files from extracted zip
  */
-const processStoryFiles = async (files: Record<string, any> | null, result: StoriesData): Promise<void> => {
+const processStoryFiles = async (
+  files: Record<string, any> | null,
+  result: StoriesData
+): Promise<void> => {
   if (!files) {
     throw new Error('No files to process');
   }
 
   // Process metadata first
-  const metadataFile = Object.keys(files).find(file => file.endsWith('metadata.json'));
+  const metadataFile = Object.keys(files).find((file) => file.endsWith('metadata.json'));
   if (metadataFile) {
     const metadataContent = await files[metadataFile].async('string');
     const metadata = JSON.parse(metadataContent) as {
@@ -128,7 +132,7 @@ const getRepositoryDetails = async (owner: string, languageCode: string): Promis
   const params = new URLSearchParams({
     subject: 'Open Bible Stories',
     lang: languageCode,
-    owner: owner,
+    owner,
     stage: 'prod',
   });
 
@@ -141,7 +145,9 @@ const getRepositoryDetails = async (owner: string, languageCode: string): Promis
     const data = await response.json();
     return data[0] || null;
   } catch (error) {
-    warn(`Error getting repository details: ${error instanceof Error ? error.message : String(error)}`);
+    warn(
+      `Error getting repository details: ${error instanceof Error ? error.message : String(error)}`
+    );
     return null;
   }
 };

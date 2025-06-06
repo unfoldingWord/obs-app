@@ -1,5 +1,5 @@
-import React from 'react';
 import { Stack } from 'expo-router';
+import React from 'react';
 
 export default function StoryRedirectLayout() {
   return (
@@ -9,4 +9,4 @@ export default function StoryRedirectLayout() {
       }}
     />
   );
-} 
+}

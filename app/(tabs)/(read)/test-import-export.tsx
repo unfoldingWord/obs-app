@@ -13,7 +13,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { CollectionImportExportManager, ImportError } from '../../../src/core/CollectionImportExportManager';
+import {
+  CollectionImportExportManager,
+  ImportError,
+} from '../../../src/core/CollectionImportExportManager';
 
 export default function TestImportExportScreen() {
   const [loading, setLoading] = useState(false);
@@ -42,7 +45,10 @@ export default function TestImportExportScreen() {
       Alert.alert('Success', `Collection exported to: ${filePath}`);
     } catch (error) {
       console.error('Export error:', error);
-      Alert.alert('Error', `Export failed: ${error instanceof Error ? error.message : String(error)}`);
+      Alert.alert(
+        'Error',
+        `Export failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     } finally {
       setLoading(false);
     }
@@ -67,11 +73,17 @@ export default function TestImportExportScreen() {
         Alert.alert('Success', 'Collection imported successfully');
       } else {
         setStatus('Import failed');
-        Alert.alert('Error', `Import failed: ${result.errors.map((e: ImportError) => e.message).join(', ')}`);
+        Alert.alert(
+          'Error',
+          `Import failed: ${result.errors.map((e: ImportError) => e.message).join(', ')}`
+        );
       }
     } catch (error) {
       console.error('Import error:', error);
-      Alert.alert('Error', `Import failed: ${error instanceof Error ? error.message : String(error)}`);
+      Alert.alert(
+        'Error',
+        `Import failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     } finally {
       setLoading(false);
     }
@@ -84,11 +96,7 @@ export default function TestImportExportScreen() {
           <TouchableOpacity
             onPress={() => router.back()}
             className={`mb-4 rounded-xl p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} border ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-            <MaterialIcons
-              name="arrow-back"
-              size={24}
-              color={isDark ? '#9CA3AF' : '#6B7280'}
-            />
+            <MaterialIcons name="arrow-back" size={24} color={isDark ? '#9CA3AF' : '#6B7280'} />
           </TouchableOpacity>
 
           <Text className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
@@ -107,7 +115,8 @@ export default function TestImportExportScreen() {
               className={`rounded-xl p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} border ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
               <View className="flex-row items-center justify-between">
                 <View>
-                  <Text className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  <Text
+                    className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                     Export Test Collection
                   </Text>
                   <Text className={`mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -128,7 +137,8 @@ export default function TestImportExportScreen() {
               className={`rounded-xl p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} border ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
               <View className="flex-row items-center justify-between">
                 <View>
-                  <Text className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  <Text
+                    className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                     Import Test Collection
                   </Text>
                   <Text className={`mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -144,8 +154,10 @@ export default function TestImportExportScreen() {
             </TouchableOpacity>
 
             {status && (
-              <View className={`rounded-xl p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} border ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                <Text className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              <View
+                className={`rounded-xl p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} border ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+                <Text
+                  className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                   Status
                 </Text>
                 <Text className={`mt-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
@@ -155,8 +167,10 @@ export default function TestImportExportScreen() {
             )}
 
             {importResult && (
-              <View className={`rounded-xl p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} border ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                <Text className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              <View
+                className={`rounded-xl p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} border ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+                <Text
+                  className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                   Import Result
                 </Text>
                 <Text className={`mt-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>

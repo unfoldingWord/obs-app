@@ -28,31 +28,16 @@ export const OwnerCard: React.FC<OwnerCardProps> = ({
   return (
     <TouchableOpacity
       onPress={onPress}
-      className={`p-4 mb-2 rounded-lg ${
-        isDark ? 'bg-gray-800' : 'bg-white'
-      } shadow-sm`}
-    >
-      <View className="flex-row justify-between items-center">
-        <Text
-          className={`text-lg font-bold ${
-            isDark ? 'text-white' : 'text-gray-900'
-          }`}
-        >
+      className={`mb-2 rounded-lg p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-sm`}>
+      <View className="flex-row items-center justify-between">
+        <Text className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
           {name}
         </Text>
-        <Text
-          className={`text-sm ${
-            isDark ? 'text-gray-400' : 'text-gray-500'
-          }`}
-        >
+        <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
           {collectionCount} collections
         </Text>
       </View>
-      <Text
-        className={`text-sm mt-2 ${
-          isDark ? 'text-gray-400' : 'text-gray-500'
-        }`}
-      >
+      <Text className={`mt-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
         Last updated: {formatDate(lastUpdated)}
       </Text>
     </TouchableOpacity>

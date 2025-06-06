@@ -6,6 +6,10 @@
     "version": "1.0.0",
     "owner": "unfoldingword",
     "scheme": "obs-app",
+    "linking": {
+      "scheme": "obs-app",
+      "prefixes": ["obs-app://", "obs-app://file-import"]
+    },
     "newArchEnabled": true,
     "web": {
       "favicon": "./assets/favicon.png"
@@ -31,9 +35,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
       "icon": "./assets/icon.png",
@@ -43,6 +45,30 @@
         "imageWidth": 200,
         "resizeMode": "contain",
         "backgroundColor": "#006a78"
+      },
+      "associatedDomains": [],
+      "infoPlist": {
+        "CFBundleDocumentTypes": [
+          {
+            "CFBundleTypeRole": "Editor",
+            "CFBundleTypeIconFiles": [],
+            "CFBundleTypeDescription": "Open Bible Stories Collection",
+            "CFBundleTypeName": "OBS Collection",
+            "LSHandlerRank": "Owner",
+            "LSItemContentTypes": ["com.unfoldingword.obs-collection"]
+          }
+        ],
+        "UTExportedTypeDeclarations": [
+          {
+            "UTTypeConformsTo": ["public.data"],
+            "UTTypeDescription": "Open Bible Stories Collection",
+            "UTTypeIdentifier": "com.unfoldingword.obs-collection",
+            "UTTypeTagSpecification": {
+              "public.filename-extension": ["obs"],
+              "public.mime-type": ["application/octet-stream"]
+            }
+          }
+        ]
       }
     },
     "android": {
@@ -51,7 +77,49 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.unfoldingword.obsapp"
+      "package": "com.unfoldingword.obsapp",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "category": ["DEFAULT", "BROWSABLE"],
+          "data": [
+            {
+              "scheme": "file",
+              "pathPattern": ".*\\.obs",
+              "mimeType": "*/*"
+            }
+          ]
+        },
+        {
+          "action": "VIEW",
+          "category": ["DEFAULT", "BROWSABLE"],
+          "data": [
+            {
+              "scheme": "content",
+              "pathPattern": ".*\\.obs",
+              "mimeType": "*/*"
+            }
+          ]
+        },
+        {
+          "action": "VIEW",
+          "category": ["DEFAULT"],
+          "data": [
+            {
+              "pathPattern": ".*\\.obs"
+            }
+          ]
+        },
+        {
+          "action": "SEND",
+          "category": ["DEFAULT"],
+          "data": [
+            {
+              "mimeType": "application/octet-stream"
+            }
+          ]
+        }
+      ]
     }
   }
 }

@@ -8,28 +8,16 @@ interface FilterChipProps {
   onPress: () => void;
 }
 
-export const FilterChip: React.FC<FilterChipProps> = ({
-  label,
-  selected,
-  count,
-  onPress,
-}) => {
+export const FilterChip: React.FC<FilterChipProps> = ({ label, selected, count, onPress }) => {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
   return (
     <TouchableOpacity
       onPress={onPress}
-      className={`mr-2 px-3 py-1 rounded-full flex-row items-center ${
-        selected
-          ? isDark
-            ? 'bg-blue-900'
-            : 'bg-blue-100'
-          : isDark
-          ? 'bg-gray-700'
-          : 'bg-gray-100'
-      }`}
-    >
+      className={`mr-2 flex-row items-center rounded-full px-3 py-1 ${
+        selected ? (isDark ? 'bg-blue-900' : 'bg-blue-100') : isDark ? 'bg-gray-700' : 'bg-gray-100'
+      }`}>
       <Text
         className={`text-sm ${
           selected
@@ -37,24 +25,22 @@ export const FilterChip: React.FC<FilterChipProps> = ({
               ? 'text-blue-400'
               : 'text-blue-600'
             : isDark
-            ? 'text-gray-400'
-            : 'text-gray-600'
-        }`}
-      >
+              ? 'text-gray-400'
+              : 'text-gray-600'
+        }`}>
         {label}
       </Text>
       {count !== undefined && (
         <View
-          className={`ml-1 px-1 rounded-full ${
+          className={`ml-1 rounded-full px-1 ${
             selected
               ? isDark
                 ? 'bg-blue-800'
                 : 'bg-blue-200'
               : isDark
-              ? 'bg-gray-600'
-              : 'bg-gray-200'
-          }`}
-        >
+                ? 'bg-gray-600'
+                : 'bg-gray-200'
+          }`}>
           <Text
             className={`text-xs ${
               selected
@@ -62,10 +48,9 @@ export const FilterChip: React.FC<FilterChipProps> = ({
                   ? 'text-blue-300'
                   : 'text-blue-700'
                 : isDark
-                ? 'text-gray-300'
-                : 'text-gray-700'
-            }`}
-          >
+                  ? 'text-gray-300'
+                  : 'text-gray-700'
+            }`}>
             {count}
           </Text>
         </View>

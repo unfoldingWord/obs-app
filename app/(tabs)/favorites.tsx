@@ -1,4 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useFocusEffect } from 'expo-router';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -13,13 +14,12 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { FrameBadge } from '../../src/components/FrameBadge';
 import { CollectionsManager, Story, Frame } from '../../src/core/CollectionsManager';
 import { CommentsManager, FrameComment } from '../../src/core/CommentsManager';
-import { StoryManager, UserMarker } from '../../src/core/storyManager';
-import { FrameBadge } from '../../src/components/FrameBadge';
 import { UnifiedLanguagesManager } from '../../src/core/UnifiedLanguagesManager';
+import { StoryManager, UserMarker } from '../../src/core/storyManager';
 import { useStoryNavigation } from '../../src/hooks/useStoryNavigation';
 
 type ReadingMode = 'horizontal' | 'vertical';
@@ -49,9 +49,7 @@ interface FavoriteComment extends FrameComment {
 }
 
 export default function FavoritesScreen() {
-  const [activeTab, setActiveTab] = useState<'favorites' | 'markers' | 'comments'>(
-    'favorites'
-  );
+  const [activeTab, setActiveTab] = useState<'favorites' | 'markers' | 'comments'>('favorites');
   const [loading, setLoading] = useState(true);
   const [favoriteStories, setFavoriteStories] = useState<FavoriteStory[]>([]);
   const [favoriteFrames, setFavoriteFrames] = useState<FavoriteFrame[]>([]);
@@ -63,7 +61,10 @@ export default function FavoritesScreen() {
   const isDark = colorScheme === 'dark';
 
   // Combine and sort favorites by timestamp (most recent first)
-  const combinedFavorites = [...favoriteStories.map(story => ({ ...story, type: 'story' as const })), ...favoriteFrames.map(frame => ({ ...frame, type: 'frame' as const }))].sort((a, b) => {
+  const combinedFavorites = [
+    ...favoriteStories.map((story) => ({ ...story, type: 'story' as const })),
+    ...favoriteFrames.map((frame) => ({ ...frame, type: 'frame' as const })),
+  ].sort((a, b) => {
     // Sort by most recently added (you might need to add timestamps to your data)
     return 0; // For now, keep original order
   });
@@ -84,7 +85,9 @@ export default function FavoritesScreen() {
       const storiesWithThumbnails = await Promise.all(
         favStories.map(async (story) => {
           const collection = await collectionsManager.getCollection(story.collectionId);
-          const languageData = collection ? await languagesManager.getLanguage(collection.language) : null;
+          const languageData = collection
+            ? await languagesManager.getLanguage(collection.language)
+            : null;
           return {
             ...story,
             collectionDisplayName: collection?.displayName || story.collectionId,
@@ -101,7 +104,9 @@ export default function FavoritesScreen() {
         favFrames.map(async (frame) => {
           const story = await collectionsManager.getStory(frame.collectionId, frame.storyNumber);
           const collection = await collectionsManager.getCollection(frame.collectionId);
-          const languageData = collection ? await languagesManager.getLanguage(collection.language) : null;
+          const languageData = collection
+            ? await languagesManager.getLanguage(collection.language)
+            : null;
           return {
             ...frame,
             storyTitle: story?.title || `Story ${frame.storyNumber}`,
@@ -118,7 +123,9 @@ export default function FavoritesScreen() {
         allMarkers.map(async (marker) => {
           const story = await collectionsManager.getStory(marker.collectionId, marker.storyNumber);
           const collection = await collectionsManager.getCollection(marker.collectionId);
-          const languageData = collection ? await languagesManager.getLanguage(collection.language) : null;
+          const languageData = collection
+            ? await languagesManager.getLanguage(collection.language)
+            : null;
           return {
             ...marker,
             storyTitle: story?.title || `Story ${marker.storyNumber}`,
@@ -140,7 +147,9 @@ export default function FavoritesScreen() {
             comment.storyNumber
           );
           const collection = await collectionsManager.getCollection(comment.collectionId);
-          const languageData = collection ? await languagesManager.getLanguage(collection.language) : null;
+          const languageData = collection
+            ? await languagesManager.getLanguage(collection.language)
+            : null;
           return {
             ...comment,
             storyTitle: story?.title || `Story ${comment.storyNumber}`,
@@ -172,7 +181,9 @@ export default function FavoritesScreen() {
       const storiesWithThumbnails = await Promise.all(
         favStories.map(async (story) => {
           const collection = await collectionsManager.getCollection(story.collectionId);
-          const languageData = collection ? await languagesManager.getLanguage(collection.language) : null;
+          const languageData = collection
+            ? await languagesManager.getLanguage(collection.language)
+            : null;
           return {
             ...story,
             collectionDisplayName: collection?.displayName || story.collectionId,
@@ -189,7 +200,9 @@ export default function FavoritesScreen() {
         favFrames.map(async (frame) => {
           const story = await collectionsManager.getStory(frame.collectionId, frame.storyNumber);
           const collection = await collectionsManager.getCollection(frame.collectionId);
-          const languageData = collection ? await languagesManager.getLanguage(collection.language) : null;
+          const languageData = collection
+            ? await languagesManager.getLanguage(collection.language)
+            : null;
           return {
             ...frame,
             storyTitle: story?.title || `Story ${frame.storyNumber}`,
@@ -206,7 +219,9 @@ export default function FavoritesScreen() {
         allMarkers.map(async (marker) => {
           const story = await collectionsManager.getStory(marker.collectionId, marker.storyNumber);
           const collection = await collectionsManager.getCollection(marker.collectionId);
-          const languageData = collection ? await languagesManager.getLanguage(collection.language) : null;
+          const languageData = collection
+            ? await languagesManager.getLanguage(collection.language)
+            : null;
           return {
             ...marker,
             storyTitle: story?.title || `Story ${marker.storyNumber}`,
@@ -228,7 +243,9 @@ export default function FavoritesScreen() {
             comment.storyNumber
           );
           const collection = await collectionsManager.getCollection(comment.collectionId);
-          const languageData = collection ? await languagesManager.getLanguage(collection.language) : null;
+          const languageData = collection
+            ? await languagesManager.getLanguage(collection.language)
+            : null;
           return {
             ...comment,
             storyTitle: story?.title || `Story ${comment.storyNumber}`,
@@ -293,19 +310,18 @@ export default function FavoritesScreen() {
 
   const renderFavoriteStory = ({ item }: { item: FavoriteStory }) => {
     const sourceReference = item.metadata?.sourceReference;
-    
+
     return (
       <TouchableOpacity
         onPress={() => navigateToFavoriteStory(item)}
-        className={`mx-4 mb-6 overflow-hidden rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-lg border ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
+        className={`mx-4 mb-6 overflow-hidden rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-white'} border shadow-lg ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
         <View className="relative">
           <Image source={{ uri: item.thumbnailUrl }} className="h-48 w-full" resizeMode="cover" />
           {/* Story badge with icon and number */}
-          <View className={`absolute top-3 ${item.isRTL ? 'left-3' : 'right-3'} flex-row items-center rounded-full px-3 py-2 ${isDark ? 'bg-blue-600/90' : 'bg-blue-500/90'}`}>
+          <View
+            className={`absolute top-3 ${item.isRTL ? 'left-3' : 'right-3'} flex-row items-center rounded-full px-3 py-2 ${isDark ? 'bg-blue-600/90' : 'bg-blue-500/90'}`}>
             <MaterialIcons name="menu-book" size={16} color="#FFFFFF" />
-            <Text className="ml-1 text-sm font-bold text-white">
-              {item.storyNumber}
-            </Text>
+            <Text className="ml-1 text-sm font-bold text-white">{item.storyNumber}</Text>
           </View>
         </View>
         <View className="p-4">
@@ -315,7 +331,7 @@ export default function FavoritesScreen() {
             numberOfLines={1}>
             {item.title}
           </Text>
-          
+
           {/* Source Reference */}
           {sourceReference && (
             <TouchableOpacity
@@ -331,7 +347,7 @@ export default function FavoritesScreen() {
               </Text>
             </TouchableOpacity>
           )}
-          
+
           <Text
             className={`${sourceReference ? 'mt-1' : 'mt-2'} text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}
             style={{ textAlign: item.isRTL ? 'right' : 'left' }}>
@@ -345,11 +361,12 @@ export default function FavoritesScreen() {
   const renderFavoriteFrame = ({ item }: { item: FavoriteFrame }) => (
     <TouchableOpacity
       onPress={() => navigateToFrame(item)}
-      className={`mx-4 mb-6 overflow-hidden rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-lg border ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
+      className={`mx-4 mb-6 overflow-hidden rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-white'} border shadow-lg ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
       <View className="relative">
         <Image source={{ uri: item.imageUrl }} className="h-48 w-full" resizeMode="cover" />
         {/* Frame badge with icon and reference */}
-        <View className={`absolute top-3 ${item.isRTL ? 'left-3' : 'right-3'} flex-row items-center rounded-full px-3 py-2 ${isDark ? 'bg-red-600/90' : 'bg-red-500/90'}`}>
+        <View
+          className={`absolute top-3 ${item.isRTL ? 'left-3' : 'right-3'} flex-row items-center rounded-full px-3 py-2 ${isDark ? 'bg-red-600/90' : 'bg-red-500/90'}`}>
           <MaterialIcons name="photo" size={16} color="#FFFFFF" />
           <Text className="ml-1 text-sm font-bold text-white">
             {item.storyNumber}:{item.frameNumber}
@@ -384,7 +401,6 @@ export default function FavoritesScreen() {
     <TouchableOpacity
       onPress={() => navigateToMarker(item)}
       className={`mx-4 mb-4 flex-row items-center rounded-xl p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} border shadow-lg ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
-
       {/* Colored marker indicator */}
       <View
         className="mr-4 h-12 w-12 items-center justify-center rounded-xl"
@@ -442,9 +458,9 @@ export default function FavoritesScreen() {
     <TouchableOpacity
       onPress={() => navigateToComment(item)}
       className={`mx-4 mb-4 flex-row items-center rounded-xl p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} border shadow-lg ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
-
       {/* Note icon indicator */}
-      <View className={`mr-4 h-12 w-12 items-center justify-center rounded-xl ${isDark ? 'bg-blue-600' : 'bg-blue-500'}`}>
+      <View
+        className={`mr-4 h-12 w-12 items-center justify-center rounded-xl ${isDark ? 'bg-blue-600' : 'bg-blue-500'}`}>
         <MaterialIcons name="edit-note" size={20} color="#FFFFFF" />
       </View>
 
@@ -517,7 +533,7 @@ export default function FavoritesScreen() {
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       {/* Header with icon tabs */}
-      <View className={`px-6 pt-6 pb-4 ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
+      <View className={`px-6 pb-4 pt-6 ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
         <View className="flex-row justify-center">
           <TouchableOpacity
             onPress={() => setActiveTab('favorites')}
@@ -535,9 +551,14 @@ export default function FavoritesScreen() {
               size={24}
               color={activeTab === 'favorites' ? '#FFFFFF' : isDark ? '#9CA3AF' : '#6B7280'}
             />
-            <Text className={`mt-1 text-xs font-medium ${
-              activeTab === 'favorites' ? 'text-white' : isDark ? 'text-gray-400' : 'text-gray-600'
-            }`}>
+            <Text
+              className={`mt-1 text-xs font-medium ${
+                activeTab === 'favorites'
+                  ? 'text-white'
+                  : isDark
+                    ? 'text-gray-400'
+                    : 'text-gray-600'
+              }`}>
               {favoriteStories.length + favoriteFrames.length}
             </Text>
           </TouchableOpacity>
@@ -558,9 +579,10 @@ export default function FavoritesScreen() {
               size={24}
               color={activeTab === 'markers' ? '#FFFFFF' : isDark ? '#9CA3AF' : '#6B7280'}
             />
-            <Text className={`mt-1 text-xs font-medium ${
-              activeTab === 'markers' ? 'text-white' : isDark ? 'text-gray-400' : 'text-gray-600'
-            }`}>
+            <Text
+              className={`mt-1 text-xs font-medium ${
+                activeTab === 'markers' ? 'text-white' : isDark ? 'text-gray-400' : 'text-gray-600'
+              }`}>
               {markers.length}
             </Text>
           </TouchableOpacity>
@@ -581,9 +603,10 @@ export default function FavoritesScreen() {
               size={24}
               color={activeTab === 'comments' ? '#FFFFFF' : isDark ? '#9CA3AF' : '#6B7280'}
             />
-            <Text className={`mt-1 text-xs font-medium ${
-              activeTab === 'comments' ? 'text-white' : isDark ? 'text-gray-400' : 'text-gray-600'
-            }`}>
+            <Text
+              className={`mt-1 text-xs font-medium ${
+                activeTab === 'comments' ? 'text-white' : isDark ? 'text-gray-400' : 'text-gray-600'
+              }`}>
               {comments.length}
             </Text>
           </TouchableOpacity>
@@ -608,11 +631,7 @@ export default function FavoritesScreen() {
           />
         ) : (
           <View className="flex-1 items-center justify-center">
-            <MaterialIcons
-              name="favorite"
-              size={64}
-              color={isDark ? '#374151' : '#D1D5DB'}
-            />
+            <MaterialIcons name="favorite" size={64} color={isDark ? '#374151' : '#D1D5DB'} />
           </View>
         )
       ) : activeTab === 'markers' ? (
@@ -626,31 +645,21 @@ export default function FavoritesScreen() {
           />
         ) : (
           <View className="flex-1 items-center justify-center">
-            <MaterialIcons
-              name="bookmark"
-              size={64}
-              color={isDark ? '#374151' : '#D1D5DB'}
-            />
+            <MaterialIcons name="bookmark" size={64} color={isDark ? '#374151' : '#D1D5DB'} />
           </View>
         )
+      ) : comments.length > 0 ? (
+        <FlatList
+          data={comments}
+          renderItem={renderComment}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{ padding: 16 }}
+          showsVerticalScrollIndicator={false}
+        />
       ) : (
-        comments.length > 0 ? (
-          <FlatList
-            data={comments}
-            renderItem={renderComment}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={{ padding: 16 }}
-            showsVerticalScrollIndicator={false}
-          />
-        ) : (
-          <View className="flex-1 items-center justify-center">
-            <MaterialIcons
-              name="edit-note"
-              size={64}
-              color={isDark ? '#374151' : '#D1D5DB'}
-            />
-          </View>
-        )
+        <View className="flex-1 items-center justify-center">
+          <MaterialIcons name="edit-note" size={64} color={isDark ? '#374151' : '#D1D5DB'} />
+        </View>
       )}
     </SafeAreaView>
   );

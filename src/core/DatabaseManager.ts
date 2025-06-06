@@ -1,4 +1,5 @@
 import { eq, and, desc, asc, like, count, or, isNotNull, ne } from 'drizzle-orm';
+
 import database, { initializeDatabase } from '../db/database';
 import {
   languages,
@@ -18,7 +19,6 @@ import {
   type Frame,
   type NewFrame,
   type FrameComment,
-  type NewFrameComment
 } from '../db/schema';
 
 export class DatabaseManager {
@@ -51,8 +51,8 @@ export class DatabaseManager {
         target: languages.lc,
         set: {
           ...languageData,
-          lastUpdated: new Date().toISOString()
-        }
+          lastUpdated: new Date().toISOString(),
+        },
       });
   }
 
@@ -68,10 +68,7 @@ export class DatabaseManager {
 
   async getAllLanguages(): Promise<Language[]> {
     await this.initialize();
-    return await database
-      .select()
-      .from(languages)
-      .orderBy(asc(languages.ln));
+    return await database.select().from(languages).orderBy(asc(languages.ln));
   }
 
   async getLanguagesWithCollections(): Promise<Language[]> {
@@ -88,7 +85,7 @@ export class DatabaseManager {
         pk: languages.pk,
         alt: languages.alt,
         cc: languages.cc,
-        lastUpdated: languages.lastUpdated
+        lastUpdated: languages.lastUpdated,
       })
       .from(languages)
       .innerJoin(collections, eq(languages.lc, collections.language))
@@ -104,7 +101,10 @@ export class DatabaseManager {
       .orderBy(asc(languages.ln));
   }
 
-  async markLanguageAsHavingCollections(languageCode: string, hasCollections: boolean): Promise<void> {
+  async markLanguageAsHavingCollections(
+    languageCode: string,
+    hasCollections: boolean
+  ): Promise<void> {
     // This method is no longer needed since we don't store hasCollections in the database
     // Keeping it for backward compatibility but it's a no-op
     await this.initialize();
@@ -129,9 +129,7 @@ export class DatabaseManager {
 
   async deleteLanguage(languageCode: string): Promise<void> {
     await this.initialize();
-    await database
-      .delete(languages)
-      .where(eq(languages.lc, languageCode));
+    await database.delete(languages).where(eq(languages.lc, languageCode));
   }
 
   async getLanguageStats(): Promise<{
@@ -176,8 +174,8 @@ export class DatabaseManager {
         target: repositoryOwners.username,
         set: {
           ...ownerData,
-          lastUpdated: new Date().toISOString()
-        }
+          lastUpdated: new Date().toISOString(),
+        },
       });
   }
 
@@ -193,10 +191,7 @@ export class DatabaseManager {
 
   async getAllRepositoryOwners(): Promise<RepositoryOwner[]> {
     await this.initialize();
-    return await database
-      .select()
-      .from(repositoryOwners)
-      .orderBy(asc(repositoryOwners.username));
+    return await database.select().from(repositoryOwners).orderBy(asc(repositoryOwners.username));
   }
 
   async getRepositoryOwnersByType(ownerType: 'user' | 'organization'): Promise<RepositoryOwner[]> {
@@ -226,9 +221,7 @@ export class DatabaseManager {
 
   async deleteRepositoryOwner(username: string): Promise<void> {
     await this.initialize();
-    await database
-      .delete(repositoryOwners)
-      .where(eq(repositoryOwners.username, username));
+    await database.delete(repositoryOwners).where(eq(repositoryOwners.username, username));
   }
 
   async getRepositoryOwnerStats(): Promise<{
@@ -257,10 +250,7 @@ export class DatabaseManager {
     const withWebsiteResult = await database
       .select({ count: count() })
       .from(repositoryOwners)
-      .where(and(
-        isNotNull(repositoryOwners.website),
-        ne(repositoryOwners.website, '')
-      ));
+      .where(and(isNotNull(repositoryOwners.website), ne(repositoryOwners.website, '')));
     const withWebsite = withWebsiteResult[0]?.count || 0;
 
     return { total, users, organizations, withWebsite };
@@ -276,27 +266,20 @@ export class DatabaseManager {
         target: collections.id,
         set: {
           ...collectionData,
-          lastUpdated: new Date().toISOString()
-        }
+          lastUpdated: new Date().toISOString(),
+        },
       });
   }
 
   async getCollection(id: string): Promise<Collection | null> {
     await this.initialize();
-    const result = await database
-      .select()
-      .from(collections)
-      .where(eq(collections.id, id))
-      .limit(1);
+    const result = await database.select().from(collections).where(eq(collections.id, id)).limit(1);
     return result[0] || null;
   }
 
   async getAllCollections(): Promise<Collection[]> {
     await this.initialize();
-    return await database
-      .select()
-      .from(collections)
-      .orderBy(asc(collections.displayName));
+    return await database.select().from(collections).orderBy(asc(collections.displayName));
   }
 
   async getCollectionsByLanguage(languageCode: string): Promise<Collection[]> {
@@ -328,17 +311,12 @@ export class DatabaseManager {
 
   async markCollectionAsDownloaded(id: string, isDownloaded: boolean): Promise<void> {
     await this.initialize();
-    await database
-      .update(collections)
-      .set({ isDownloaded })
-      .where(eq(collections.id, id));
+    await database.update(collections).set({ isDownloaded }).where(eq(collections.id, id));
   }
 
   async deleteCollection(id: string): Promise<void> {
     await this.initialize();
-    await database
-      .delete(collections)
-      .where(eq(collections.id, id));
+    await database.delete(collections).where(eq(collections.id, id));
   }
 
   // Story Operations
@@ -349,7 +327,7 @@ export class DatabaseManager {
       .values(storyData)
       .onConflictDoUpdate({
         target: [stories.collection_id, stories.story_number],
-        set: storyData
+        set: storyData,
       });
   }
 
@@ -358,12 +336,7 @@ export class DatabaseManager {
     const result = await database
       .select()
       .from(stories)
-      .where(
-        and(
-          eq(stories.collection_id, collectionId),
-          eq(stories.story_number, storyNumber)
-        )
-      )
+      .where(and(eq(stories.collection_id, collectionId), eq(stories.story_number, storyNumber)))
       .limit(1);
     return result[0] || null;
   }
@@ -393,12 +366,7 @@ export class DatabaseManager {
       await database
         .update(stories)
         .set({ is_favorite: !story.is_favorite })
-        .where(
-          and(
-            eq(stories.collection_id, collectionId),
-            eq(stories.story_number, storyNumber)
-          )
-        );
+        .where(and(eq(stories.collection_id, collectionId), eq(stories.story_number, storyNumber)));
     }
   }
 
@@ -410,11 +378,15 @@ export class DatabaseManager {
       .values(frameData)
       .onConflictDoUpdate({
         target: [frames.collection_id, frames.story_number, frames.frame_number],
-        set: frameData
+        set: frameData,
       });
   }
 
-  async getFrame(collectionId: string, storyNumber: number, frameNumber: number): Promise<Frame | null> {
+  async getFrame(
+    collectionId: string,
+    storyNumber: number,
+    frameNumber: number
+  ): Promise<Frame | null> {
     await this.initialize();
     const result = await database
       .select()
@@ -435,12 +407,7 @@ export class DatabaseManager {
     return await database
       .select()
       .from(frames)
-      .where(
-        and(
-          eq(frames.collection_id, collectionId),
-          eq(frames.story_number, storyNumber)
-        )
-      )
+      .where(and(eq(frames.collection_id, collectionId), eq(frames.story_number, storyNumber)))
       .orderBy(asc(frames.frame_number));
   }
 
@@ -453,7 +420,11 @@ export class DatabaseManager {
       .orderBy(asc(frames.collection_id), asc(frames.story_number), asc(frames.frame_number));
   }
 
-  async toggleFrameFavorite(collectionId: string, storyNumber: number, frameNumber: number): Promise<void> {
+  async toggleFrameFavorite(
+    collectionId: string,
+    storyNumber: number,
+    frameNumber: number
+  ): Promise<void> {
     await this.initialize();
     const frame = await this.getFrame(collectionId, storyNumber, frameNumber);
     if (frame) {
@@ -478,12 +449,7 @@ export class DatabaseManager {
       return await database
         .select()
         .from(frames)
-        .where(
-          and(
-            eq(frames.collection_id, collectionId),
-            like(frames.text, searchTerm)
-          )
-        )
+        .where(and(eq(frames.collection_id, collectionId), like(frames.text, searchTerm)))
         .orderBy(asc(frames.collection_id), asc(frames.story_number), asc(frames.frame_number));
     } else {
       return await database
@@ -505,19 +471,21 @@ export class DatabaseManager {
     const id = `comment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const now = new Date().toISOString();
 
-    await database
-      .insert(frameComments)
-      .values({
-        ...commentData,
-        id,
-        created_at: now,
-        updated_at: now
-      });
+    await database.insert(frameComments).values({
+      ...commentData,
+      id,
+      created_at: now,
+      updated_at: now,
+    });
 
     return id;
   }
 
-  async getFrameComments(collectionId: string, storyNumber: number, frameNumber: number): Promise<FrameComment[]> {
+  async getFrameComments(
+    collectionId: string,
+    storyNumber: number,
+    frameNumber: number
+  ): Promise<FrameComment[]> {
     await this.initialize();
     return await database
       .select()
@@ -538,27 +506,26 @@ export class DatabaseManager {
       .update(frameComments)
       .set({
         comment: newComment,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .where(eq(frameComments.id, commentId));
   }
 
   async deleteComment(commentId: string): Promise<void> {
     await this.initialize();
-    await database
-      .delete(frameComments)
-      .where(eq(frameComments.id, commentId));
+    await database.delete(frameComments).where(eq(frameComments.id, commentId));
   }
 
   async getAllComments(): Promise<FrameComment[]> {
     await this.initialize();
-    return await database
-      .select()
-      .from(frameComments)
-      .orderBy(desc(frameComments.created_at));
+    return await database.select().from(frameComments).orderBy(desc(frameComments.created_at));
   }
 
-  async getCommentsCount(collectionId: string, storyNumber: number, frameNumber: number): Promise<number> {
+  async getCommentsCount(
+    collectionId: string,
+    storyNumber: number,
+    frameNumber: number
+  ): Promise<number> {
     await this.initialize();
     const result = await database
       .select({ count: count() })

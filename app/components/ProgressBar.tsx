@@ -41,7 +41,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 
   return (
     <View className="w-full">
-      <View className="flex-row justify-between mb-1">
+      <View className="mb-1 flex-row justify-between">
         <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
           {getStatusText()}
         </Text>
@@ -56,7 +56,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
         />
       </View>
       {(size || timeRemaining) && (
-        <View className="flex-row justify-between mt-1">
+        <View className="mt-1 flex-row justify-between">
           {size && (
             <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
               {formatSize(size)}

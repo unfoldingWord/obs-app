@@ -38,7 +38,7 @@ export class UnifiedLanguagesManager {
     return {
       ...language,
       ld: language.ld as 'ltr' | 'rtl',
-      lastUpdated: new Date(language.lastUpdated)
+      lastUpdated: new Date(language.lastUpdated),
     };
   }
 
@@ -55,7 +55,7 @@ export class UnifiedLanguagesManager {
       pk: languageData.pk || 0,
       alt: languageData.alt || [],
       cc: languageData.cc || [],
-      lastUpdated: languageData.lastUpdated?.toISOString() || new Date().toISOString()
+      lastUpdated: languageData.lastUpdated?.toISOString() || new Date().toISOString(),
     };
   }
 
@@ -71,17 +71,17 @@ export class UnifiedLanguagesManager {
 
   async getAllLanguages(): Promise<LanguageCompatible[]> {
     const languages = await this.databaseManager.getAllLanguages();
-    return languages.map(lang => this.languageToCompatible(lang));
+    return languages.map((lang) => this.languageToCompatible(lang));
   }
 
   async getLanguagesWithCollections(): Promise<LanguageCompatible[]> {
     const languages = await this.databaseManager.getLanguagesWithCollections();
-    return languages.map(lang => this.languageToCompatible(lang));
+    return languages.map((lang) => this.languageToCompatible(lang));
   }
 
   async getGatewayLanguages(): Promise<LanguageCompatible[]> {
     const languages = await this.databaseManager.getGatewayLanguages();
-    return languages.map(lang => this.languageToCompatible(lang));
+    return languages.map((lang) => this.languageToCompatible(lang));
   }
 
   async markLanguageAsHavingCollections(languageCode: string): Promise<void> {
@@ -98,7 +98,7 @@ export class UnifiedLanguagesManager {
 
   async searchLanguages(query: string): Promise<LanguageCompatible[]> {
     const languages = await this.databaseManager.searchLanguages(query);
-    return languages.map(lang => this.languageToCompatible(lang));
+    return languages.map((lang) => this.languageToCompatible(lang));
   }
 
   async deleteLanguage(languageCode: string): Promise<void> {

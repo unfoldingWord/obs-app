@@ -1,12 +1,12 @@
 import { injectable, inject } from 'inversify';
 import JSZip from 'jszip';
-import JSZipUtils from 'jszip-utils';
-import { IStorage } from '../interfaces/IStorage';
+
+import { TYPES } from '../container';
 import { IFileSystem } from '../interfaces/IFileSystem';
 import { INetworkService } from '../interfaces/INetworkService';
 import { IRepositoryService } from '../interfaces/IRepositoryService';
+import { IStorage } from '../interfaces/IStorage';
 import { Repository } from '../interfaces/Repository';
-import { TYPES } from '../container';
 import { warn } from '../utils';
 
 @injectable()
@@ -84,7 +84,9 @@ export class RepositoryService implements IRepositoryService {
         await this.fileSystem.makeDirectoryAsync(dirUri, { intermediates: true });
       }
     } catch (error) {
-      warn(`Error ensuring directory exists: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Error ensuring directory exists: ${error instanceof Error ? error.message : String(error)}`
+      );
       throw error;
     }
   }
@@ -111,7 +113,9 @@ export class RepositoryService implements IRepositoryService {
           return localRepo;
         }
       } catch (error) {
-        warn(`Error loading repository from local storage: ${error instanceof Error ? error.message : String(error)}`);
+        warn(
+          `Error loading repository from local storage: ${error instanceof Error ? error.message : String(error)}`
+        );
       }
     }
 
@@ -252,7 +256,9 @@ export class RepositoryService implements IRepositoryService {
         })
       );
     } catch (error) {
-      warn(`Error searching repositories: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Error searching repositories: ${error instanceof Error ? error.message : String(error)}`
+      );
       const repos = await this.getDownloadedRepositories();
       if (language) {
         return repos.filter((repo) => repo.language === language);
@@ -280,7 +286,9 @@ export class RepositoryService implements IRepositoryService {
       }
 
       const entryData = await entryResponse.json();
-      const zipballUrl = entryData?.zipball_url || `https://git.door43.org/${owner}/${repositoryId}/archive/${version}.zip`;
+      const zipballUrl =
+        entryData?.zipball_url ||
+        `https://git.door43.org/${owner}/${repositoryId}/archive/${version}.zip`;
 
       const downloadResponse = await this.network.fetch(zipballUrl);
       if (!downloadResponse.ok) {
@@ -322,7 +330,9 @@ export class RepositoryService implements IRepositoryService {
         }
       }
     } catch (error) {
-      warn(`Error downloading repository: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Error downloading repository: ${error instanceof Error ? error.message : String(error)}`
+      );
       throw error;
     }
   }
@@ -403,7 +413,9 @@ export class RepositoryService implements IRepositoryService {
             isDownloaded: true,
           });
         } catch (error) {
-          warn(`Error loading repository ${repo.repositoryId}: ${error instanceof Error ? error.message : String(error)}`);
+          warn(
+            `Error loading repository ${repo.repositoryId}: ${error instanceof Error ? error.message : String(error)}`
+          );
           repositories.push({
             id: repo.repositoryId,
             owner: repo.owner,
@@ -418,7 +430,9 @@ export class RepositoryService implements IRepositoryService {
 
       return repositories;
     } catch (error) {
-      warn(`Error getting downloaded repositories: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Error getting downloaded repositories: ${error instanceof Error ? error.message : String(error)}`
+      );
       return [];
     }
   }
@@ -451,7 +465,9 @@ export class RepositoryService implements IRepositoryService {
 
       return latestVersion !== currentVersion;
     } catch (error) {
-      warn(`Error checking for repository updates: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Error checking for repository updates: ${error instanceof Error ? error.message : String(error)}`
+      );
       return false;
     }
   }
@@ -541,7 +557,9 @@ export class RepositoryService implements IRepositoryService {
 
         return true;
       } catch (error) {
-        warn(`Corrupted metadata detected: ${error instanceof Error ? error.message : String(error)}`);
+        warn(
+          `Corrupted metadata detected: ${error instanceof Error ? error.message : String(error)}`
+        );
 
         const repairedMetadata = {
           id: repositoryId,
@@ -559,7 +577,9 @@ export class RepositoryService implements IRepositoryService {
         return true;
       }
     } catch (error) {
-      warn(`Error validating repository metadata: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Error validating repository metadata: ${error instanceof Error ? error.message : String(error)}`
+      );
       return false;
     }
   }
@@ -588,7 +608,9 @@ export class RepositoryService implements IRepositoryService {
 
       return repository;
     } catch (error) {
-      warn(`Error getting local repository: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Error getting local repository: ${error instanceof Error ? error.message : String(error)}`
+      );
       return null;
     }
   }

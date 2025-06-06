@@ -3,9 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Image, TouchableOpacity } from 'react-native';
 
 import { FrameBadge } from './FrameBadge';
-import { UserProgress } from '../core/storyManager';
 import { CollectionsManager, Story, Collection } from '../core/CollectionsManager';
 import { UnifiedLanguagesManager } from '../core/UnifiedLanguagesManager';
+import { UserProgress } from '../core/storyManager';
 
 interface ContinueReadingProps {
   lastReadProgress: UserProgress;
@@ -39,7 +39,9 @@ export function ContinueReading({ lastReadProgress, onPress, isDark }: ContinueR
         setStory(storyData);
 
         // Fetch collection details
-        const collectionData = await collectionsManager.getCollection(lastReadProgress.collectionId);
+        const collectionData = await collectionsManager.getCollection(
+          lastReadProgress.collectionId
+        );
         setCollection(collectionData);
 
         // Get language direction
@@ -59,13 +61,15 @@ export function ContinueReading({ lastReadProgress, onPress, isDark }: ContinueR
     <View className="mb-4">
       <TouchableOpacity
         onPress={onPress}
-        className={`overflow-hidden rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-lg border ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
+        className={`overflow-hidden rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-white'} border shadow-lg ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
         <Image source={image} style={{ width: '100%', height: 120 }} resizeMode="cover" />
         <View className="p-4">
           <View
-            className="flex-row items-start justify-between mb-3"
+            className="mb-3 flex-row items-start justify-between"
             style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-            <View className="flex-1" style={{ paddingRight: isRTL ? 0 : 12, paddingLeft: isRTL ? 12 : 0 }}>
+            <View
+              className="flex-1"
+              style={{ paddingRight: isRTL ? 0 : 12, paddingLeft: isRTL ? 12 : 0 }}>
               <Text
                 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}
                 style={{ textAlign: isRTL ? 'right' : 'left' }}>

@@ -1,3 +1,4 @@
+import { MaterialIcons } from '@expo/vector-icons';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -10,7 +11,6 @@ import {
   ActivityIndicator,
   useColorScheme,
 } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
 
 import {
   CollectionImportExportManager,
@@ -90,7 +90,7 @@ export const CollectionImportExportUI: React.FC<Props> = ({
   const loadCollection = async () => {
     try {
       const allCollections = await collectionsManager.getLocalCollections();
-      const collection = allCollections.find(c => c.id === selectedCollectionId);
+      const collection = allCollections.find((c) => c.id === selectedCollectionId);
       if (collection) {
         setCollection(collection);
       }
@@ -126,8 +126,10 @@ export const CollectionImportExportUI: React.FC<Props> = ({
 
       // For now, we'll just show a placeholder message
       // In a real implementation, you would use expo-file-system and expo-sharing
-      Alert.alert('Export Feature', 'Export functionality requires additional packages:\n\n• expo-document-picker\n• expo-sharing\n• expo-file-system\n\nPlease install these packages to enable import/export.');
-
+      Alert.alert(
+        'Export Feature',
+        'Export functionality requires additional packages:\n\n• expo-document-picker\n• expo-sharing\n• expo-file-system\n\nPlease install these packages to enable import/export.'
+      );
     } catch (error) {
       console.error('Export error:', error);
       Alert.alert('Export Failed', error instanceof Error ? error.message : 'Unknown error');
@@ -139,8 +141,10 @@ export const CollectionImportExportUI: React.FC<Props> = ({
   const handleImport = async () => {
     try {
       // For now, we'll just show a placeholder message
-      Alert.alert('Import Feature', 'Import functionality requires additional packages:\n\n• expo-document-picker\n• expo-sharing\n• expo-file-system\n\nPlease install these packages to enable import/export.');
-
+      Alert.alert(
+        'Import Feature',
+        'Import functionality requires additional packages:\n\n• expo-document-picker\n• expo-sharing\n• expo-file-system\n\nPlease install these packages to enable import/export.'
+      );
     } catch (error) {
       console.error('Import error:', error);
       Alert.alert('Import Failed', error instanceof Error ? error.message : 'Unknown error');
@@ -162,11 +166,11 @@ export const CollectionImportExportUI: React.FC<Props> = ({
 
     return (
       <View className="mb-6">
-        <Text className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+        <Text className={`mb-4 text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
           Collection to Export
         </Text>
 
-        <View className={`p-4 rounded-lg ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
+        <View className={`rounded-lg p-4 ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
           <Text className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
             {collection.displayName}
           </Text>
@@ -180,33 +184,33 @@ export const CollectionImportExportUI: React.FC<Props> = ({
 
   const renderExportOptions = () => (
     <View className="mb-6">
-      <Text className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+      <Text className={`mb-4 text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
         Export Options
       </Text>
 
       <View className="space-y-4">
-        <View className="flex-row items-center justify-between mb-4">
+        <View className="mb-4 flex-row items-center justify-between">
           <Text className={`${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
             Include user data (bookmarks, progress)
           </Text>
           <Switch
             value={exportOptions.includeUserData}
             onValueChange={(value) =>
-              setExportOptions(prev => ({ ...prev, includeUserData: value }))
+              setExportOptions((prev) => ({ ...prev, includeUserData: value }))
             }
             trackColor={{ false: '#767577', true: '#81b0ff' }}
             thumbColor={exportOptions.includeUserData ? '#f5dd4b' : '#f4f3f4'}
           />
         </View>
 
-        <View className="flex-row items-center justify-between mb-4">
+        <View className="mb-4 flex-row items-center justify-between">
           <Text className={`${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
             Include thumbnails
           </Text>
           <Switch
             value={exportOptions.includeThumbnails}
             onValueChange={(value) =>
-              setExportOptions(prev => ({ ...prev, includeThumbnails: value }))
+              setExportOptions((prev) => ({ ...prev, includeThumbnails: value }))
             }
             trackColor={{ false: '#767577', true: '#81b0ff' }}
             thumbColor={exportOptions.includeThumbnails ? '#f5dd4b' : '#f4f3f4'}
@@ -215,8 +219,8 @@ export const CollectionImportExportUI: React.FC<Props> = ({
       </View>
 
       {exportPreview && (
-        <View className={`mt-4 p-4 rounded-lg ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
-          <Text className={`font-semibold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+        <View className={`mt-4 rounded-lg p-4 ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
+          <Text className={`mb-2 font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
             Export Preview
           </Text>
           <Text className={`${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
@@ -230,57 +234,54 @@ export const CollectionImportExportUI: React.FC<Props> = ({
 
       <TouchableOpacity
         onPress={generateExportPreview}
-        className={`mt-4 py-2 px-4 rounded-lg ${isDark ? 'bg-blue-600' : 'bg-blue-500'}`}
-        disabled={!selectedCollectionId}
-      >
-        <Text className="text-white text-center font-semibold">Generate Preview</Text>
+        className={`mt-4 rounded-lg px-4 py-2 ${isDark ? 'bg-blue-600' : 'bg-blue-500'}`}
+        disabled={!selectedCollectionId}>
+        <Text className="text-center font-semibold text-white">Generate Preview</Text>
       </TouchableOpacity>
     </View>
   );
 
   const renderImportOptions = () => (
     <View className="mb-6">
-      <Text className={`text-lg font-semibold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+      <Text className={`mb-4 text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
         Import Options
       </Text>
 
       <View className="space-y-4">
-        <View className="flex-row items-center justify-between mb-4">
+        <View className="mb-4 flex-row items-center justify-between">
           <Text className={`${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
             Overwrite existing collections
           </Text>
           <Switch
             value={importOptions.overwriteExisting}
             onValueChange={(value) =>
-              setImportOptions(prev => ({ ...prev, overwriteExisting: value }))
+              setImportOptions((prev) => ({ ...prev, overwriteExisting: value }))
             }
             trackColor={{ false: '#767577', true: '#81b0ff' }}
             thumbColor={importOptions.overwriteExisting ? '#f5dd4b' : '#f4f3f4'}
           />
         </View>
 
-        <View className="flex-row items-center justify-between mb-4">
-          <Text className={`${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-            Merge user data
-          </Text>
+        <View className="mb-4 flex-row items-center justify-between">
+          <Text className={`${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Merge user data</Text>
           <Switch
             value={importOptions.mergeUserData}
             onValueChange={(value) =>
-              setImportOptions(prev => ({ ...prev, mergeUserData: value }))
+              setImportOptions((prev) => ({ ...prev, mergeUserData: value }))
             }
             trackColor={{ false: '#767577', true: '#81b0ff' }}
             thumbColor={importOptions.mergeUserData ? '#f5dd4b' : '#f4f3f4'}
           />
         </View>
 
-        <View className="flex-row items-center justify-between mb-4">
+        <View className="mb-4 flex-row items-center justify-between">
           <Text className={`${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
             Skip version check
           </Text>
           <Switch
             value={importOptions.skipVersionCheck}
             onValueChange={(value) =>
-              setImportOptions(prev => ({ ...prev, skipVersionCheck: value }))
+              setImportOptions((prev) => ({ ...prev, skipVersionCheck: value }))
             }
             trackColor={{ false: '#767577', true: '#81b0ff' }}
             thumbColor={importOptions.skipVersionCheck ? '#f5dd4b' : '#f4f3f4'}
@@ -296,8 +297,8 @@ export const CollectionImportExportUI: React.FC<Props> = ({
     if (!isProcessing && !progress.isComplete) return null;
 
     return (
-      <View className={`mb-6 p-4 rounded-lg ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
-        <View className="flex-row items-center mb-2">
+      <View className={`mb-6 rounded-lg p-4 ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
+        <View className="mb-2 flex-row items-center">
           {!progress.isComplete && <ActivityIndicator size="small" color="#3B82F6" />}
           <Text className={`ml-2 font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
             {progress.status}
@@ -338,9 +339,9 @@ export const CollectionImportExportUI: React.FC<Props> = ({
   return (
     <Modal visible={visible} transparent animationType="slide">
       <View className="flex-1 bg-black/50">
-        <View className={`flex-1 mt-20 rounded-t-3xl ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
+        <View className={`mt-20 flex-1 rounded-t-3xl ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
           {/* Header */}
-          <View className="flex-row items-center justify-between p-6 border-b border-gray-200">
+          <View className="flex-row items-center justify-between border-b border-gray-200 p-6">
             <Text className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
               {mode === 'export' ? 'Export Collections' : 'Import Collections'}
             </Text>
@@ -358,20 +359,27 @@ export const CollectionImportExportUI: React.FC<Props> = ({
           </ScrollView>
 
           {/* Actions */}
-          <View className={`p-6 border-t ${isDark ? 'border-gray-600' : 'border-gray-200'}`}>
+          <View className={`border-t p-6 ${isDark ? 'border-gray-600' : 'border-gray-200'}`}>
             <TouchableOpacity
               onPress={mode === 'export' ? handleExport : handleImport}
               disabled={isProcessing || !selectedCollectionId}
-              className={`py-4 rounded-xl ${
+              className={`rounded-xl py-4 ${
                 isProcessing || !selectedCollectionId
-                  ? isDark ? 'bg-gray-600' : 'bg-gray-300'
-                  : isDark ? 'bg-blue-600' : 'bg-blue-500'
-              }`}
-            >
-              <Text className="text-white text-center text-lg font-semibold">
+                  ? isDark
+                    ? 'bg-gray-600'
+                    : 'bg-gray-300'
+                  : isDark
+                    ? 'bg-blue-600'
+                    : 'bg-blue-500'
+              }`}>
+              <Text className="text-center text-lg font-semibold text-white">
                 {isProcessing
-                  ? mode === 'export' ? 'Exporting...' : 'Importing...'
-                  : mode === 'export' ? 'Export Collections' : 'Select File to Import'}
+                  ? mode === 'export'
+                    ? 'Exporting...'
+                    : 'Importing...'
+                  : mode === 'export'
+                    ? 'Export Collections'
+                    : 'Select File to Import'}
               </Text>
             </TouchableOpacity>
           </View>

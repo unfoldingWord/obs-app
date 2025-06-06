@@ -1,6 +1,6 @@
+import { MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
 import { View, Text, TouchableOpacity, useColorScheme } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
 
 interface CollectionCardProps {
   title: string;
@@ -63,19 +63,14 @@ export const CollectionCard: React.FC<CollectionCardProps> = ({
   return (
     <TouchableOpacity
       onPress={onPress}
-      className={`p-4 mb-2 rounded-lg ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-sm`}
-    >
-      <View className="flex-row justify-between items-center">
+      className={`mb-2 rounded-lg p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-sm`}>
+      <View className="flex-row items-center justify-between">
         <Text className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
           {title}
         </Text>
         <View className="flex-row space-x-2">
           <TouchableOpacity onPress={onDownload}>
-            <MaterialIcons
-              name={getDownloadIcon()}
-              size={24}
-              className={getDownloadColor()}
-            />
+            <MaterialIcons name={getDownloadIcon()} size={24} className={getDownloadColor()} />
           </TouchableOpacity>
           <TouchableOpacity onPress={onShare}>
             <MaterialIcons

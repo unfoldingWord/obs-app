@@ -97,21 +97,21 @@ export class LanguagesManager {
     if (!this.initialized) await this.initialize();
 
     const dbLanguages = await this.databaseManager.getAllLanguages();
-    return dbLanguages.map(lang => this.convertFromDb(lang));
+    return dbLanguages.map((lang) => this.convertFromDb(lang));
   }
 
   async getLanguagesWithCollections(): Promise<Language[]> {
     if (!this.initialized) await this.initialize();
 
     const dbLanguages = await this.databaseManager.getLanguagesWithCollections();
-    return dbLanguages.map(lang => this.convertFromDb(lang));
+    return dbLanguages.map((lang) => this.convertFromDb(lang));
   }
 
   async getGatewayLanguages(): Promise<Language[]> {
     if (!this.initialized) await this.initialize();
 
     const dbLanguages = await this.databaseManager.getGatewayLanguages();
-    return dbLanguages.map(lang => this.convertFromDb(lang));
+    return dbLanguages.map((lang) => this.convertFromDb(lang));
   }
 
   async markLanguageAsHavingCollections(languageCode: string): Promise<void> {
@@ -151,7 +151,7 @@ export class LanguagesManager {
     if (!this.initialized) await this.initialize();
 
     const dbLanguages = await this.databaseManager.searchLanguages(query);
-    return dbLanguages.map(lang => this.convertFromDb(lang));
+    return dbLanguages.map((lang) => this.convertFromDb(lang));
   }
 
   async deleteLanguage(languageCode: string): Promise<void> {

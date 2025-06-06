@@ -1,4 +1,5 @@
 import * as SQLite from 'expo-sqlite';
+
 import { DatabaseManager } from '../core/DatabaseManager';
 import { warn } from '../core/utils';
 
@@ -42,7 +43,7 @@ export class DataMigration {
       // Check if migration marker exists in AsyncStorage
       const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
       const migrationCompleted = await AsyncStorage.getItem('@migration_completed');
-      
+
       if (migrationCompleted === 'true') {
         return true;
       }
@@ -50,7 +51,7 @@ export class DataMigration {
       // Also check if we have data in the new database as a backup check
       const collections = await this.databaseManager.getAllCollections();
       const hasData = collections.length > 0;
-      
+
       if (hasData) {
         // Mark as completed if we find data but no marker
         await AsyncStorage.setItem('@migration_completed', 'true');
@@ -59,7 +60,9 @@ export class DataMigration {
 
       return false;
     } catch (error) {
-      warn(`Error checking migration status: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Error checking migration status: ${error instanceof Error ? error.message : String(error)}`
+      );
       return false;
     }
   }
@@ -68,17 +71,19 @@ export class DataMigration {
     try {
       const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
       await AsyncStorage.setItem('@migration_completed', 'true');
-      
+
       // Also add a marker in the database
       await this.databaseManager.saveLanguage({
         lc: '__migration_marker__',
         ln: 'Migration Completed',
-        ang: 'Migration Completed'
+        ang: 'Migration Completed',
       });
-      
+
       warn('📝 Migration marked as completed');
     } catch (error) {
-      warn(`Error marking migration as completed: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Error marking migration as completed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -91,7 +96,7 @@ export class DataMigration {
 
     try {
       warn('🔄 Migrating languages...');
-      
+
       const legacyLanguages = await this.getLegacyLanguages(legacyDb);
       warn(`Found ${legacyLanguages.length} languages to migrate`);
 
@@ -108,22 +113,28 @@ export class DataMigration {
             lr: this.getFieldValue(lang, 'lr', 'region') || lang.lr || '',
             pk: parseInt(this.getFieldValue(lang, 'pk', 'catalogId') || lang.pk || '0', 10),
             alt: this.parseJsonField(lang.alt) || [],
-            cc: this.parseJsonField(lang.cc) || []
+            cc: this.parseJsonField(lang.cc) || [],
           });
           migratedCount++;
         } catch (error) {
-          warn(`Error migrating language ${lang.lc}: ${error instanceof Error ? error.message : String(error)}`);
+          warn(
+            `Error migrating language ${lang.lc}: ${error instanceof Error ? error.message : String(error)}`
+          );
         }
       }
 
       warn(`✅ Successfully migrated ${migratedCount} languages`);
     } catch (error) {
-      warn(`Error during language migration: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Error during language migration: ${error instanceof Error ? error.message : String(error)}`
+      );
     } finally {
       try {
         await legacyDb.closeAsync();
       } catch (error) {
-        warn(`Error closing legacy languages database: ${error instanceof Error ? error.message : String(error)}`);
+        warn(
+          `Error closing legacy languages database: ${error instanceof Error ? error.message : String(error)}`
+        );
       }
     }
   }
@@ -137,7 +148,7 @@ export class DataMigration {
 
     try {
       warn('🔄 Migrating collections...');
-      
+
       const legacyCollections = await this.getLegacyCollections(legacyDb);
       warn(`Found ${legacyCollections.length} collections to migrate`);
 
@@ -173,14 +184,27 @@ export class DataMigration {
           // Migrate collection data
           await this.databaseManager.saveCollection({
             id: collection.id,
-            owner: owner,
-            language: this.getFieldValue(collection, 'language', 'languageCode') || collection.language,
-            displayName: this.getFieldValue(collection, 'displayName', 'name', 'title') || collection.displayName || collection.id,
+            owner,
+            language:
+              this.getFieldValue(collection, 'language', 'languageCode') || collection.language,
+            displayName:
+              this.getFieldValue(collection, 'displayName', 'name', 'title') ||
+              collection.displayName ||
+              collection.id,
             version: this.getFieldValue(collection, 'version') || collection.version || '1.0.0',
-            imageSetId: this.getFieldValue(collection, 'imageSetId', 'imageSet') || collection.imageSetId || 'default',
-            lastUpdated: this.parseDate(this.getFieldValue(collection, 'lastUpdated', 'updated_at') || collection.lastUpdated),
-            isDownloaded: Boolean(this.getFieldValue(collection, 'isDownloaded', 'downloaded') || collection.isDownloaded || false),
-            metadata: this.parseJsonField(collection.metadata) || {}
+            imageSetId:
+              this.getFieldValue(collection, 'imageSetId', 'imageSet') ||
+              collection.imageSetId ||
+              'default',
+            lastUpdated: this.parseDate(
+              this.getFieldValue(collection, 'lastUpdated', 'updated_at') || collection.lastUpdated
+            ),
+            isDownloaded: Boolean(
+              this.getFieldValue(collection, 'isDownloaded', 'downloaded') ||
+                collection.isDownloaded ||
+                false
+            ),
+            metadata: this.parseJsonField(collection.metadata) || {},
           });
 
           // Migrate stories and frames for this collection
@@ -188,18 +212,24 @@ export class DataMigration {
 
           migratedCount++;
         } catch (error) {
-          warn(`Error migrating collection ${collection.id}: ${error instanceof Error ? error.message : String(error)}`);
+          warn(
+            `Error migrating collection ${collection.id}: ${error instanceof Error ? error.message : String(error)}`
+          );
         }
       }
 
       warn(`✅ Successfully migrated ${migratedCount} collections`);
     } catch (error) {
-      warn(`Error during collection migration: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Error during collection migration: ${error instanceof Error ? error.message : String(error)}`
+      );
     } finally {
       try {
         await legacyDb.closeAsync();
       } catch (error) {
-        warn(`Error closing legacy collections database: ${error instanceof Error ? error.message : String(error)}`);
+        warn(
+          `Error closing legacy collections database: ${error instanceof Error ? error.message : String(error)}`
+        );
       }
     }
   }
@@ -216,12 +246,14 @@ export class DataMigration {
       await this.databaseManager.saveRepositoryOwner({
         username: ownerUsername,
         fullName: ownerUsername, // Use username as fallback
-        ownerType: 'user' // Default to user type
+        ownerType: 'user', // Default to user type
       });
 
       warn(`Created owner entry for: ${ownerUsername}`);
     } catch (error) {
-      warn(`Error creating owner entry for ${ownerUsername}: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Error creating owner entry for ${ownerUsername}: ${error instanceof Error ? error.message : String(error)}`
+      );
       // Don't throw - owner creation failure shouldn't stop migration
     }
   }
@@ -238,11 +270,15 @@ export class DataMigration {
             story_number: story.storyNumber || story.story_number,
             title: story.title || `Story ${story.storyNumber || story.story_number}`,
             is_favorite: Boolean(story.isFavorite || story.is_favorite || false),
-            metadata: this.parseJsonField(story.metadata) || {}
+            metadata: this.parseJsonField(story.metadata) || {},
           });
 
           // Get frames for this story
-          const frames = await this.getLegacyFramesFromCollections(collectionsDb, collectionId, story.storyNumber || story.story_number);
+          const frames = await this.getLegacyFramesFromCollections(
+            collectionsDb,
+            collectionId,
+            story.storyNumber || story.story_number
+          );
           for (const frame of frames) {
             await this.databaseManager.saveFrame({
               collection_id: collectionId,
@@ -251,12 +287,14 @@ export class DataMigration {
               image_url: frame.imageUrl || frame.image_url || '',
               text: frame.text || '',
               is_favorite: Boolean(frame.isFavorite || frame.is_favorite || false),
-              metadata: this.parseJsonField(frame.metadata) || {}
+              metadata: this.parseJsonField(frame.metadata) || {},
             });
           }
         }
       } catch (error) {
-        warn(`Error migrating stories/frames for ${collectionId}: ${error instanceof Error ? error.message : String(error)}`);
+        warn(
+          `Error migrating stories/frames for ${collectionId}: ${error instanceof Error ? error.message : String(error)}`
+        );
       } finally {
         await collectionsDb.closeAsync();
       }
@@ -271,7 +309,9 @@ export class DataMigration {
       await db.getFirstAsync('SELECT name FROM sqlite_master WHERE type="table" LIMIT 1');
       return db;
     } catch (error) {
-      warn(`Database ${dbName} not found or empty: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Database ${dbName} not found or empty: ${error instanceof Error ? error.message : String(error)}`
+      );
       return null;
     }
   }
@@ -296,17 +336,29 @@ export class DataMigration {
     }
   }
 
-  private async getLegacyStoriesFromCollections(db: SQLite.SQLiteDatabase, collectionId: string): Promise<any[]> {
+  private async getLegacyStoriesFromCollections(
+    db: SQLite.SQLiteDatabase,
+    collectionId: string
+  ): Promise<any[]> {
     try {
-      const result = await db.getAllAsync('SELECT * FROM stories WHERE collection_id = ? OR collectionId = ?', [collectionId, collectionId]);
+      const result = await db.getAllAsync(
+        'SELECT * FROM stories WHERE collection_id = ? OR collectionId = ?',
+        [collectionId, collectionId]
+      );
       return result || [];
     } catch (error) {
-      warn(`Error reading stories for ${collectionId}: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Error reading stories for ${collectionId}: ${error instanceof Error ? error.message : String(error)}`
+      );
       return [];
     }
   }
 
-  private async getLegacyFramesFromCollections(db: SQLite.SQLiteDatabase, collectionId: string, storyNumber: number): Promise<any[]> {
+  private async getLegacyFramesFromCollections(
+    db: SQLite.SQLiteDatabase,
+    collectionId: string,
+    storyNumber: number
+  ): Promise<any[]> {
     try {
       const result = await db.getAllAsync(
         'SELECT * FROM frames WHERE (collection_id = ? OR collectionId = ?) AND (story_number = ? OR storyNumber = ?)',
@@ -314,7 +366,9 @@ export class DataMigration {
       );
       return result || [];
     } catch (error) {
-      warn(`Error reading frames for ${collectionId}/${storyNumber}: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Error reading frames for ${collectionId}/${storyNumber}: ${error instanceof Error ? error.message : String(error)}`
+      );
       return [];
     }
   }
@@ -353,7 +407,7 @@ export class DataMigration {
   // Cleanup methods
   async cleanupLegacyDatabases(): Promise<void> {
     warn('🧹 Starting cleanup of legacy databases...');
-    
+
     const databasesToCleanup = ['languages.db', 'collections.db', 'comments.db'];
     let cleanedCount = 0;
 
@@ -368,7 +422,9 @@ export class DataMigration {
           cleanedCount++;
         }
       } catch (error) {
-        warn(`Error cleaning up ${dbName}: ${error instanceof Error ? error.message : String(error)}`);
+        warn(
+          `Error cleaning up ${dbName}: ${error instanceof Error ? error.message : String(error)}`
+        );
       }
     }
 

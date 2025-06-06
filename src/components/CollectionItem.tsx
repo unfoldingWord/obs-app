@@ -98,7 +98,7 @@ export function CollectionItem({
     <>
       <TouchableOpacity
         onPress={() => onPress(item)}
-        className={`mb-4 flex-row items-center rounded-xl p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-sm border ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
+        className={`mb-4 flex-row items-center rounded-xl p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} border shadow-sm ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
         <Image
           source={image}
           style={{

@@ -13,19 +13,11 @@ interface RequireContext {
 declare namespace NodeJS {
   interface Global {
     require: {
-      context(
-        directory: string,
-        useSubdirectories: boolean,
-        regExp: RegExp
-      ): RequireContext;
+      context(directory: string, useSubdirectories: boolean, regExp: RegExp): RequireContext;
     };
   }
 }
 
-declare var require: {
-  context(
-    directory: string,
-    useSubdirectories: boolean,
-    regExp: RegExp
-  ): RequireContext;
-}; 
+declare let require: {
+  context(directory: string, useSubdirectories: boolean, regExp: RegExp): RequireContext;
+};

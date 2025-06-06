@@ -1,5 +1,6 @@
-import { injectable } from 'inversify';
 import * as FileSystem from 'expo-file-system';
+import { injectable } from 'inversify';
+
 import { IFileSystem } from '../interfaces/IFileSystem';
 
 @injectable()

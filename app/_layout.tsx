@@ -1,13 +1,14 @@
 import 'reflect-metadata';
+import { useDrizzleStudio } from 'expo-drizzle-studio-plugin';
 import { Stack } from 'expo-router';
+import * as SQLite from 'expo-sqlite';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { useColorScheme, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { enableScreens } from 'react-native-screens';
+
 import '../global.css';
-import { useDrizzleStudio } from 'expo-drizzle-studio-plugin';
-import * as SQLite from 'expo-sqlite';
 import { DatabaseManager } from '../src/core/DatabaseManager';
 import { DataMigration } from '../src/db/migration';
 
@@ -20,7 +21,6 @@ const db = SQLite.openDatabaseSync('app.db');
 export default function RootLayout() {
   useDrizzleStudio(db);
   const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -48,6 +48,7 @@ export default function RootLayout() {
         <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="+not-found" options={{ headerShown: false }} />
         </Stack>
       </View>
     </GestureHandlerRootView>

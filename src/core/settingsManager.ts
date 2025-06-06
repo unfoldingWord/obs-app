@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import { warn } from './utils';
 
 interface AppSettings {
@@ -42,10 +43,7 @@ export class SettingsManager {
     try {
       const currentSettings = await this.getSettings();
       const newSettings = { ...currentSettings, ...settings };
-      await AsyncStorage.setItem(
-        SettingsManager.STORAGE_KEY,
-        JSON.stringify(newSettings)
-      );
+      await AsyncStorage.setItem(SettingsManager.STORAGE_KEY, JSON.stringify(newSettings));
     } catch (error) {
       warn(`Error updating settings: ${error}`);
     }
@@ -53,10 +51,7 @@ export class SettingsManager {
 
   async resetSettings(): Promise<void> {
     try {
-      await AsyncStorage.setItem(
-        SettingsManager.STORAGE_KEY,
-        JSON.stringify(DEFAULT_SETTINGS)
-      );
+      await AsyncStorage.setItem(SettingsManager.STORAGE_KEY, JSON.stringify(DEFAULT_SETTINGS));
     } catch (error) {
       warn(`Error resetting settings: ${error}`);
     }

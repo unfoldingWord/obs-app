@@ -114,12 +114,12 @@ export interface OBSContextType {
 
 // Action types for the reducer
 export type OBSAction =
-  | { type: "GO_NEXT" }
-  | { type: "GO_PREV" }
-  | { type: "NAV_TO"; payload: { story: number; frame?: number } }
-  | { type: "SET_OBS"; payload: StoriesData }
-  | { type: "SET_LANGUAGE"; payload: Language }
-  | { type: "ADD_BOOKMARK"; payload: Bookmark }
-  | { type: "REMOVE_BOOKMARK"; payload: string }
-  | { type: "UPDATE_BOOKMARK"; payload: Bookmark }
-  | { type: "ADD_BOOKMARKS"; payload: Bookmark[] };
+  | { type: 'GO_NEXT' }
+  | { type: 'GO_PREV' }
+  | { type: 'NAV_TO'; payload: { story: number; frame?: number } }
+  | { type: 'SET_OBS'; payload: StoriesData }
+  | { type: 'SET_LANGUAGE'; payload: Language }
+  | { type: 'ADD_BOOKMARK'; payload: Bookmark }
+  | { type: 'REMOVE_BOOKMARK'; payload: string }
+  | { type: 'UPDATE_BOOKMARK'; payload: Bookmark }
+  | { type: 'ADD_BOOKMARKS'; payload: Bookmark[] };

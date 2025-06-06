@@ -1,6 +1,6 @@
+import { MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
 import { View, Text, useColorScheme } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
 
 interface QualityBadgeProps {
   verified: boolean;
@@ -12,16 +12,15 @@ export const QualityBadge: React.FC<QualityBadgeProps> = ({ verified }) => {
 
   return (
     <View
-      className={`flex-row items-center px-2 py-1 rounded-full ${
+      className={`flex-row items-center rounded-full px-2 py-1 ${
         verified
           ? isDark
             ? 'bg-green-900'
             : 'bg-green-100'
           : isDark
-          ? 'bg-gray-700'
-          : 'bg-gray-100'
-      }`}
-    >
+            ? 'bg-gray-700'
+            : 'bg-gray-100'
+      }`}>
       <MaterialIcons
         name={verified ? 'verified' : 'warning'}
         size={16}
@@ -31,8 +30,8 @@ export const QualityBadge: React.FC<QualityBadgeProps> = ({ verified }) => {
               ? 'text-green-400'
               : 'text-green-600'
             : isDark
-            ? 'text-gray-400'
-            : 'text-gray-600'
+              ? 'text-gray-400'
+              : 'text-gray-600'
         }
       />
       <Text
@@ -42,10 +41,9 @@ export const QualityBadge: React.FC<QualityBadgeProps> = ({ verified }) => {
               ? 'text-green-400'
               : 'text-green-600'
             : isDark
-            ? 'text-gray-400'
-            : 'text-gray-600'
-        }`}
-      >
+              ? 'text-gray-400'
+              : 'text-gray-600'
+        }`}>
         {verified ? 'Verified' : 'Unverified'}
       </Text>
     </View>

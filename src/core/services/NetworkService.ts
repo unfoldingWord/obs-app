@@ -1,4 +1,5 @@
 import { injectable } from 'inversify';
+
 import { INetworkService } from '../interfaces/INetworkService';
 
 @injectable()

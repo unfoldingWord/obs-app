@@ -16,7 +16,7 @@ const args = process.argv.slice(2).join(' ');
 try {
   execSync(`${gradlewCmd} ${args}`, {
     stdio: 'inherit',
-    cwd: process.cwd()
+    cwd: process.cwd(),
   });
 } catch (error) {
   process.exit(error.status || 1);

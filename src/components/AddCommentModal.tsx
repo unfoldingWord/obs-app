@@ -1,3 +1,4 @@
+import { MaterialIcons } from '@expo/vector-icons';
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -10,7 +11,6 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialIcons } from '@expo/vector-icons';
 
 interface AddCommentModalProps {
   visible: boolean;
@@ -87,36 +87,24 @@ export const AddCommentModal: React.FC<AddCommentModalProps> = ({
       visible={visible}
       animationType="slide"
       presentationStyle="pageSheet"
-      onRequestClose={handleClose}
-    >
+      onRequestClose={handleClose}>
       <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          className="flex-1"
-        >
+          className="flex-1">
           {/* Modern Header with Icon-based Design */}
           <View
-            className={`flex-row items-center justify-between px-6 py-4 ${isDark ? 'bg-gray-900' : 'bg-white'} border-b ${isDark ? 'border-gray-800' : 'border-gray-200'}`}
-          >
+            className={`flex-row items-center justify-between px-6 py-4 ${isDark ? 'bg-gray-900' : 'bg-white'} border-b ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
             {/* Close Button */}
             <TouchableOpacity
               onPress={handleClose}
-              className={`rounded-full p-3 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}
-            >
-              <MaterialIcons
-                name="close"
-                size={20}
-                color={isDark ? '#9CA3AF' : '#6B7280'}
-              />
+              className={`rounded-full p-3 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
+              <MaterialIcons name="close" size={20} color={isDark ? '#9CA3AF' : '#6B7280'} />
             </TouchableOpacity>
 
             {/* Title with Icon */}
             <View className="flex-row items-center gap-2">
-              <MaterialIcons
-                name="edit-note"
-                size={24}
-                color={isDark ? '#60A5FA' : '#3B82F6'}
-              />
+              <MaterialIcons name="edit-note" size={24} color={isDark ? '#60A5FA' : '#3B82F6'} />
               <Text className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 {title === 'Add Comment' ? '' : ''}
               </Text>
@@ -128,17 +116,18 @@ export const AddCommentModal: React.FC<AddCommentModalProps> = ({
               disabled={isSubmitting || !commentText.trim()}
               className={`rounded-full p-3 ${
                 isSubmitting || !commentText.trim()
-                  ? isDark ? 'bg-gray-800' : 'bg-gray-200'
-                  : isDark ? 'bg-blue-600' : 'bg-blue-500'
-              }`}
-            >
+                  ? isDark
+                    ? 'bg-gray-800'
+                    : 'bg-gray-200'
+                  : isDark
+                    ? 'bg-blue-600'
+                    : 'bg-blue-500'
+              }`}>
               <MaterialIcons
                 name={isSubmitting ? 'hourglass-empty' : 'check'}
                 size={20}
                 color={
-                  isSubmitting || !commentText.trim()
-                    ? isDark ? '#4B5563' : '#9CA3AF'
-                    : '#FFFFFF'
+                  isSubmitting || !commentText.trim() ? (isDark ? '#4B5563' : '#9CA3AF') : '#FFFFFF'
                 }
               />
             </TouchableOpacity>
@@ -148,8 +137,7 @@ export const AddCommentModal: React.FC<AddCommentModalProps> = ({
           <View className="flex-1 p-6">
             {/* Text Input with Modern Design */}
             <View
-              className={`flex-1 rounded-2xl border ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'} shadow-sm`}
-            >
+              className={`flex-1 rounded-2xl border ${isDark ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-white'} shadow-sm`}>
               <TextInput
                 value={commentText}
                 onChangeText={setCommentText}
@@ -165,7 +153,7 @@ export const AddCommentModal: React.FC<AddCommentModalProps> = ({
             </View>
 
             {/* Bottom Stats Bar */}
-            <View className="flex-row items-center justify-between mt-4">
+            <View className="mt-4 flex-row items-center justify-between">
               {/* Character Count with Icon */}
               <View className="flex-row items-center gap-2">
                 <MaterialIcons
@@ -173,10 +161,7 @@ export const AddCommentModal: React.FC<AddCommentModalProps> = ({
                   size={16}
                   color={getCharacterCountColor()}
                 />
-                <Text
-                  className="text-sm font-medium"
-                  style={{ color: getCharacterCountColor() }}
-                >
+                <Text className="text-sm font-medium" style={{ color: getCharacterCountColor() }}>
                   {commentText.length}/1000
                 </Text>
               </View>
@@ -197,8 +182,12 @@ export const AddCommentModal: React.FC<AddCommentModalProps> = ({
                               ? 'bg-red-500'
                               : commentText.length > 700
                                 ? 'bg-yellow-500'
-                                : isDark ? 'bg-blue-500' : 'bg-blue-600'
-                            : isDark ? 'bg-gray-700' : 'bg-gray-300'
+                                : isDark
+                                  ? 'bg-blue-500'
+                                  : 'bg-blue-600'
+                            : isDark
+                              ? 'bg-gray-700'
+                              : 'bg-gray-300'
                         }`}
                       />
                     );
@@ -213,9 +202,10 @@ export const AddCommentModal: React.FC<AddCommentModalProps> = ({
                         ? 'bg-red-500/20'
                         : commentText.length > 900
                           ? 'bg-yellow-500/20'
-                          : isDark ? 'bg-green-500/20' : 'bg-green-500/20'
-                    }`}
-                  >
+                          : isDark
+                            ? 'bg-green-500/20'
+                            : 'bg-green-500/20'
+                    }`}>
                     <MaterialIcons
                       name={
                         commentText.length > 950

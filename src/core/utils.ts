@@ -8,7 +8,7 @@
  * @returns A string with the padded number
  */
 export function pad(num: number | string): string {
-  return String(num).padStart(2, "0");
+  return String(num).padStart(2, '0');
 }
 
 /**
@@ -41,7 +41,7 @@ export function debounce<T extends (...args: any[]) => any>(
 ): (...args: Parameters<T>) => void {
   let timeout: NodeJS.Timeout | null = null;
 
-  return function(this: any, ...args: Parameters<T>) {
+  return function (this: any, ...args: Parameters<T>) {
     const context = this;
 
     if (timeout) {
@@ -66,10 +66,7 @@ export function formatDate(date: Date, format: string = 'YYYY-MM-DD'): string {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
 
-  return format
-    .replace('YYYY', String(year))
-    .replace('MM', month)
-    .replace('DD', day);
+  return format.replace('YYYY', String(year)).replace('MM', month).replace('DD', day);
 }
 
 /**
@@ -123,7 +120,7 @@ export function isValidUrl(url: string): boolean {
  * @returns A promise that resolves after the specified time
  */
 export function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -181,11 +178,7 @@ export function parseQueryString(queryString: string): Record<string, string> {
  * @param suffix Optional suffix to add when truncated (default: "...")
  * @returns Truncated string
  */
-export function truncateString(
-  str: string,
-  maxLength: number,
-  suffix: string = '...'
-): string {
+export function truncateString(str: string, maxLength: number, suffix: string = '...'): string {
   if (str.length <= maxLength) {
     return str;
   }

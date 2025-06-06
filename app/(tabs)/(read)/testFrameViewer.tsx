@@ -1,3 +1,4 @@
+import { Stack } from 'expo-router';
 import React, { useState } from 'react';
 import {
   View,
@@ -12,7 +13,6 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack } from 'expo-router';
 
 import { CollectionsManager, Frame } from '../../../src/core/CollectionsManager';
 
@@ -59,7 +59,9 @@ export default function TestFrameViewerScreen() {
       if (loadedFrame) {
         setFrame(loadedFrame);
       } else {
-        setError(`Frame not found for \nCollection: ${collectionId} \nStory: ${storyNum}, Frame: ${frameNum}`);
+        setError(
+          `Frame not found for \nCollection: ${collectionId} \nStory: ${storyNum}, Frame: ${frameNum}`
+        );
       }
     } catch (e: any) {
       console.error('Failed to load frame:', e);
@@ -117,7 +119,7 @@ export default function TestFrameViewerScreen() {
     },
     buttonContainer: {
       marginVertical: 10,
-    }
+    },
   });
 
   return (
@@ -154,16 +156,29 @@ export default function TestFrameViewerScreen() {
         />
 
         <View style={styles.buttonContainer}>
-          <Button title="Load Frame" onPress={handleLoadFrame} disabled={loading} color={isDark ? '#3B82F6' : '#2563EB'} />
+          <Button
+            title="Load Frame"
+            onPress={handleLoadFrame}
+            disabled={loading}
+            color={isDark ? '#3B82F6' : '#2563EB'}
+          />
         </View>
 
-        {loading && <ActivityIndicator size="large" color={isDark ? '#60A5FA' : '#3B82F6'} style={{ marginVertical: 20 }} />}
+        {loading && (
+          <ActivityIndicator
+            size="large"
+            color={isDark ? '#60A5FA' : '#3B82F6'}
+            style={{ marginVertical: 20 }}
+          />
+        )}
 
         {error && <Text style={styles.errorText}>{error}</Text>}
 
         {frame && (
           <View>
-            <Text style={[styles.label, { marginTop: 20, marginBottom: 8, textAlign: 'center' }]}>Frame Content:</Text>
+            <Text style={[styles.label, { marginTop: 20, marginBottom: 8, textAlign: 'center' }]}>
+              Frame Content:
+            </Text>
             <Image source={{ uri: frame.imageUrl }} style={styles.frameImage} />
             <Text style={styles.frameText}>{frame.text}</Text>
           </View>

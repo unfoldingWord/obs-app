@@ -1,8 +1,9 @@
 import * as FileSystem from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
+
 import { ImageSet } from '../types';
-import { StoriesData, StoryFrame } from '../types/index';
 import { warn } from './utils';
+import { StoriesData, StoryFrame } from '../types/index';
 
 const IMAGE_CACHE_DIR = 'image-cache';
 const BUNDLED_IMAGES_DIR = 'bundled-images';
@@ -72,7 +73,9 @@ export class ImageManager {
         this.imagePacks.set(this.defaultImagePack.id, this.defaultImagePack);
       }
     } catch (error) {
-      warn(`Error initializing image directories: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Error initializing image directories: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -97,7 +100,9 @@ export class ImageManager {
         })),
       };
     } catch (error) {
-      warn(`Error loading default image pack: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Error loading default image pack: ${error instanceof Error ? error.message : String(error)}`
+      );
       return null;
     }
   }
@@ -134,7 +139,7 @@ export class ImageManager {
       }
 
       // Find image in pack
-      const image = imagePack.images.find(img => img.id === frameId);
+      const image = imagePack.images.find((img) => img.id === frameId);
       if (!image) {
         throw new Error('Image not found in pack');
       }
@@ -148,7 +153,10 @@ export class ImageManager {
     }
   }
 
-  async getImageResolutions(storiesData: StoriesData, frameId: string): Promise<{
+  async getImageResolutions(
+    storiesData: StoriesData,
+    frameId: string
+  ): Promise<{
     low: string;
     medium: string;
     high: string;
@@ -229,7 +237,7 @@ export class ImageManager {
 
       // Save the original image
       await FileSystem.writeAsStringAsync(thumbPath, imageData, {
-        encoding: FileSystem.EncodingType.Base64
+        encoding: FileSystem.EncodingType.Base64,
       });
 
       // Generate and save thumbnail
@@ -240,10 +248,12 @@ export class ImageManager {
       );
 
       await FileSystem.writeAsStringAsync(thumbPath, manipResult.uri, {
-        encoding: FileSystem.EncodingType.Base64
+        encoding: FileSystem.EncodingType.Base64,
       });
     } catch (error) {
-      warn(`Error saving collection thumbnail: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Error saving collection thumbnail: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -257,10 +267,12 @@ export class ImageManager {
       }
 
       return await FileSystem.readAsStringAsync(thumbPath, {
-        encoding: FileSystem.EncodingType.Base64
+        encoding: FileSystem.EncodingType.Base64,
       });
     } catch (error) {
-      warn(`Error getting collection thumbnail: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Error getting collection thumbnail: ${error instanceof Error ? error.message : String(error)}`
+      );
       return null;
     }
   }
@@ -270,7 +282,9 @@ export class ImageManager {
       const thumbPath = `${this.thumbnailsDir}/${collectionId}.jpg`;
       await FileSystem.deleteAsync(thumbPath, { idempotent: true });
     } catch (error) {
-      warn(`Error deleting collection thumbnail: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Error deleting collection thumbnail: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 }

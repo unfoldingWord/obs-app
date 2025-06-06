@@ -78,9 +78,7 @@ export const FrameBadge: React.FC<FrameBadgeProps> = ({
         />
       )}
       <Text
-        className={`${sizeClasses.text} font-medium ${
-          isDark ? 'text-gray-300' : 'text-gray-600'
-        }`}
+        className={`${sizeClasses.text} font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'}`}
         style={{ textAlign: isRTL ? 'right' : 'left' }}>
         {storyNumber}:{frameNumber}
       </Text>

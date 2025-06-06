@@ -1,4 +1,5 @@
 import JSZip from 'jszip';
+
 import { warn } from './utils';
 
 /**
@@ -152,7 +153,11 @@ export async function processZipContents(
     }
 
     processedFiles++;
-    onProgress?.(processedFiles, filesToProcess.length, `Processed ${processedFiles} of ${filesToProcess.length} files`);
+    onProgress?.(
+      processedFiles,
+      filesToProcess.length,
+      `Processed ${processedFiles} of ${filesToProcess.length} files`
+    );
   }
 
   return { stories: allStories, frames: allFrames };
@@ -176,22 +181,25 @@ export async function batchSaveStories(stories: ProcessedStoryData[]): Promise<v
       const batch = stories.slice(i, i + batchSize);
 
       // Use Drizzle's bulk insert
-      const insertValues = batch.map(story => ({
+      const insertValues = batch.map((story) => ({
         collection_id: story.collection_id,
         story_number: story.story_number,
         title: story.title,
         is_favorite: story.is_favorite,
-        metadata: story.metadata || {}
+        metadata: story.metadata || {},
       }));
 
-      await tx.insert(storiesTable).values(insertValues).onConflictDoUpdate({
-        target: [storiesTable.collection_id, storiesTable.story_number],
-        set: {
-          title: sql`excluded.title`,
-          is_favorite: sql`excluded.is_favorite`,
-          metadata: sql`excluded.metadata`
-        }
-      });
+      await tx
+        .insert(storiesTable)
+        .values(insertValues)
+        .onConflictDoUpdate({
+          target: [storiesTable.collection_id, storiesTable.story_number],
+          set: {
+            title: sql`excluded.title`,
+            is_favorite: sql`excluded.is_favorite`,
+            metadata: sql`excluded.metadata`,
+          },
+        });
     }
   });
 }
@@ -219,25 +227,28 @@ export async function batchSaveFrames(
       const currentBatch = Math.floor(i / batchSize) + 1;
 
       // Use Drizzle's bulk insert
-      const insertValues = batch.map(frame => ({
+      const insertValues = batch.map((frame) => ({
         collection_id: frame.collection_id,
         story_number: frame.story_number,
         frame_number: frame.frame_number,
         image_url: frame.image_url,
         text: frame.text,
         is_favorite: frame.is_favorite,
-        metadata: frame.metadata || {}
+        metadata: frame.metadata || {},
       }));
 
-      await tx.insert(framesTable).values(insertValues).onConflictDoUpdate({
-        target: [framesTable.collection_id, framesTable.story_number, framesTable.frame_number],
-        set: {
-          image_url: sql`excluded.image_url`,
-          text: sql`excluded.text`,
-          is_favorite: sql`excluded.is_favorite`,
-          metadata: sql`excluded.metadata`
-        }
-      });
+      await tx
+        .insert(framesTable)
+        .values(insertValues)
+        .onConflictDoUpdate({
+          target: [framesTable.collection_id, framesTable.story_number, framesTable.frame_number],
+          set: {
+            image_url: sql`excluded.image_url`,
+            text: sql`excluded.text`,
+            is_favorite: sql`excluded.is_favorite`,
+            metadata: sql`excluded.metadata`,
+          },
+        });
 
       // Report progress
       onProgress?.((currentBatch / totalBatches) * 100);
@@ -257,11 +268,11 @@ export async function loadZipFile(
   if (typeof source === 'string' && options.isBase64) {
     return await zip.loadAsync(source, {
       base64: true,
-      createFolders: false // Don't create folder objects, saves memory
+      createFolders: false, // Don't create folder objects, saves memory
     });
   } else {
     return await zip.loadAsync(source, {
-      createFolders: false // Don't create folder objects, saves memory
+      createFolders: false, // Don't create folder objects, saves memory
     });
   }
 }
@@ -313,9 +324,13 @@ export async function processAndStoreZipOptimized(
 
     onProgress?.('complete', 100, 'ZIP processing complete!');
 
-    warn(`Successfully processed and stored ${stories.length} stories and ${frames.length} frames for collection ${collectionId}`);
+    warn(
+      `Successfully processed and stored ${stories.length} stories and ${frames.length} frames for collection ${collectionId}`
+    );
   } catch (error) {
-    warn(`Error in optimized ZIP processing for ${collectionId}: ${error instanceof Error ? error.message : String(error)}`);
+    warn(
+      `Error in optimized ZIP processing for ${collectionId}: ${error instanceof Error ? error.message : String(error)}`
+    );
     throw error;
   }
 }

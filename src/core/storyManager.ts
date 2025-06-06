@@ -74,7 +74,11 @@ export class StoryManager {
   /**
    * Get a specific frame
    */
-  async getFrame(collectionId: string, storyNumber: number, frameNumber: number): Promise<Frame | null> {
+  async getFrame(
+    collectionId: string,
+    storyNumber: number,
+    frameNumber: number
+  ): Promise<Frame | null> {
     return this.collectionsManager.getFrame(collectionId, storyNumber, frameNumber);
   }
 
@@ -103,20 +107,27 @@ export class StoryManager {
       // Also update recently viewed
       await this.addToRecentlyViewed(collectionId, storyNumber);
     } catch (error) {
-      warn(`Error saving reading progress: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Error saving reading progress: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
   /**
    * Get reading progress for a story
    */
-  async getReadingProgress(collectionId: string, storyNumber: number): Promise<UserProgress | null> {
+  async getReadingProgress(
+    collectionId: string,
+    storyNumber: number
+  ): Promise<UserProgress | null> {
     try {
       const key = `@reading_progress:${collectionId}:${storyNumber}`;
       const progress = await AsyncStorage.getItem(key);
       return progress ? JSON.parse(progress) : null;
     } catch (error) {
-      warn(`Error getting reading progress: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Error getting reading progress: ${error instanceof Error ? error.message : String(error)}`
+      );
       return null;
     }
   }
@@ -127,14 +138,16 @@ export class StoryManager {
   async getAllReadingProgress(): Promise<UserProgress[]> {
     try {
       const keys = await AsyncStorage.getAllKeys();
-      const progressKeys = keys.filter(key => key.startsWith('@reading_progress:'));
+      const progressKeys = keys.filter((key) => key.startsWith('@reading_progress:'));
       const progressEntries = await AsyncStorage.multiGet(progressKeys);
 
       return progressEntries
-        .map(([key, value]) => value ? JSON.parse(value) : null)
+        .map(([key, value]) => (value ? JSON.parse(value) : null))
         .filter(Boolean);
     } catch (error) {
-      warn(`Error getting all reading progress: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Error getting all reading progress: ${error instanceof Error ? error.message : String(error)}`
+      );
       return [];
     }
   }
@@ -175,24 +188,31 @@ export class StoryManager {
   /**
    * Get markers for a specific frame
    */
-  async getMarkersForFrame(collectionId: string, storyNumber: number, frameNumber: number): Promise<UserMarker[]> {
+  async getMarkersForFrame(
+    collectionId: string,
+    storyNumber: number,
+    frameNumber: number
+  ): Promise<UserMarker[]> {
     try {
       const keys = await AsyncStorage.getAllKeys();
-      const markerKeys = keys.filter(key => key.startsWith('@marker:'));
+      const markerKeys = keys.filter((key) => key.startsWith('@marker:'));
       const markerEntries = await AsyncStorage.multiGet(markerKeys);
 
       const markers = markerEntries
-        .map(([key, value]) => value ? JSON.parse(value) : null)
+        .map(([key, value]) => (value ? JSON.parse(value) : null))
         .filter(Boolean)
-        .filter((marker: UserMarker) =>
-          marker.collectionId === collectionId &&
-          marker.storyNumber === storyNumber &&
-          marker.frameNumber === frameNumber
+        .filter(
+          (marker: UserMarker) =>
+            marker.collectionId === collectionId &&
+            marker.storyNumber === storyNumber &&
+            marker.frameNumber === frameNumber
         );
 
       return markers.sort((a, b) => b.timestamp - a.timestamp);
     } catch (error) {
-      warn(`Error getting markers for frame: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Error getting markers for frame: ${error instanceof Error ? error.message : String(error)}`
+      );
       return [];
     }
   }
@@ -203,20 +223,22 @@ export class StoryManager {
   async getMarkersForStory(collectionId: string, storyNumber: number): Promise<UserMarker[]> {
     try {
       const keys = await AsyncStorage.getAllKeys();
-      const markerKeys = keys.filter(key => key.startsWith('@marker:'));
+      const markerKeys = keys.filter((key) => key.startsWith('@marker:'));
       const markerEntries = await AsyncStorage.multiGet(markerKeys);
 
       const markers = markerEntries
-        .map(([key, value]) => value ? JSON.parse(value) : null)
+        .map(([key, value]) => (value ? JSON.parse(value) : null))
         .filter(Boolean)
-        .filter((marker: UserMarker) =>
-          marker.collectionId === collectionId &&
-          marker.storyNumber === storyNumber
+        .filter(
+          (marker: UserMarker) =>
+            marker.collectionId === collectionId && marker.storyNumber === storyNumber
         );
 
       return markers.sort((a, b) => a.frameNumber - b.frameNumber);
     } catch (error) {
-      warn(`Error getting markers for story: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Error getting markers for story: ${error instanceof Error ? error.message : String(error)}`
+      );
       return [];
     }
   }
@@ -227,11 +249,11 @@ export class StoryManager {
   async getAllMarkers(): Promise<UserMarker[]> {
     try {
       const keys = await AsyncStorage.getAllKeys();
-      const markerKeys = keys.filter(key => key.startsWith('@marker:'));
+      const markerKeys = keys.filter((key) => key.startsWith('@marker:'));
       const markerEntries = await AsyncStorage.multiGet(markerKeys);
 
       const markers = markerEntries
-        .map(([key, value]) => value ? JSON.parse(value) : null)
+        .map(([key, value]) => (value ? JSON.parse(value) : null))
         .filter(Boolean);
 
       return markers.sort((a, b) => b.timestamp - a.timestamp);
@@ -275,7 +297,7 @@ export class StoryManager {
 
       // Remove existing entry if present
       const filtered = existing.filter(
-        item => !(item.collectionId === collectionId && item.storyNumber === storyNumber)
+        (item) => !(item.collectionId === collectionId && item.storyNumber === storyNumber)
       );
 
       // Add new item at the beginning
@@ -283,7 +305,9 @@ export class StoryManager {
 
       await AsyncStorage.setItem('@recently_viewed', JSON.stringify(updated));
     } catch (error) {
-      warn(`Error adding to recently viewed: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Error adding to recently viewed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -295,7 +319,9 @@ export class StoryManager {
       const recent = await AsyncStorage.getItem('@recently_viewed');
       return recent ? JSON.parse(recent) : [];
     } catch (error) {
-      warn(`Error getting recently viewed: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Error getting recently viewed: ${error instanceof Error ? error.message : String(error)}`
+      );
       return [];
     }
   }
@@ -312,7 +338,11 @@ export class StoryManager {
   /**
    * Toggle frame favorite
    */
-  async toggleFrameFavorite(collectionId: string, storyNumber: number, frameNumber: number): Promise<void> {
+  async toggleFrameFavorite(
+    collectionId: string,
+    storyNumber: number,
+    frameNumber: number
+  ): Promise<void> {
     await this.collectionsManager.toggleFrameFavorite(collectionId, storyNumber, frameNumber);
   }
 

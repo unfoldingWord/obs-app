@@ -15,4 +15,4 @@ declare module 'compare-versions' {
       loose?: boolean;
     }
   ): -1 | 0 | 1;
-} 
+}

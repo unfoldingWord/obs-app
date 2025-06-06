@@ -1,6 +1,6 @@
-import * as FileSystem from 'expo-file-system';
-import * as DocumentPicker from 'expo-document-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
 
 import { CollectionImportExportManager } from '../core/CollectionImportExportManager';
 
@@ -37,10 +37,8 @@ export const getStorageLocations = async (): Promise<StorageLocation[]> => {
     name: 'Internal Storage',
     path: internalPath,
     type: 'internal',
-    icon: 'phone-android'
+    icon: 'phone-android',
   });
-
-
 
   try {
     // Add custom directory if previously selected during export
@@ -50,7 +48,7 @@ export const getStorageLocations = async (): Promise<StorageLocation[]> => {
         name: 'Custom Export Location',
         path: customExportUri,
         type: 'external',
-        icon: 'folder-open'
+        icon: 'folder-open',
       });
     }
   } catch (error) {
@@ -62,13 +60,13 @@ export const getStorageLocations = async (): Promise<StorageLocation[]> => {
     const customImportUri = await AsyncStorage.getItem('@custom_import_directory');
     if (customImportUri) {
       // Check if this URI is already added as export location
-      const alreadyExists = locations.some(loc => loc.path === customImportUri);
+      const alreadyExists = locations.some((loc) => loc.path === customImportUri);
       if (!alreadyExists) {
         locations.push({
           name: 'Custom Import Location',
           path: customImportUri,
           type: 'external',
-          icon: 'folder-special'
+          icon: 'folder-special',
         });
       }
     }
@@ -77,8 +75,8 @@ export const getStorageLocations = async (): Promise<StorageLocation[]> => {
   }
 
   // Deduplicate locations by path to prevent scanning the same directory twice
-  const uniqueLocations = locations.filter((location, index, self) =>
-    index === self.findIndex(loc => loc.path === location.path)
+  const uniqueLocations = locations.filter(
+    (location, index, self) => index === self.findIndex((loc) => loc.path === location.path)
   );
 
   return uniqueLocations;
@@ -113,7 +111,7 @@ export const scanForImportableCollections = async (): Promise<ImportableCollecti
                     fileName,
                     filePath: fileUri,
                     displayInfo,
-                    storageLocation: location
+                    storageLocation: location,
                   });
                 }
               }
@@ -136,11 +134,11 @@ export const scanForImportableCollections = async (): Promise<ImportableCollecti
         const collections = await importManager.listImportableCollections(location.path);
 
         // Add storage location info to each collection
-        const collectionsWithLocation = collections.map(collection => ({
+        const collectionsWithLocation = collections.map((collection) => ({
           fileName: collection.fileName,
           filePath: `${location.path}${collection.fileName}`,
           displayInfo: collection.displayInfo,
-          storageLocation: location
+          storageLocation: location,
         }));
 
         allCollections.push(...collectionsWithLocation);
@@ -151,13 +149,15 @@ export const scanForImportableCollections = async (): Promise<ImportableCollecti
   }
 
   // Deduplicate collections by file path to prevent duplicate entries
-  const uniqueCollections = allCollections.filter((collection, index, self) =>
-    index === self.findIndex(col => col.filePath === collection.filePath)
+  const uniqueCollections = allCollections.filter(
+    (collection, index, self) =>
+      index === self.findIndex((col) => col.filePath === collection.filePath)
   );
 
   // Sort by export date (newest first)
-  return uniqueCollections.sort((a, b) =>
-    new Date(b.displayInfo.exportDate).getTime() - new Date(a.displayInfo.exportDate).getTime()
+  return uniqueCollections.sort(
+    (a, b) =>
+      new Date(b.displayInfo.exportDate).getTime() - new Date(a.displayInfo.exportDate).getTime()
   );
 };
 
@@ -169,14 +169,14 @@ export const pickCollectionFile = async (): Promise<{ uri: string; name: string 
     const result = await DocumentPicker.getDocumentAsync({
       type: 'application/octet-stream', // Only accept .obs files
       copyToCacheDirectory: true,
-      multiple: false
+      multiple: false,
     });
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
       const asset = result.assets[0];
       return {
         uri: asset.uri,
-        name: asset.name
+        name: asset.name,
       };
     }
 
@@ -206,7 +206,7 @@ export const validateCollectionFile = async (filePath: string): Promise<boolean>
     // Read the first few bytes to check for ZIP signature (OBS files are ZIP format internally)
     const fileContent = await FileSystem.readAsStringAsync(filePath, {
       encoding: FileSystem.EncodingType.Base64,
-      length: 4 // Read just the first 4 bytes
+      length: 4, // Read just the first 4 bytes
     });
 
     // Check for ZIP file signature (PK\x03\x04)

@@ -1,6 +1,6 @@
+import { MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
 import { View, Text, TouchableOpacity, useColorScheme } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
 
 interface SharingPackage {
   id: string;
@@ -73,15 +73,10 @@ export const SharingPackage: React.FC<SharingPackageProps> = ({
   return (
     <TouchableOpacity
       onPress={onPress}
-      className={`p-4 mb-2 rounded-lg ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-sm`}
-    >
-      <View className="flex-row justify-between items-center">
+      className={`mb-2 rounded-lg p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-sm`}>
+      <View className="flex-row items-center justify-between">
         <View className="flex-row items-center">
-          <MaterialIcons
-            name={getStatusIcon()}
-            size={24}
-            className={getStatusColor()}
-          />
+          <MaterialIcons name={getStatusIcon()} size={24} className={getStatusColor()} />
           <Text className={`ml-2 text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
             Package {pkg.id}
           </Text>

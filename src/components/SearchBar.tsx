@@ -1,6 +1,6 @@
+import { MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
 import { View, TextInput, useColorScheme } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
 
 interface SearchBarProps {
   value: string;
@@ -18,10 +18,9 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 
   return (
     <View
-      className={`flex-row items-center px-3 py-2 rounded-lg ${
+      className={`flex-row items-center rounded-lg px-3 py-2 ${
         isDark ? 'bg-gray-800' : 'bg-gray-100'
-      }`}
-    >
+      }`}>
       <MaterialIcons
         name="search"
         size={20}
@@ -32,7 +31,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor={isDark ? '#9CA3AF' : '#6B7280'}
-        className={`flex-1 ml-2 ${isDark ? 'text-white' : 'text-gray-900'}`}
+        className={`ml-2 flex-1 ${isDark ? 'text-white' : 'text-gray-900'}`}
       />
       {value.length > 0 && (
         <MaterialIcons
@@ -46,4 +45,4 @@ export const SearchBar: React.FC<SearchBarProps> = ({
   );
 };
 
-export default SearchBar; 
+export default SearchBar;

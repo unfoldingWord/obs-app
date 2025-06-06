@@ -1,4 +1,5 @@
 import { FontAwesome, MaterialIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState, useCallback } from 'react';
@@ -14,7 +15,6 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {
   CollectionsManager,
@@ -287,7 +287,7 @@ export default function StoriesScreen() {
               style={{ textAlign: isRTL ? 'right' : 'left' }}>
               {item.title}
             </Text>
-            
+
             {/* Source Reference - Simplified */}
             {sourceReference && (
               <TouchableOpacity

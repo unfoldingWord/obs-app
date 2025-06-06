@@ -295,7 +295,7 @@ export default function StoryFrameScreen() {
     if (!frameArray || frameArray.length === 0) return;
 
     // For auxiliary frames, we need to find the real frame (not auxiliary)
-    const realFrame = frameArray.find(f => f.frameNumber === frameNum && !(f as any).isAuxiliary);
+    const realFrame = frameArray.find((f) => f.frameNumber === frameNum && !(f as any).isAuxiliary);
     if (!realFrame) return;
 
     // Set current frame
@@ -303,7 +303,9 @@ export default function StoryFrameScreen() {
     setCurrentFrameNumber(frameNum);
 
     // Find the index in auxiliaryFrames array (including auxiliary frames)
-    const frameIndex = frameArray.findIndex((f) => f.frameNumber === frameNum && !(f as any).isAuxiliary);
+    const frameIndex = frameArray.findIndex(
+      (f) => f.frameNumber === frameNum && !(f as any).isAuxiliary
+    );
     if (frameIndex !== -1 && flatListRef.current) {
       isProgrammaticScrollRef.current = true;
       flatListRef.current.scrollToIndex({
@@ -630,8 +632,8 @@ export default function StoryFrameScreen() {
           setCurrentFrame(updatedFrame);
 
           // Update the frames array to maintain state across navigation
-          setFrames(prevFrames =>
-            prevFrames.map(frame =>
+          setFrames((prevFrames) =>
+            prevFrames.map((frame) =>
               frame.frameNumber === currentFrameNumber
                 ? { ...frame, isFavorite: updatedFrame.isFavorite }
                 : frame
@@ -639,8 +641,8 @@ export default function StoryFrameScreen() {
           );
 
           // Update auxiliary frames array as well
-          setAuxiliaryFrames(prevAuxFrames =>
-            prevAuxFrames.map(frame =>
+          setAuxiliaryFrames((prevAuxFrames) =>
+            prevAuxFrames.map((frame) =>
               frame.frameNumber === currentFrameNumber
                 ? { ...frame, isFavorite: updatedFrame.isFavorite }
                 : frame
@@ -1080,13 +1082,18 @@ export default function StoryFrameScreen() {
   }, []);
 
   // Helper function to navigate to next story with correct reading mode
-  const navigateToNextStory = useCallback((nextStory: Story) => {
-    if (preferredReadingMode === 'vertical') {
-      router.replace(`/story/${encodeURIComponent(collectionId)}/${nextStory.storyNumber}/vertical?frame=1`);
-    } else {
-      router.replace(`/story/${encodeURIComponent(collectionId)}/${nextStory.storyNumber}/1`);
-    }
-  }, [preferredReadingMode, collectionId, router]);
+  const navigateToNextStory = useCallback(
+    (nextStory: Story) => {
+      if (preferredReadingMode === 'vertical') {
+        router.replace(
+          `/story/${encodeURIComponent(collectionId)}/${nextStory.storyNumber}/vertical?frame=1`
+        );
+      } else {
+        router.replace(`/story/${encodeURIComponent(collectionId)}/${nextStory.storyNumber}/1`);
+      }
+    },
+    [preferredReadingMode, collectionId, router]
+  );
 
   if (loading) {
     return (
@@ -1179,7 +1186,9 @@ export default function StoryFrameScreen() {
               onPress={() => {
                 // Save vertical mode preference and navigate to vertical
                 AsyncStorage.setItem('readingModePreference', 'vertical').catch(console.error);
-                router.replace(`/story/${encodeURIComponent(collectionId)}/${storyNumber}/vertical?frame=${currentFrameNumber}`);
+                router.replace(
+                  `/story/${encodeURIComponent(collectionId)}/${storyNumber}/vertical?frame=${currentFrameNumber}`
+                );
               }}
               className={`rounded-full p-2 ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
               <MaterialIcons name="view-stream" size={20} color={isDark ? '#9CA3AF' : '#6B7280'} />
@@ -1245,7 +1254,9 @@ export default function StoryFrameScreen() {
             }}
             initialScrollIndex={Math.max(
               0,
-              auxiliaryFrames.findIndex((f) => f.frameNumber === currentFrameNumber && !(f as any).isAuxiliary)
+              auxiliaryFrames.findIndex(
+                (f) => f.frameNumber === currentFrameNumber && !(f as any).isAuxiliary
+              )
             )}
             inverted={isRTL}
           />
@@ -1309,22 +1320,20 @@ export default function StoryFrameScreen() {
             className="flex-1 items-center"
             style={{
               flexDirection: isRTL ? 'row-reverse' : 'row',
-              justifyContent: 'center'
+              justifyContent: 'center',
             }}>
             <View
               className={`rounded-full border px-3 py-2 ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-100'}`}
               style={{
                 flexDirection: (isRTL ? 'row-reverse' : 'row') as 'row' | 'row-reverse',
                 alignItems: 'center',
-                gap: 6
+                gap: 6,
               }}>
               <MaterialIcons name="auto-stories" size={16} color={isDark ? '#9CA3AF' : '#6B7280'} />
               <Text className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                 {parseInt(storyNumber as string, 10)}
               </Text>
-              <Text className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
-                •
-              </Text>
+              <Text className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>•</Text>
               <Text className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                 {currentFrameNumber}/{totalFrames}
               </Text>

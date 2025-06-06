@@ -1,10 +1,8 @@
-import JSZip from 'jszip';
-
 import { DatabaseManager } from './DatabaseManager';
 import { LanguagesManager } from './LanguagesManager';
+import { processAndStoreZipOptimized } from './ZipProcessingUtils';
 import { ImageManager } from './imageManager';
 import { warn } from './utils';
-import { processAndStoreZipOptimized } from './ZipProcessingUtils';
 
 export interface Collection {
   id: string;
@@ -246,10 +244,12 @@ export class CollectionsManager {
         isValid: boolean;
       }[];
 
-      const validCount = allCollections.filter(result => result.isValid).length;
+      const validCount = allCollections.filter((result) => result.isValid).length;
       const invalidCount = allCollections.length - validCount;
 
-      console.log(`✅ Found ${validCount} valid and ${invalidCount} invalid collections out of ${data?.length || 0} total for language: ${language}`);
+      console.log(
+        `✅ Found ${validCount} valid and ${invalidCount} invalid collections out of ${data?.length || 0} total for language: ${language}`
+      );
 
       return allCollections;
     } catch (error) {
@@ -468,8 +468,6 @@ export class CollectionsManager {
     return text.replace(regex, '<mark>$1</mark>');
   }
 
-
-
   // Delete Operations
   async deleteCollection(id: string): Promise<void> {
     if (!this.initialized) await this.initialize();
@@ -507,7 +505,6 @@ export class CollectionsManager {
   private async cleanupUserDataForCollection(collectionId: string): Promise<void> {
     try {
       // Import managers dynamically to avoid circular dependencies
-      const { StoryManager } = await import('./storyManager');
       const { CommentsManager } = await import('./CommentsManager');
 
       // Clean up reading progress from AsyncStorage
@@ -662,23 +659,27 @@ export class CollectionsManager {
       }
 
       // Look for an item with path="content" or path="ingredients" and type="dir"
-      const hasContentDir = contents.some(item =>
-        (item.path === 'content' || item.path === 'ingredients') && item.type === 'dir'
+      const hasContentDir = contents.some(
+        (item) => (item.path === 'content' || item.path === 'ingredients') && item.type === 'dir'
       );
 
       if (!hasContentDir) {
-        warn('Collection does not have required directory structure (missing "content" or "ingredients" directory)');
+        warn(
+          'Collection does not have required directory structure (missing "content" or "ingredients" directory)'
+        );
         return false;
       }
 
-      const foundDirType = contents.find(item =>
-        (item.path === 'content' || item.path === 'ingredients') && item.type === 'dir'
+      const foundDirType = contents.find(
+        (item) => (item.path === 'content' || item.path === 'ingredients') && item.type === 'dir'
       )?.path;
 
       console.log(`✅ Collection has valid structure with "${foundDirType}" directory`);
       return true;
     } catch (error) {
-      warn(`Error validating collection structure: ${error instanceof Error ? error.message : String(error)}`);
+      warn(
+        `Error validating collection structure: ${error instanceof Error ? error.message : String(error)}`
+      );
       return false;
     }
   }
@@ -748,10 +749,12 @@ export class CollectionsManager {
           const mappedProgress = 25 + Math.floor((progress / 100) * 70);
           console.log(`Download progress: ${mappedProgress}% - ${status}`);
           onProgress?.(mappedProgress, status);
-        }
+        },
       });
 
-      warn(`Successfully processed and stored ZIP for collection ${collection.id} using optimized method`);
+      warn(
+        `Successfully processed and stored ZIP for collection ${collection.id} using optimized method`
+      );
     } catch (error) {
       warn(
         `Error processing ZIP for collection ${collection.id}: ${error instanceof Error ? error.message : String(error)}`
@@ -836,10 +839,12 @@ export class CollectionsManager {
     const contentsUrl = `https://git.door43.org/api/v1/repos/${owner}/${repoName}/contents?ref=${collection.version}`;
     const canDownload = await this.validateCollectionStructure(contentsUrl);
     if (!canDownload) {
-      throw new Error(`Cannot download collection ${collection.id}: Invalid structure - missing required directory (must have either "content" or "ingredients" directory)`);
+      throw new Error(
+        `Cannot download collection ${collection.id}: Invalid structure - missing required directory (must have either "content" or "ingredients" directory)`
+      );
     }
 
-        try {
+    try {
       console.log(`Download progress: 0% - Preparing download...`);
       onProgress?.(0, 'Preparing download...');
 
@@ -962,7 +967,9 @@ export class CollectionsManager {
    * Test download with progress logging (similar to CollectionImportExportManager test methods)
    */
   async testDownloadWithProgress(collection: Collection, languageData?: any): Promise<void> {
-    console.log(`🚀 Starting test download for collection: ${collection.displayName} (${collection.id})`);
+    console.log(
+      `🚀 Starting test download for collection: ${collection.displayName} (${collection.id})`
+    );
 
     return this.downloadRemoteCollection(collection, languageData, (progress, status) => {
       console.log(`Download progress: ${progress}% - ${status}`);

@@ -1,7 +1,7 @@
+import * as FileSystem from 'expo-file-system';
+
 import { StoryFrame } from '../types';
 import { warn } from './utils';
-import { ImageSourcePropType } from 'react-native';
-import * as FileSystem from 'expo-file-system';
 
 // Define bundled images as a type rather than actual imports
 // These should be used in a component's source prop directly
@@ -63,7 +63,11 @@ export async function ensureImageDirectoryExists(): Promise<void> {
  * @param key The image key to parse (e.g., "obs-en-01-01")
  * @returns Object containing parsed components
  */
-export function parseImageKey(key: BundledImageKey): { language: string; storyId: string; frameId: string } {
+export function parseImageKey(key: BundledImageKey): {
+  language: string;
+  storyId: string;
+  frameId: string;
+} {
   const parts = key.split('-');
 
   if (parts.length !== 4 || parts[0] !== 'obs') {
@@ -122,7 +126,10 @@ export async function imageExistsLocally(key: BundledImageKey): Promise<boolean>
  * @param quality The desired image quality
  * @returns Promise that resolves when the download is complete
  */
-export async function downloadImage(key: BundledImageKey, quality: ImageQuality = 'medium'): Promise<void> {
+export async function downloadImage(
+  key: BundledImageKey,
+  quality: ImageQuality = 'medium'
+): Promise<void> {
   await ensureImageDirectoryExists();
 
   const remoteUrl = getRemoteImageUrl(key, quality);
@@ -143,7 +150,10 @@ export async function downloadImage(key: BundledImageKey, quality: ImageQuality 
  * @param quality The desired image quality
  * @returns Promise that resolves to an object with image information
  */
-export async function getImageInfo(key: BundledImageKey, quality: ImageQuality = 'medium'): Promise<BundledImage> {
+export async function getImageInfo(
+  key: BundledImageKey,
+  quality: ImageQuality = 'medium'
+): Promise<BundledImage> {
   const { language, storyId, frameId } = parseImageKey(key);
   const remoteUrl = getRemoteImageUrl(key, quality);
 
@@ -209,7 +219,7 @@ export class BundledImageManager {
       'obs-en-01-02',
       'obs-en-01-03',
       'obs-en-01-04',
-      'obs-en-01-05'
+      'obs-en-01-05',
     ];
 
     return validKeys.includes(name as BundledImageKey);

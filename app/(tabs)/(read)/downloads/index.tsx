@@ -102,8 +102,6 @@ export default function DownloadsScreen() {
     router.push(`/downloads/${language.lc}?${languageParams.toString()}`);
   };
 
-
-
   const renderLanguageItem = ({ item }: { item: Language }) => (
     <TouchableOpacity
       onPress={() => handleLanguagePress(item)}
@@ -113,9 +111,10 @@ export default function DownloadsScreen() {
         <View className="flex-row items-center justify-between">
           <View className="flex-1 flex-row items-center">
             {/* Language Icon */}
-            <View className={`mr-4 rounded-full p-3 ${isDark ? 'bg-blue-600/20' : 'bg-blue-500/10'}`}>
+            <View
+              className={`mr-4 rounded-full p-3 ${isDark ? 'bg-blue-600/20' : 'bg-blue-500/10'}`}>
               <MaterialIcons
-                name={item.gw ? "language" : "translate"}
+                name={item.gw ? 'language' : 'translate'}
                 size={24}
                 color={isDark ? '#60A5FA' : '#3B82F6'}
               />
@@ -133,8 +132,10 @@ export default function DownloadsScreen() {
               )}
               {/* Language Code Badge */}
               <View className="mt-2 flex-row items-center">
-                <View className={`rounded-full px-3 py-1 ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                  <Text className={`text-xs font-mono ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                <View
+                  className={`rounded-full px-3 py-1 ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                  <Text
+                    className={`font-mono text-xs ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
                     {item.lc.toUpperCase()}
                   </Text>
                 </View>
@@ -144,25 +145,20 @@ export default function DownloadsScreen() {
 
           {/* Chevron */}
           <View className={`rounded-full p-2 ${isDark ? 'bg-gray-600/30' : 'bg-gray-200/50'}`}>
-            <MaterialIcons
-              name="chevron-right"
-              size={24}
-              color={isDark ? '#9CA3AF' : '#6B7280'}
-            />
+            <MaterialIcons name="chevron-right" size={24} color={isDark ? '#9CA3AF' : '#6B7280'} />
           </View>
         </View>
       </View>
     </TouchableOpacity>
   );
 
-
-
   if (loading) {
     return (
       <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
         <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
         <View className="flex-1 items-center justify-center">
-          <View className={`rounded-2xl p-8 ${isDark ? 'bg-gray-800' : 'bg-white'} shadow-xl border ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+          <View
+            className={`rounded-2xl p-8 ${isDark ? 'bg-gray-800' : 'bg-white'} border shadow-xl ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
             <ActivityIndicator size="large" color={isDark ? '#60A5FA' : '#3B82F6'} />
             <MaterialIcons
               name="language"
@@ -182,12 +178,9 @@ export default function DownloadsScreen() {
         <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
         <View className="flex-1 items-center justify-center p-6">
           <View className="items-center">
-            <View className={`mb-6 rounded-3xl p-6 ${isDark ? 'bg-red-600/20' : 'bg-red-500/10'} border ${isDark ? 'border-red-600/30' : 'border-red-500/20'}`}>
-              <MaterialIcons
-                name="cloud-off"
-                size={48}
-                color={isDark ? '#F87171' : '#EF4444'}
-              />
+            <View
+              className={`mb-6 rounded-3xl p-6 ${isDark ? 'bg-red-600/20' : 'bg-red-500/10'} border ${isDark ? 'border-red-600/30' : 'border-red-500/20'}`}>
+              <MaterialIcons name="cloud-off" size={48} color={isDark ? '#F87171' : '#EF4444'} />
             </View>
             <TouchableOpacity
               onPress={loadLanguages}
@@ -211,35 +204,32 @@ export default function DownloadsScreen() {
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       {/* Header */}
-      <View className={`px-6 py-4 ${isDark ? 'bg-gray-900' : 'bg-white'} border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+      <View
+        className={`px-6 py-4 ${isDark ? 'bg-gray-900' : 'bg-white'} border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
         <View className="flex-row items-center justify-between">
-        <View className="flex-row items-center">
-          <TouchableOpacity
-            onPress={() => router.back()}
-            className={`mr-4 rounded-full p-2 ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
-            <MaterialIcons name="arrow-back" size={24} color={isDark ? '#FFFFFF' : '#374151'} />
-          </TouchableOpacity>
           <View className="flex-row items-center">
-            <MaterialIcons name="download" size={28} color={isDark ? '#60A5FA' : '#3B82F6'} />
-            <View className={`ml-3 rounded-full px-3 py-1 ${isDark ? 'bg-blue-600/20' : 'bg-blue-500/10'}`}>
-              <Text className={`text-sm font-medium ${isDark ? 'text-blue-300' : 'text-blue-600'}`}>
-                {filteredLanguages.length}
-              </Text>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              className={`mr-4 rounded-full p-2 ${isDark ? 'bg-gray-700/50' : 'bg-gray-100'}`}>
+              <MaterialIcons name="arrow-back" size={24} color={isDark ? '#FFFFFF' : '#374151'} />
+            </TouchableOpacity>
+            <View className="flex-row items-center">
+              <MaterialIcons name="download" size={28} color={isDark ? '#60A5FA' : '#3B82F6'} />
+              <View
+                className={`ml-3 rounded-full px-3 py-1 ${isDark ? 'bg-blue-600/20' : 'bg-blue-500/10'}`}>
+                <Text
+                  className={`text-sm font-medium ${isDark ? 'text-blue-300' : 'text-blue-600'}`}>
+                  {filteredLanguages.length}
+                </Text>
+              </View>
             </View>
           </View>
-          </View>
-
-
         </View>
       </View>
 
       {/* Search */}
       <View className={`px-6 py-4 ${isDark ? 'bg-gray-900/50' : 'bg-white/50'}`}>
-        <SearchBar
-          placeholder=""
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
+        <SearchBar placeholder="" value={searchQuery} onChangeText={setSearchQuery} />
       </View>
 
       <FlatList
@@ -250,8 +240,6 @@ export default function DownloadsScreen() {
         showsVerticalScrollIndicator={false}
         className={`flex-1 ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}
       />
-
-
     </SafeAreaView>
   );
 }

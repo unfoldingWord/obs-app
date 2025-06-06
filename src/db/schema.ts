@@ -52,26 +52,24 @@ export const repositoryOwners = sqliteTable(
       .$type<string[]>()
       .notNull()
       .default(sql`'[]'`), // Subjects/topics
-    socialLinks: text('social_links', { mode: 'json' })
-      .$type<{
-        twitter?: string;
-        github?: string;
-        linkedin?: string;
-        facebook?: string;
-        mastodon?: string;
-      }>(), // Social media links
-    metadata: text('metadata', { mode: 'json' })
-      .$type<{
-        bio?: string;
-        company?: string;
-        hireable?: boolean;
-        publicRepos?: number;
-        publicGists?: number;
-        followers?: number;
-        following?: number;
-        createdAt?: string;
-        updatedAt?: string;
-      }>(), // Additional metadata from API
+    socialLinks: text('social_links', { mode: 'json' }).$type<{
+      twitter?: string;
+      github?: string;
+      linkedin?: string;
+      facebook?: string;
+      mastodon?: string;
+    }>(), // Social media links
+    metadata: text('metadata', { mode: 'json' }).$type<{
+      bio?: string;
+      company?: string;
+      hireable?: boolean;
+      publicRepos?: number;
+      publicGists?: number;
+      followers?: number;
+      following?: number;
+      createdAt?: string;
+      updatedAt?: string;
+    }>(), // Additional metadata from API
     lastUpdated: text('last_updated')
       .notNull()
       .default(sql`(datetime('now'))`),
@@ -87,7 +85,9 @@ export const collections = sqliteTable(
   'collections',
   {
     id: text('id').primaryKey(), // Format: "owner/repository-name"
-    owner: text('owner').notNull().references(() => repositoryOwners.username, { onDelete: 'cascade' }),
+    owner: text('owner')
+      .notNull()
+      .references(() => repositoryOwners.username, { onDelete: 'cascade' }),
     language: text('language')
       .notNull()
       .references(() => languages.lc, { onDelete: 'cascade' }),
@@ -98,29 +98,28 @@ export const collections = sqliteTable(
       .notNull()
       .default(sql`(datetime('now'))`),
     isDownloaded: integer('is_downloaded', { mode: 'boolean' }).notNull().default(false),
-    metadata: text('metadata', { mode: 'json' })
-      .$type<{
-        description?: string;
-        targetAudience?: string;
-        thumbnail?: string;
-        checking?: {
-          checkingEntity?: string[];
-          checkingLevel?: string;
-        };
-        publisher?: string;
-        rights?: string;
-        subject?: string;
-        contributor?: string[];
-        creator?: string;
-        issued?: string;
-        modified?: string;
-        relation?: string[];
-        source?: Array<{
-          identifier: string;
-          language: string;
-          version: string;
-        }>;
-      }>(),
+    metadata: text('metadata', { mode: 'json' }).$type<{
+      description?: string;
+      targetAudience?: string;
+      thumbnail?: string;
+      checking?: {
+        checkingEntity?: string[];
+        checkingLevel?: string;
+      };
+      publisher?: string;
+      rights?: string;
+      subject?: string;
+      contributor?: string[];
+      creator?: string;
+      issued?: string;
+      modified?: string;
+      relation?: string[];
+      source?: {
+        identifier: string;
+        language: string;
+        version: string;
+      }[];
+    }>(),
   },
   (table) => ({
     ownerIdx: index('idx_collections_owner').on(table.owner),

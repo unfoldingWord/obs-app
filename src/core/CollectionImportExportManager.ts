@@ -5,15 +5,10 @@ import JSZip from 'jszip';
 import { CollectionsManager, Collection, Story, Frame } from './CollectionsManager';
 import { DatabaseManager } from './DatabaseManager';
 import { UnifiedLanguagesManager } from './UnifiedLanguagesManager';
+import { batchSaveStories, batchSaveFrames, extractSourceReference } from './ZipProcessingUtils';
 import { ImageManager } from './imageManager';
-import { StoryManager, UserMarker, UserProgress } from './storyManager';
+import { StoryManager } from './storyManager';
 import { warn } from './utils';
-import {
-  processAndStoreZipOptimized,
-  batchSaveStories,
-  batchSaveFrames,
-  extractSourceReference
-} from './ZipProcessingUtils';
 
 // Export/Import format version for compatibility checking
 const EXPORT_FORMAT_VERSION = '1.0.0';
@@ -220,6 +215,14 @@ export class CollectionImportExportManager {
   private imageManager: ImageManager;
   private storyManager: StoryManager;
   private initialized: boolean = false;
+
+  // Cache for getZipDisplayInfo to prevent duplicate processing
+  private zipDisplayInfoCache = new Map<string, Promise<any>>();
+  private static readonly CACHE_EXPIRY_MS = 30000; // 30 seconds
+  private cacheTimestamps = new Map<string, number>();
+
+  // Global processing lock to prevent simultaneous operations
+  private processingLock = new Set<string>();
 
   private constructor() {
     this.collectionsManager = CollectionsManager.getInstance();
@@ -546,8 +549,47 @@ export class CollectionImportExportManager {
     try {
       onProgress?.(0, 'Reading import file...');
 
+      let actualFilePath = filePath;
+
+      // Handle content URIs by copying to cache first (same logic as processZipFile)
+      if (filePath.startsWith('content://')) {
+        console.log('📥 Import: Content URI detected, copying to cache...');
+        console.log('📥 Import: Original URI for copyAsync:', filePath);
+        try {
+          const { StorageAccessFramework } = await import('expo-file-system');
+
+          // Create a unique filename for the cache
+          const timestamp = Date.now();
+          const randomString = Math.random().toString(36).substr(2, 9);
+          const cacheFileName = `temp_import_${timestamp}_${randomString}.obs`;
+          const cacheFilePath = `${FileSystem.cacheDirectory}${cacheFileName}`;
+
+          // For content URIs, we need to reconstruct the properly encoded URI
+          let sourceUri = filePath;
+
+          // Check if the URI has been decoded (contains colons and slashes in the path)
+          if (filePath.includes('primary:Documents/')) {
+            // Re-encode the path part to restore the original Android content URI format
+            sourceUri = filePath.replace('primary:Documents/', 'primary%3ADocuments%2F');
+            console.log('📥 Import: Re-encoded URI for Android:', sourceUri);
+          }
+
+          // Copy the content URI to cache
+          await StorageAccessFramework.copyAsync({
+            from: sourceUri,
+            to: cacheFilePath,
+          });
+
+          actualFilePath = cacheFilePath;
+          console.log('📥 Import: File copied to cache:', actualFilePath);
+        } catch (copyError) {
+          console.error('📥 Import: Failed to copy content URI to cache:', copyError);
+          throw new Error('Could not access file: Permission denied or file not found');
+        }
+      }
+
       // Optimized ZIP file reading - read as base64 in one go
-      const zipContent = await FileSystem.readAsStringAsync(filePath, {
+      const zipContent = await FileSystem.readAsStringAsync(actualFilePath, {
         encoding: FileSystem.EncodingType.Base64,
       });
 
@@ -556,7 +598,7 @@ export class CollectionImportExportManager {
       // Load ZIP with streaming option for better memory usage
       const zip = await JSZip.loadAsync(zipContent, {
         base64: true,
-        createFolders: false // Don't create folder objects, saves memory
+        createFolders: false, // Don't create folder objects, saves memory
       });
 
       onProgress?.(10, 'Validating import file...');
@@ -580,13 +622,19 @@ export class CollectionImportExportManager {
 
       const existingCollection = await this.databaseManager.getCollection(manifest.collection.id);
       if (existingCollection) {
-        const comparison = this.compareVersions(existingCollection.version, manifest.collection.version);
+        const comparison = this.compareVersions(
+          existingCollection.version,
+          manifest.collection.version
+        );
 
         if (comparison !== 0 && !options.overwriteExisting) {
           result.skipped = true;
           result.errors.push({
             type: 'VERSION_CONFLICT',
-            code: comparison > 0 ? IMPORT_ERROR_CODES.VERSION_CONFLICT_OLDER : IMPORT_ERROR_CODES.VERSION_CONFLICT_NEWER,
+            code:
+              comparison > 0
+                ? IMPORT_ERROR_CODES.VERSION_CONFLICT_OLDER
+                : IMPORT_ERROR_CODES.VERSION_CONFLICT_NEWER,
             message: `Version conflict detected for collection "${manifest.collection.display_name}"`,
             canRetry: true,
             details: {
@@ -684,22 +732,26 @@ export class CollectionImportExportManager {
         imageSetId: manifest.collection.image_set_id,
         lastUpdated: manifest.collection.last_updated_timestamp,
         isDownloaded: true,
-        metadata: manifest.collection.metadata ? {
-          description: manifest.collection.metadata.description,
-          targetAudience: manifest.collection.metadata.target_audience,
-          publisher: manifest.collection.metadata.publisher,
-          rights: manifest.collection.metadata.rights,
-          subject: manifest.collection.metadata.subject,
-          creator: manifest.collection.metadata.creator,
-          issued: manifest.collection.metadata.issued,
-          modified: manifest.collection.metadata.modified,
-          relation: manifest.collection.metadata.relation,
-          source: manifest.collection.metadata.source,
-          checking: manifest.collection.metadata.checking ? {
-            checkingEntity: manifest.collection.metadata.checking.checking_entity,
-            checkingLevel: manifest.collection.metadata.checking.checking_level,
-          } : undefined,
-        } : undefined,
+        metadata: manifest.collection.metadata
+          ? {
+              description: manifest.collection.metadata.description,
+              targetAudience: manifest.collection.metadata.target_audience,
+              publisher: manifest.collection.metadata.publisher,
+              rights: manifest.collection.metadata.rights,
+              subject: manifest.collection.metadata.subject,
+              creator: manifest.collection.metadata.creator,
+              issued: manifest.collection.metadata.issued,
+              modified: manifest.collection.metadata.modified,
+              relation: manifest.collection.metadata.relation,
+              source: manifest.collection.metadata.source,
+              checking: manifest.collection.metadata.checking
+                ? {
+                    checkingEntity: manifest.collection.metadata.checking.checking_entity,
+                    checkingLevel: manifest.collection.metadata.checking.checking_level,
+                  }
+                : undefined,
+            }
+          : undefined,
       });
 
       onProgress?.(30, 'Processing stories...');
@@ -711,7 +763,8 @@ export class CollectionImportExportManager {
       }
 
       const storyFileRegex = /(?:^|\/)(?:content\/|ingredients\/)?(\d+)\.md$/i;
-      const frameParseRegex = /!\[[^\]]*?\]\(([^)]+?)\)\s*([\s\S]*?)(?=(?:!\[[^\]]*?\]\([^)]+?\))|$)/g;
+      const frameParseRegex =
+        /!\[[^\]]*?\]\(([^)]+?)\)\s*([\s\S]*?)(?=(?:!\[[^\]]*?\]\([^)]+?\))|$)/g;
 
       const filesToProcess = Object.entries(storiesFolder.files);
       const allStories: any[] = [];
@@ -766,7 +819,9 @@ export class CollectionImportExportManager {
             const imageUrl = match[1].trim();
             const frameText = match[2].trim();
             if (!imageUrl || !frameText) {
-              warn(`Skipping empty frame ${frameNumber} in story ${storyNumber} of ${manifest.collection.id}`);
+              warn(
+                `Skipping empty frame ${frameNumber} in story ${storyNumber} of ${manifest.collection.id}`
+              );
               continue;
             }
 
@@ -790,7 +845,7 @@ export class CollectionImportExportManager {
         }
       }
 
-            onProgress?.(70, 'Saving to database...');
+      onProgress?.(70, 'Saving to database...');
 
       // OPTIMIZATION: Batch save all stories and frames
       await batchSaveStories(allStories);
@@ -814,12 +869,14 @@ export class CollectionImportExportManager {
       onProgress?.(100, 'Import complete!');
     } catch (error) {
       // Error handling (same as original)
-      const errorDetails = manifest ? {
-        collectionId: manifest.collection.id,
-        collectionName: manifest.collection.display_name,
-        ownerName: manifest.repositoryOwner?.full_name || manifest.collection.owner_username,
-        language: manifest.collection.language_code,
-      } : undefined;
+      const errorDetails = manifest
+        ? {
+            collectionId: manifest.collection.id,
+            collectionName: manifest.collection.display_name,
+            ownerName: manifest.repositoryOwner?.full_name || manifest.collection.owner_username,
+            language: manifest.collection.language_code,
+          }
+        : undefined;
 
       let errorCode: ImportErrorCode = IMPORT_ERROR_CODES.UNKNOWN_ERROR;
       if (error instanceof Error) {
@@ -845,7 +902,7 @@ export class CollectionImportExportManager {
     return result;
   }
 
-      /**
+  /**
    * Extract source reference from story content (using shared utility)
    */
   private extractSourceReference = extractSourceReference;
@@ -1139,11 +1196,153 @@ export class CollectionImportExportManager {
     storyCount: number;
     exportDate: string;
   } | null> {
+    console.log('getZipDisplayInfo called with filePath:', filePath);
+
+    // Check if already processing this exact file
+    if (this.processingLock.has(filePath)) {
+      console.log('🔒 File already being processed, waiting for existing operation:', filePath);
+      // Wait for existing operation to complete by checking cache periodically
+      let attempts = 0;
+      while (this.processingLock.has(filePath) && attempts < 30) {
+        // Max 3 seconds
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        attempts++;
+      }
+
+      // If still processing after timeout, proceed anyway
+      if (this.processingLock.has(filePath)) {
+        console.log('⚠️ Processing timeout, removing lock and proceeding:', filePath);
+        this.processingLock.delete(filePath);
+      }
+    }
+
+    // Check cache first
+    const now = Date.now();
+    const cacheKey = filePath;
+    const cachedTimestamp = this.cacheTimestamps.get(cacheKey);
+
+    if (
+      this.zipDisplayInfoCache.has(cacheKey) &&
+      cachedTimestamp &&
+      now - cachedTimestamp < CollectionImportExportManager.CACHE_EXPIRY_MS
+    ) {
+      console.log('🎯 Using cached result for:', filePath);
+      return this.zipDisplayInfoCache.get(cacheKey)!;
+    }
+
+    // Clear expired cache entries
+    this.clearExpiredCache();
+
+    // Add to processing lock
+    this.processingLock.add(filePath);
+
     try {
+      // Create new promise for this file
+      const processingPromise = this.processZipFile(filePath);
+      this.zipDisplayInfoCache.set(cacheKey, processingPromise);
+      this.cacheTimestamps.set(cacheKey, now);
+
+      const result = await processingPromise;
+      return result;
+    } finally {
+      // Always remove from processing lock
+      this.processingLock.delete(filePath);
+    }
+  }
+
+  /**
+   * Clear expired cache entries
+   */
+  private clearExpiredCache(): void {
+    const now = Date.now();
+    const expiredKeys: string[] = [];
+
+    this.cacheTimestamps.forEach((timestamp, key) => {
+      if (now - timestamp >= CollectionImportExportManager.CACHE_EXPIRY_MS) {
+        expiredKeys.push(key);
+      }
+    });
+
+    expiredKeys.forEach((key) => {
+      this.zipDisplayInfoCache.delete(key);
+      this.cacheTimestamps.delete(key);
+    });
+
+    if (expiredKeys.length > 0) {
+      console.log('🧹 Cleared', expiredKeys.length, 'expired cache entries');
+    }
+  }
+
+  /**
+   * Process zip file and extract display information
+   */
+  private async processZipFile(filePath: string): Promise<{
+    collectionName: string;
+    ownerName: string;
+    version: string;
+    language: string;
+    storyCount: number;
+    exportDate: string;
+  } | null> {
+    try {
+      let actualFilePath = filePath;
+
+      // Handle content URIs by copying to cache first
+      if (filePath.startsWith('content://')) {
+        console.log('Content URI detected, copying to cache...');
+        console.log('Original URI for copyAsync:', filePath);
+        try {
+          const { StorageAccessFramework } = await import('expo-file-system');
+
+          // Create a unique filename for the cache
+          const timestamp = Date.now();
+          const randomString = Math.random().toString(36).substr(2, 9);
+          const cacheFileName = `temp_import_${timestamp}_${randomString}.obs`;
+          const cacheFilePath = `${FileSystem.cacheDirectory}${cacheFileName}`;
+
+          // For content URIs, we need to reconstruct the properly encoded URI
+          // The issue is that we're receiving a decoded URI, but Android expects the original encoded format
+          let sourceUri = filePath;
+
+          // Check if the URI has been decoded (contains colons and slashes in the path)
+          if (filePath.includes('primary:Documents/')) {
+            // Re-encode the path part to restore the original Android content URI format
+            sourceUri = filePath.replace('primary:Documents/', 'primary%3ADocuments%2F');
+            console.log('Re-encoded URI for Android:', sourceUri);
+          }
+
+          // Copy the content URI to cache
+          await StorageAccessFramework.copyAsync({
+            from: sourceUri,
+            to: cacheFilePath,
+          });
+
+          actualFilePath = cacheFilePath;
+          console.log('File copied to cache:', actualFilePath);
+        } catch (copyError) {
+          console.error('Failed to copy content URI to cache:', copyError);
+          throw new Error('Could not access file: Permission denied or file not found');
+        }
+      }
+
+      // Check if file exists
+      const fileInfo = await FileSystem.getInfoAsync(actualFilePath);
+      console.log('File exists:', fileInfo.exists);
+      console.log('File info:', fileInfo);
+
+      if (!fileInfo.exists) {
+        console.log('File does not exist:', actualFilePath);
+        throw new Error('File not found');
+      }
+
       // Read the zip file as base64
-      const zipContent = await FileSystem.readAsStringAsync(filePath, {
+      console.log('Reading file as base64...');
+      const zipContent = await FileSystem.readAsStringAsync(actualFilePath, {
         encoding: FileSystem.EncodingType.Base64,
       });
+
+      console.log('Zip content length:', zipContent.length);
+      console.log('First 100 chars of zip content:', zipContent.substring(0, 100));
 
       // Convert base64 to Uint8Array
       const binaryString = atob(zipContent);
@@ -1152,29 +1351,50 @@ export class CollectionImportExportManager {
         bytes[i] = binaryString.charCodeAt(i);
       }
 
+      console.log('Loading zip with JSZip...');
       const zip = await JSZip.loadAsync(bytes);
+      console.log('Zip loaded successfully');
+      console.log('Zip files:', Object.keys(zip.files));
+
       const manifestFile = zip.file('manifest.json');
+      console.log('Manifest file found:', !!manifestFile);
 
       if (!manifestFile) {
-        return null;
+        console.log('No manifest.json found in zip file');
+        throw new Error('Invalid OBS file: Missing manifest.json');
       }
 
-      const manifest: AppExportManifest = JSON.parse(await manifestFile.async('text'));
+      console.log('Reading manifest content...');
+      const manifestContent = await manifestFile.async('text');
+      console.log('Manifest content:', manifestContent);
 
-      return {
+      const manifest: AppExportManifest = JSON.parse(manifestContent);
+      console.log('Manifest parsed successfully');
+
+      // Count story files
+      const storyCount = Object.keys(zip.files).filter(
+        (name) => name.startsWith('content/') && name.endsWith('.md')
+      ).length;
+
+      const result = {
         collectionName: manifest.collection.display_name,
         ownerName: manifest.repositoryOwner?.full_name || manifest.collection.owner_username,
         version: manifest.collection.version,
         language: manifest.collection.language_code,
-        storyCount: Object.keys(zip.files).filter(
-          (name) => name.startsWith('content/') && name.endsWith('.md')
-        ).length,
+        storyCount,
         exportDate: manifest.exportedDate,
       };
+
+      console.log('Display info result:', result);
+      return result;
     } catch (error) {
-      warn(
-        `Failed to read display info: ${error instanceof Error ? error.message : String(error)}`
-      );
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('❌ Failed to read display info:', errorMessage);
+
+      // Remove from cache on error
+      this.zipDisplayInfoCache.delete(filePath);
+      this.cacheTimestamps.delete(filePath);
+
       return null;
     }
   }
@@ -1223,8 +1443,6 @@ export class CollectionImportExportManager {
       return [];
     }
   }
-
-
 
   /**
    * Backup user data before collection deletion

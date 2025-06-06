@@ -163,13 +163,12 @@ export const NotesSection: React.FC<NotesSectionProps> = ({
       {/* Notes Toggle Button */}
       <TouchableOpacity
         onPress={onToggleVisibility}
-        className={`px-4 py-3 border-t ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}
+        className={`border-t px-4 py-3 ${isDark ? 'border-gray-800 bg-gray-900' : 'border-gray-200 bg-white'}`}
         style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <MaterialIcons name="edit-note" size={20} color={isDark ? '#9CA3AF' : '#6B7280'} />
           {notesCount > 0 && (
-            <View
-              className={`rounded-full px-2.5 py-1 ${isDark ? 'bg-blue-600' : 'bg-blue-500'}`}>
+            <View className={`rounded-full px-2.5 py-1 ${isDark ? 'bg-blue-600' : 'bg-blue-500'}`}>
               <Text className="text-xs font-bold text-white">{notesCount}</Text>
             </View>
           )}
@@ -204,7 +203,12 @@ export const NotesSection: React.FC<NotesSectionProps> = ({
             <TouchableOpacity
               onPress={() => setShowAddModal(true)}
               className={`rounded-xl p-3 shadow-lg ${isDark ? 'bg-blue-600' : 'bg-blue-500'}`}
-              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+              }}>
               <MaterialIcons name="add" size={20} color="white" />
             </TouchableOpacity>
           </View>
@@ -216,9 +220,7 @@ export const NotesSection: React.FC<NotesSectionProps> = ({
         visible={showAddModal}
         onClose={handleCloseModal}
         onSubmit={
-          editingNote
-            ? (text: string) => handleEditNote(editingNote.id, text)
-            : handleAddNote
+          editingNote ? (text: string) => handleEditNote(editingNote.id, text) : handleAddNote
         }
         initialText={editingNote?.comment || ''}
         title={editingNote ? 'Edit Note' : 'Add Note'}

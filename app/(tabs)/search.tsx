@@ -13,9 +13,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { CollectionsManager, SearchResult, Collection } from '../../src/core/CollectionsManager';
 import { NotesSection } from '../../src/components/CommentsSection';
 import { FrameBadge } from '../../src/components/FrameBadge';
+import { CollectionsManager, SearchResult, Collection } from '../../src/core/CollectionsManager';
 import { useStoryNavigation } from '../../src/hooks/useStoryNavigation';
 
 interface HighlightedTextProps {
@@ -81,7 +81,7 @@ export default function SearchScreen() {
       const localCollections = await collectionsManager.getLocalCollections();
       setCollections(localCollections);
       // Initially select all collections
-      setSelectedCollections(new Set(localCollections.map(c => c.id)));
+      setSelectedCollections(new Set(localCollections.map((c) => c.id)));
     } catch (error) {
       console.error('Error loading collections:', error);
     } finally {
@@ -100,7 +100,7 @@ export default function SearchScreen() {
   };
 
   const selectAllCollections = () => {
-    setSelectedCollections(new Set(collections.map(c => c.id)));
+    setSelectedCollections(new Set(collections.map((c) => c.id)));
   };
 
   const selectNoneCollections = () => {
@@ -162,8 +162,7 @@ export default function SearchScreen() {
     <TouchableOpacity
       onPress={() => navigateToStory(item.collectionId, item.storyNumber, item.frameNumber)}
       className={`mx-4 mb-4 rounded-2xl p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} border shadow-lg ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
-
-      <View className="flex-row items-center justify-between mb-3">
+      <View className="mb-3 flex-row items-center justify-between">
         <Text
           className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}
           numberOfLines={1}
@@ -178,7 +177,7 @@ export default function SearchScreen() {
         />
       </View>
 
-      <Text className={`text-sm mb-3 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+      <Text className={`mb-3 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
         {item.collectionName}
       </Text>
 
@@ -191,9 +190,9 @@ export default function SearchScreen() {
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       {/* Search Header */}
-      <View className={`px-6 pt-6 pb-4 ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
+      <View className={`px-6 pb-4 pt-6 ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
         <View className="flex-row items-center">
-          <View className="flex-1 relative">
+          <View className="relative flex-1">
             <MaterialIcons
               name="search"
               size={20}
@@ -201,8 +200,10 @@ export default function SearchScreen() {
               style={{ position: 'absolute', left: 16, top: 16, zIndex: 1 }}
             />
             <TextInput
-              className={`p-4 pl-12 rounded-2xl pr-12 text-base ${
-                isDark ? 'bg-gray-800 text-white border border-gray-700' : 'bg-white text-gray-900 border border-gray-200'
+              className={`rounded-2xl p-4 pl-12 pr-12 text-base ${
+                isDark
+                  ? 'border border-gray-700 bg-gray-800 text-white'
+                  : 'border border-gray-200 bg-white text-gray-900'
               } shadow-sm`}
               placeholder=""
               placeholderTextColor={isDark ? '#6B7280' : '#9CA3AF'}
@@ -211,14 +212,8 @@ export default function SearchScreen() {
               onSubmitEditing={handleSearch}
             />
             {searchQuery.length > 0 && (
-              <TouchableOpacity
-                onPress={handleClear}
-                className="absolute right-3 top-3 p-1">
-                <MaterialIcons
-                  name="clear"
-                  size={24}
-                  color={isDark ? '#6B7280' : '#9CA3AF'}
-                />
+              <TouchableOpacity onPress={handleClear} className="absolute right-3 top-3 p-1">
+                <MaterialIcons name="clear" size={24} color={isDark ? '#6B7280' : '#9CA3AF'} />
               </TouchableOpacity>
             )}
           </View>
@@ -227,40 +222,42 @@ export default function SearchScreen() {
 
       {/* Collection Filters */}
       {!loadingCollections && collections.length > 0 && (
-        <View className={`mx-6 mb-4 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-white'} border ${isDark ? 'border-gray-700' : 'border-gray-200'} shadow-sm`}>
+        <View
+          className={`mx-6 mb-4 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-white'} border ${isDark ? 'border-gray-700' : 'border-gray-200'} shadow-sm`}>
           <TouchableOpacity
             onPress={() => setShowFilters(!showFilters)}
             className="flex-row items-center justify-between p-4">
             <View className="flex-row items-center">
-              <MaterialIcons
-                name="tune"
-                size={24}
-                color={isDark ? '#60A5FA' : '#3B82F6'}
-              />
-              <Text className={`ml-3 text-base font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              <MaterialIcons name="tune" size={24} color={isDark ? '#60A5FA' : '#3B82F6'} />
+              <Text
+                className={`ml-3 text-base font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
                 {selectedCollections.size}
               </Text>
             </View>
             <MaterialIcons
-              name={showFilters ? "expand-less" : "expand-more"}
+              name={showFilters ? 'expand-less' : 'expand-more'}
               size={24}
               color={isDark ? '#6B7280' : '#9CA3AF'}
             />
           </TouchableOpacity>
 
           {showFilters && (
-            <View className="px-4 pb-4 border-t border-gray-200 dark:border-gray-700">
+            <View className="border-t border-gray-200 px-4 pb-4 dark:border-gray-700">
               {/* Select All/None buttons */}
-              <View className="flex-row mt-4 mb-4">
+              <View className="mb-4 mt-4 flex-row">
                 <TouchableOpacity
                   onPress={selectAllCollections}
-                  className={`mr-3 px-4 py-3 rounded-xl flex-row items-center ${isDark ? 'bg-blue-600' : 'bg-blue-500'}`}>
+                  className={`mr-3 flex-row items-center rounded-xl px-4 py-3 ${isDark ? 'bg-blue-600' : 'bg-blue-500'}`}>
                   <MaterialIcons name="check-circle" size={16} color="#FFFFFF" />
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={selectNoneCollections}
-                  className={`px-4 py-3 rounded-xl flex-row items-center ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                  <MaterialIcons name="radio-button-unchecked" size={16} color={isDark ? '#9CA3AF' : '#6B7280'} />
+                  className={`flex-row items-center rounded-xl px-4 py-3 ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                  <MaterialIcons
+                    name="radio-button-unchecked"
+                    size={16}
+                    color={isDark ? '#9CA3AF' : '#6B7280'}
+                  />
                 </TouchableOpacity>
               </View>
 
@@ -270,20 +267,34 @@ export default function SearchScreen() {
                   <TouchableOpacity
                     key={collection.id}
                     onPress={() => toggleCollection(collection.id)}
-                    className="flex-row items-center py-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0">
+                    className="flex-row items-center border-b border-gray-100 py-3 last:border-b-0 dark:border-gray-700">
                     <MaterialIcons
-                      name={selectedCollections.has(collection.id) ? "check-circle" : "radio-button-unchecked"}
+                      name={
+                        selectedCollections.has(collection.id)
+                          ? 'check-circle'
+                          : 'radio-button-unchecked'
+                      }
                       size={20}
-                      color={selectedCollections.has(collection.id)
-                        ? (isDark ? '#60A5FA' : '#3B82F6')
-                        : (isDark ? '#6B7280' : '#9CA3AF')
+                      color={
+                        selectedCollections.has(collection.id)
+                          ? isDark
+                            ? '#60A5FA'
+                            : '#3B82F6'
+                          : isDark
+                            ? '#6B7280'
+                            : '#9CA3AF'
                       }
                     />
-                    <Text className={`ml-3 flex-1 text-sm ${
-                      selectedCollections.has(collection.id)
-                        ? (isDark ? 'text-white' : 'text-gray-900')
-                        : (isDark ? 'text-gray-400' : 'text-gray-500')
-                    }`}>
+                    <Text
+                      className={`ml-3 flex-1 text-sm ${
+                        selectedCollections.has(collection.id)
+                          ? isDark
+                            ? 'text-white'
+                            : 'text-gray-900'
+                          : isDark
+                            ? 'text-gray-400'
+                            : 'text-gray-500'
+                      }`}>
                       {collection.displayName}
                     </Text>
                   </TouchableOpacity>
@@ -308,19 +319,11 @@ export default function SearchScreen() {
         />
       ) : searchQuery ? (
         <View className="flex-1 items-center justify-center">
-          <MaterialIcons
-            name="search-off"
-            size={64}
-            color={isDark ? '#374151' : '#D1D5DB'}
-          />
+          <MaterialIcons name="search-off" size={64} color={isDark ? '#374151' : '#D1D5DB'} />
         </View>
       ) : (
         <View className="flex-1 items-center justify-center">
-          <MaterialIcons
-            name="search"
-            size={64}
-            color={isDark ? '#374151' : '#D1D5DB'}
-          />
+          <MaterialIcons name="search" size={64} color={isDark ? '#374151' : '#D1D5DB'} />
         </View>
       )}
     </SafeAreaView>

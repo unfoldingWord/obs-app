@@ -82,8 +82,6 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
   </Modal>
 );
 
-
-
 interface CollectionInfoModalProps {
   collection: CollectionWithValidation | null;
   visible: boolean;
@@ -113,8 +111,6 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
   const [downloading, setDownloading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
-
-
 
   // Modal states for icon-based feedback
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -236,8 +232,10 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
       const fileName = `${collection.id.replace('/', '-')}-${collection.version}.obs`;
 
       // Use StorageAccessFramework for custom location
-      const documentsUri = await FileSystem.StorageAccessFramework.getUriForDirectoryInRoot('Documents');
-      const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync(documentsUri);
+      const documentsUri =
+        await FileSystem.StorageAccessFramework.getUriForDirectoryInRoot('Documents');
+      const permissions =
+        await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync(documentsUri);
       if (!permissions.granted) {
         setExporting(false);
         return; // User cancelled - silent return for icon-based UI
@@ -290,8 +288,6 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
       setExporting(false);
     }
   };
-
-
 
   const handleDownloadCollection = async () => {
     if (!collection || downloading) return;
@@ -566,8 +562,8 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
                         ? 'bg-yellow-600'
                         : 'bg-yellow-500'
                       : downloading
-                      ? `${isDark ? 'bg-blue-600' : 'bg-blue-500'} opacity-50`
-                      : `${isDark ? 'bg-blue-600' : 'bg-blue-500'}`
+                        ? `${isDark ? 'bg-blue-600' : 'bg-blue-500'} opacity-50`
+                        : `${isDark ? 'bg-blue-600' : 'bg-blue-500'}`
                   }`}>
                   <View className="flex-row items-center justify-center">
                     {downloading ? (
@@ -598,17 +594,26 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
         />
       )}
 
-
-
       {/* Success Modal */}
-      <Modal visible={showSuccessModal} animationType="fade" transparent onRequestClose={() => setShowSuccessModal(false)}>
+      <Modal
+        visible={showSuccessModal}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setShowSuccessModal(false)}>
         <View className="flex-1 items-center justify-center bg-black/50">
           <View className={`mx-6 rounded-2xl p-8 ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
             <View className="items-center">
-              <View className={`mb-6 rounded-full p-4 ${isDark ? 'bg-green-600/20' : 'bg-green-500/10'}`}>
-                <MaterialIcons name="check-circle" size={48} color={isDark ? '#10B981' : '#059669'} />
+              <View
+                className={`mb-6 rounded-full p-4 ${isDark ? 'bg-green-600/20' : 'bg-green-500/10'}`}>
+                <MaterialIcons
+                  name="check-circle"
+                  size={48}
+                  color={isDark ? '#10B981' : '#059669'}
+                />
               </View>
-              <TouchableOpacity onPress={() => setShowSuccessModal(false)} className={`rounded-xl p-4 ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
+              <TouchableOpacity
+                onPress={() => setShowSuccessModal(false)}
+                className={`rounded-xl p-4 ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
                 <View className="items-center">
                   <MaterialIcons name="close" size={24} color={isDark ? '#FFFFFF' : '#374151'} />
                 </View>
@@ -619,14 +624,21 @@ export const CollectionInfoModal: React.FC<CollectionInfoModalProps> = ({
       </Modal>
 
       {/* Error Modal */}
-      <Modal visible={showErrorModal} animationType="fade" transparent onRequestClose={() => setShowErrorModal(false)}>
+      <Modal
+        visible={showErrorModal}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setShowErrorModal(false)}>
         <View className="flex-1 items-center justify-center bg-black/50">
           <View className={`mx-6 rounded-2xl p-8 ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
             <View className="items-center">
-              <View className={`mb-6 rounded-full p-4 ${isDark ? 'bg-red-600/20' : 'bg-red-500/10'}`}>
+              <View
+                className={`mb-6 rounded-full p-4 ${isDark ? 'bg-red-600/20' : 'bg-red-500/10'}`}>
                 <MaterialIcons name="error" size={48} color={isDark ? '#EF4444' : '#DC2626'} />
               </View>
-              <TouchableOpacity onPress={() => setShowErrorModal(false)} className={`rounded-xl p-4 ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
+              <TouchableOpacity
+                onPress={() => setShowErrorModal(false)}
+                className={`rounded-xl p-4 ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
                 <View className="items-center">
                   <MaterialIcons name="close" size={24} color={isDark ? '#FFFFFF' : '#374151'} />
                 </View>

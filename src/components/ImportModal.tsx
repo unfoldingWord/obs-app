@@ -13,11 +13,11 @@ import {
   Animated,
 } from 'react-native';
 
+import { VersionComparison } from './VersionComparison';
 import { CollectionImportExportManager } from '../core/CollectionImportExportManager';
 import { CollectionsManager } from '../core/CollectionsManager';
 import {
   scanForImportableCollections,
-  pickCollectionFile,
   ImportableCollection,
   formatDate,
 } from '../utils/importHelpers';
@@ -37,7 +37,7 @@ interface ImportableCollectionWithStatus extends ImportableCollection {
   localVersion?: string; // The version that's currently installed locally
 }
 
-// Reusable Icon Modal Component
+// Icon Modal Component
 interface IconModalButton {
   icon: string;
   color?: string;
@@ -230,92 +230,6 @@ const InfoModal: React.FC<{ visible: boolean; onClose: () => void; isDark: boole
   />
 );
 
-// Version Comparison Component for upgrade/downgrade confirmations
-interface VersionComparisonProps {
-  collection?: ImportableCollectionWithStatus;
-  isDark: boolean;
-}
-
-const VersionComparison: React.FC<VersionComparisonProps> = ({ collection, isDark }) => {
-  if (!collection) return null;
-
-  const isUpgrade = collection.versionStatus === 'upgrade';
-  const isDowngrade = collection.versionStatus === 'downgrade';
-
-  if (!isUpgrade && !isDowngrade) return null;
-
-  return (
-    <View className="mt-2 max-w-64">
-      {/* Collection Name */}
-      <Text
-        className={`text-center text-base font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}
-        numberOfLines={2}>
-        {collection.displayInfo.collectionName}
-      </Text>
-
-      {/* Owner Name */}
-      <Text
-        className={`mt-1 text-center text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}
-        numberOfLines={1}>
-        {collection.displayInfo.ownerName}
-      </Text>
-
-      {/* Version Transition */}
-      <View className="mt-4 items-center">
-        <View className="items-center space-y-3">
-          {/* Current Version (always on top) */}
-          <View className="items-center">
-            <Text className={`text-base font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              {collection.localVersion || '?'}
-            </Text>
-          </View>
-
-          {/* Downward Arrow */}
-          <MaterialIcons name="arrow-downward" size={16} color={isDark ? '#6B7280' : '#9CA3AF'} />
-
-          {/* New Version (always on bottom) */}
-          <View className="items-center">
-            <View className="flex-row items-center">
-              <Text
-                className={`${isUpgrade ? 'text-lg font-bold' : 'text-base font-medium'} ${
-                  isUpgrade
-                    ? isDark
-                      ? 'text-green-400'
-                      : 'text-green-600'
-                    : isDark
-                      ? 'text-amber-400'
-                      : 'text-amber-600'
-                }`}>
-                {collection.displayInfo.version}
-              </Text>
-
-              {/* Circled arrow indicating upgrade/downgrade */}
-              <View
-                className={`ml-2 rounded-full p-1 ${
-                  isUpgrade
-                    ? isDark
-                      ? 'bg-green-600/20'
-                      : 'bg-green-500/20'
-                    : isDark
-                      ? 'bg-amber-600/20'
-                      : 'bg-amber-500/20'
-                }`}>
-                <MaterialIcons
-                  name={isUpgrade ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
-                  size={12}
-                  color={
-                    isUpgrade ? (isDark ? '#10B981' : '#059669') : isDark ? '#F59E0B' : '#D97706'
-                  }
-                />
-              </View>
-            </View>
-          </View>
-        </View>
-      </View>
-    </View>
-  );
-};
-
 const ConfirmationModal: React.FC<{
   visible: boolean;
   onConfirm: () => void;
@@ -331,7 +245,7 @@ const ConfirmationModal: React.FC<{
       visible={visible}
       onClose={onCancel}
       isDark={isDark}
-      icon={isUpgrade ? 'upgrade' : isDowngrade ? 'warning' : 'help'}
+      icon={isUpgrade ? 'trending-up' : isDowngrade ? 'warning' : 'help'}
       iconColor={
         isUpgrade
           ? isDark
@@ -384,7 +298,17 @@ const ConfirmationModal: React.FC<{
           onPress: onConfirm,
         },
       ]}>
-      <VersionComparison collection={collection} isDark={isDark} />
+      {collection &&
+        (collection.versionStatus === 'upgrade' || collection.versionStatus === 'downgrade') && (
+          <VersionComparison
+            collectionName={collection.displayInfo.collectionName}
+            ownerName={collection.displayInfo.ownerName}
+            currentVersion={collection.localVersion || '?'}
+            newVersion={collection.displayInfo.version}
+            versionStatus={collection.versionStatus}
+            isDark={isDark}
+          />
+        )}
     </IconModal>
   );
 };
@@ -494,7 +418,7 @@ export default function ImportModal({ visible, onClose, onImportSuccess }: Impor
           dotColor: isDark ? '#7DD3FC' : '#0EA5E9',
           bgColor: isDark ? 'bg-sky-900/15' : 'bg-sky-50/70',
           iconColor: isDark ? '#7DD3FC' : '#0284C7',
-          iconName: 'upgrade',
+          iconName: 'trending-up',
           actionBgColor: isDark ? 'bg-sky-800/15' : 'bg-sky-100/50',
           actionIconColor: isDark ? '#7DD3FC' : '#0284C7',
           actionIconName: 'north',
@@ -504,7 +428,7 @@ export default function ImportModal({ visible, onClose, onImportSuccess }: Impor
           dotColor: isDark ? '#FDA4AF' : '#F43F5E',
           bgColor: isDark ? 'bg-rose-900/15' : 'bg-rose-50/70',
           iconColor: isDark ? '#FDA4AF' : '#F43F5E',
-          iconName: 'downgrade',
+          iconName: 'trending-down',
           actionBgColor: isDark ? 'bg-rose-800/15' : 'bg-rose-100/50',
           actionIconColor: isDark ? '#FDA4AF' : '#F43F5E',
           actionIconName: 'south',
@@ -528,7 +452,6 @@ export default function ImportModal({ visible, onClose, onImportSuccess }: Impor
       const collectionsManager = CollectionsManager.getInstance();
       await collectionsManager.initialize();
       const localCollections = await collectionsManager.getLocalCollections();
-      const localCollectionIds = new Set(localCollections.map((c) => c.id));
 
       // Add version status to each collection
       const collectionsWithStatus: ImportableCollectionWithStatus[] = collections.map(
@@ -643,7 +566,7 @@ export default function ImportModal({ visible, onClose, onImportSuccess }: Impor
           skipVersionCheck: false,
         },
         (progress, status) => {
-          console.log(`Import progress: ${progress}% - ${status}`);
+          // Progress callback - can be used for UI updates if needed
         }
       );
 
@@ -678,12 +601,9 @@ export default function ImportModal({ visible, onClose, onImportSuccess }: Impor
       const fileInfo = await FileSystem.getInfoAsync(filePath);
       if (fileInfo.exists) {
         await FileSystem.deleteAsync(filePath);
-        console.log(`🗑️ Deleted collection file: ${fileName}`);
-
         // Refresh the collections list
         await loadImportableCollections();
       } else {
-        console.log(`⚠️ File not found: ${filePath}`);
         // Still refresh the list in case it was already deleted
         await loadImportableCollections();
         setShowInfoModal(true);
@@ -723,10 +643,7 @@ export default function ImportModal({ visible, onClose, onImportSuccess }: Impor
       setShowDeleteAllConfirm(false);
       setLoadingCollections(true);
 
-      let deletedCount = 0;
       let errorCount = 0;
-
-      console.log(`🗑️ Starting to delete ${importableCollections.length} collection files...`);
 
       // Delete all collection files
       for (const collection of importableCollections) {
@@ -734,14 +651,9 @@ export default function ImportModal({ visible, onClose, onImportSuccess }: Impor
           const fileInfo = await FileSystem.getInfoAsync(collection.filePath);
           if (fileInfo.exists) {
             await FileSystem.deleteAsync(collection.filePath);
-            deletedCount++;
-            console.log(`✅ Deleted: ${collection.fileName}`);
-          } else {
-            console.log(`⚠️ File not found: ${collection.filePath}`);
-            deletedCount++; // Count as success since the goal is achieved
           }
         } catch (error) {
-          console.error(`❌ Failed to delete ${collection.fileName}:`, error);
+          console.error('Error during bulk delete:', error);
           errorCount++;
         }
       }
@@ -775,7 +687,7 @@ export default function ImportModal({ visible, onClose, onImportSuccess }: Impor
                   color={isDark ? '#60A5FA' : '#3B82F6'}
                 />
               </View>
-              <View className="flex-row space-x-2 gap-2">
+              <View className="flex-row gap-2 space-x-2">
                 {importableCollections.length > 0 && (
                   <TouchableOpacity
                     onPress={handleDeleteAll}
@@ -802,18 +714,14 @@ export default function ImportModal({ visible, onClose, onImportSuccess }: Impor
             </View>
           </View>
 
-                    {/* Action Bar */}
+          {/* Action Bar */}
           <View className="px-6 py-3">
             <View className="flex-row items-center justify-between">
               <TouchableOpacity
                 onPress={handleRefresh}
                 disabled={!!importingCollectionPath || addingDirectory || loadingCollections}
                 className={`rounded-lg p-3 ${isDark ? 'bg-blue-600/20' : 'bg-blue-500/10'} ${!!importingCollectionPath || addingDirectory || loadingCollections ? 'opacity-50' : ''}`}>
-                <MaterialIcons
-                  name="refresh"
-                  size={20}
-                  color={isDark ? '#60A5FA' : '#3B82F6'}
-                />
+                <MaterialIcons name="refresh" size={20} color={isDark ? '#60A5FA' : '#3B82F6'} />
               </TouchableOpacity>
 
               <TouchableOpacity
