@@ -4,6 +4,23 @@ on:
   push:
     branches:
       - main                    # Only production builds on actual releases
+    paths:
+      - 'src/**'                # Source code changes
+      - 'app/**'                # App directory changes
+      - 'assets/**'             # Asset changes
+      - 'app.json'              # App configuration
+      - 'package.json'          # Dependencies
+      - 'package-lock.json'     # Lock file
+      - 'eas.json'              # EAS configuration
+      - 'metro.config.js'       # Metro bundler config
+      - 'babel.config.js'       # Babel config
+      - 'tailwind.config.js'    # Tailwind config
+      - '!**/*.md'              # Ignore all markdown files
+      - '!.github/**'           # Ignore GitHub workflows/templates
+      - '!docs/**'              # Ignore documentation
+      - '!.gitignore'           # Ignore git configuration
+      - '!LICENSE'              # Ignore license file
+      - '!README.md'            # Ignore README updates
   workflow_dispatch:            # Manual trigger for all other builds
     inputs:
       platform:
@@ -35,6 +52,34 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Check for skip build indicators
+        run: |
+          # Check commit message for skip indicators
+          COMMIT_MESSAGE="${{ github.event.head_commit.message }}"
+
+          # List of skip indicators (case insensitive)
+          SKIP_PATTERNS=(
+            "[skip ci]"
+            "[ci skip]"
+            "[skip build]"
+            "[build skip]"
+            "[no build]"
+            "[docs only]"
+            "[config only]"
+          )
+
+          echo "🔍 Checking commit message: $COMMIT_MESSAGE"
+
+          for pattern in "${SKIP_PATTERNS[@]}"; do
+            if [[ "${COMMIT_MESSAGE,,}" == *"${pattern,,}"* ]]; then
+              echo "⏭️ Found skip indicator: $pattern"
+              echo "🚫 Skipping build as requested"
+              exit 0
+            fi
+          done
+
+          echo "✅ No skip indicators found, proceeding with build"
+
       - name: Check for EXPO_TOKEN
         run: |
           if [ -z "${{ secrets.EXPO_TOKEN }}" ]; then
