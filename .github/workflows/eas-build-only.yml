@@ -1,0 +1,105 @@
+name: EAS Build (Gitflow)
+
+on:
+  push:
+    branches:
+      - main                    # Production builds
+      - develop                 # Preview builds
+      - 'release/**'            # Release testing
+      - 'hotfix/**'             # Emergency fixes
+  pull_request:
+    branches: [main, develop]   # Review builds
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform to build for'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - android
+        - ios
+      profile:
+        description: 'Build profile'
+        required: true
+        default: 'preview'
+        type: choice
+        options:
+        - preview
+        - production
+
+jobs:
+  build:
+    name: EAS Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check for EXPO_TOKEN
+        run: |
+          if [ -z "${{ secrets.EXPO_TOKEN }}" ]; then
+            echo "❌ EXPO_TOKEN secret is required. Please ask the unfoldingword account manager to add it."
+            echo "📖 Learn more: https://docs.expo.dev/eas-update/github-actions"
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18.x
+          cache: npm
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Determine build profile
+        id: build-profile
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "profile=production" >> $GITHUB_OUTPUT
+            echo "🏭 Building for PRODUCTION (main branch)"
+          elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+            echo "profile=preview" >> $GITHUB_OUTPUT
+            echo "🚀 Building for TESTING (develop branch)"
+          elif [[ "${{ github.ref }}" == refs/heads/release/* ]]; then
+            echo "profile=production" >> $GITHUB_OUTPUT
+            echo "📦 Building for RELEASE TESTING (release branch)"
+          elif [[ "${{ github.ref }}" == refs/heads/hotfix/* ]]; then
+            echo "profile=production" >> $GITHUB_OUTPUT
+            echo "🚨 Building for HOTFIX (hotfix branch)"
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "profile=preview" >> $GITHUB_OUTPUT
+            echo "🔍 Building for REVIEW (pull request)"
+          else
+            echo "profile=preview" >> $GITHUB_OUTPUT
+            echo "🔧 Building for FEATURE (feature branch)"
+          fi
+
+      - name: Build with EAS
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            # Manual trigger - use user selection
+            eas build --platform ${{ github.event.inputs.platform }} --profile ${{ github.event.inputs.profile }} --non-interactive
+          else
+            # Automatic trigger - use determined profile
+            eas build --platform all --profile ${{ steps.build-profile.outputs.profile }} --non-interactive
+          fi
+
+      - name: Build summary
+        run: |
+          echo "🎉 Build completed successfully!"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Profile: ${{ steps.build-profile.outputs.profile }}"
+          echo "Trigger: ${{ github.event_name }}"
+          echo ""
+          echo "📱 Check build status: https://expo.dev/accounts/unfoldingword/projects"
