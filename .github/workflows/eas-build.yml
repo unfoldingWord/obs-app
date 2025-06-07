@@ -1,0 +1,61 @@
+name: EAS Build and Submit
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build and Submit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check for EXPO_TOKEN
+        run: |
+          if [ -z "${{ secrets.EXPO_TOKEN }}" ]; then
+            echo "You must provide an EXPO_TOKEN secret linked to this project's Expo account in this repo's secrets. Learn more: https://docs.expo.dev/eas-update/github-actions"
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18.x
+          cache: npm
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create preview build
+        if: github.event_name == 'pull_request'
+        run: eas build --platform all --profile preview --non-interactive
+
+      - name: Create production build
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        run: eas build --platform all --profile production --non-interactive
+
+      - name: Submit to stores
+        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name == 'push'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          ASC_APP_ID: ${{ secrets.ASC_APP_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          GOOGLE_PLAY_SERVICE_ACCOUNT_KEY_PATH: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_KEY_PATH }}
+        run: |
+          # Submit to App Store Connect
+          eas submit --platform ios --profile production --non-interactive
+          # Submit to Google Play Store
+          eas submit --platform android --profile production --non-interactive

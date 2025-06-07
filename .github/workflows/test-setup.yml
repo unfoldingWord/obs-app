@@ -1,0 +1,88 @@
+name: Test EAS Setup
+
+on:
+  push:
+    branches: [feature/eas-configuration]
+  workflow_dispatch:
+
+jobs:
+  test-setup:
+    name: Test EAS Configuration
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate eas.json
+        run: |
+          echo "🔍 Validating eas.json configuration..."
+          if [ -f "eas.json" ]; then
+            echo "✅ eas.json exists"
+            # Check if it's valid JSON
+            if node -e "JSON.parse(require('fs').readFileSync('eas.json', 'utf8'))"; then
+              echo "✅ eas.json is valid JSON"
+            else
+              echo "❌ eas.json is invalid JSON"
+              exit 1
+            fi
+          else
+            echo "❌ eas.json not found"
+            exit 1
+          fi
+
+      - name: Check app.json
+        run: |
+          echo "🔍 Checking app.json..."
+          if [ -f "app.json" ]; then
+            echo "✅ app.json exists"
+            # Extract app name
+            APP_NAME=$(node -e "console.log(JSON.parse(require('fs').readFileSync('app.json', 'utf8')).expo.name)")
+            echo "📱 App name: $APP_NAME"
+          else
+            echo "❌ app.json not found"
+            exit 1
+          fi
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Test EAS CLI
+        run: |
+          echo "🔍 Testing EAS CLI installation..."
+          eas --version
+          echo "✅ EAS CLI is working"
+
+      - name: Validate EAS config (without auth)
+        run: |
+          echo "🔍 Validating EAS configuration..."
+          echo "Build profiles configured:"
+          node -e "
+            const config = JSON.parse(require('fs').readFileSync('eas.json', 'utf8'));
+            Object.keys(config.build).forEach(profile => {
+              console.log('  -', profile);
+            });
+          "
+          echo "✅ EAS configuration looks good!"
+
+      - name: Summary
+        run: |
+          echo "🎉 Setup Validation Complete!"
+          echo ""
+          echo "✅ All configuration files are valid"
+          echo "✅ EAS CLI can be installed"
+          echo "✅ Build profiles are configured"
+          echo ""
+          echo "🔑 Next step: unfoldingword account manager needs to:"
+          echo "   1. Add EXPO_TOKEN to GitHub secrets"
+          echo "   2. Initialize EAS project"
+          echo "   3. Test first build"
