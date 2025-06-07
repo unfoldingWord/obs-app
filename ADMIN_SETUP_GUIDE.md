@@ -53,7 +53,7 @@
 After adding EXPO_TOKEN:
 
 1. Go to **Actions** tab in GitHub
-2. Select **"EAS Build (Conservative - Free Plan)"**
+2. Select **"EAS Build - Manual & Production"**
 3. Click **"Run workflow"**
 4. Choose:
    - **Platform**: `android` (faster for testing)
