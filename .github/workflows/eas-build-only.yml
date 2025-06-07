@@ -1,4 +1,4 @@
-name: EAS Build (Conservative - Free Plan)
+name: EAS Build - Manual & Production
 
 on:
   push:
