@@ -66,97 +66,6 @@ After adding EXPO_TOKEN:
 
 ---
 
-## 🧪 **DRY RUN TESTING (Test Store Submission Without Publishing)**
-
-**⚠️ IMPORTANT**: You can test store submission setup WITHOUT actually publishing to the stores!
-
-### **Option 1: Internal Testing Tracks (RECOMMENDED)**
-
-Our `eas.json` is already configured for safe testing:
-
-#### **Android Internal Testing** (Already Configured)
-
-- **Track**: `internal` (configured in eas.json)
-- **What it does**: Submits to Google Play's internal testing track
-- **Result**: NOT published publicly - only for internal testers
-- **Safety**: ✅ Safe - won't appear in Play Store
-
-#### **iOS TestFlight** (Safe Testing)
-
-- **What it does**: Submits to TestFlight for internal testing
-- **Result**: NOT published publicly - only for internal testers
-- **Safety**: ✅ Safe - won't appear in App Store
-
-### **Option 2: Test Workflow with Build-Only**
-
-Test the complete workflow without store submission:
-
-#### **2.1 Manual Test (No Store Submission)**
-
-1. Go to **Actions** → **"EAS Build and Store Submission"**
-2. Click **"Run workflow"**
-3. Choose:
-   - **submit_to_stores**: `false` ← Important!
-   - **platform**: `android`
-4. **Result**: Builds successfully but skips store submission
-
-#### **2.2 Full Workflow Test**
-
-```bash
-# Test locally with EAS CLI (if you have credentials set up):
-eas submit --platform android --latest --non-interactive
-# This will do a real submission to internal track (safe)
-```
-
-### **Option 3: Test Store Credentials Setup**
-
-Before doing any submission, test that your credentials work:
-
-#### **3.1 Test EAS Login**
-
-```bash
-# Install EAS CLI locally
-npm install -g eas-cli
-
-# Login as unfoldingword organization
-eas login
-
-# Check project is linked
-eas project:info
-```
-
-#### **3.2 Test Store Credential Access**
-
-```bash
-# Test iOS credentials (will prompt if not set up)
-eas submit --platform ios --help
-
-# Test Android credentials (will prompt if not set up)
-eas submit --platform android --help
-```
-
-### **Testing Strategy: Progressive Safety**
-
-#### **Phase 1: Build Testing** ✅ **SAFE**
-
-- Test GitHub Actions workflows
-- Test EAS builds complete successfully
-- **NO store interaction**
-
-#### **Phase 2: Internal Track Testing** ✅ **SAFE**
-
-- Submit to Google Play internal track
-- Submit to iOS TestFlight
-- **NOT visible to public**
-
-#### **Phase 3: Production Publishing** ⚠️ **LIVE**
-
-- Submit to Google Play production
-- Submit to iOS App Store
-- **Visible to public after review**
-
----
-
 ## 🏪 **PHASE 2: STORE SUBMISSION SETUP (Optional - For Full Automation)**
 
 *Note: You can skip this phase and still get working builds. Add store submission later when ready.*
@@ -303,6 +212,99 @@ Click **"Create Variable"**:
 - [ ] **Team approval** for public release
 - [ ] **Store review guidelines** understood
 - [ ] **Production submission** process tested
+
+---
+
+---
+
+## 🧪 **DRY RUN TESTING (Test Store Submission Without Publishing)**
+
+**⚠️ IMPORTANT**: You can test store submission setup WITHOUT actually publishing to the stores!
+
+### **Option 1: Internal Testing Tracks (RECOMMENDED)**
+
+Our `eas.json` is already configured for safe testing:
+
+#### **Android Internal Testing** (Already Configured)
+
+- **Track**: `internal` (configured in eas.json)
+- **What it does**: Submits to Google Play's internal testing track
+- **Result**: NOT published publicly - only for internal testers
+- **Safety**: ✅ Safe - won't appear in Play Store
+
+#### **iOS TestFlight** (Safe Testing)
+
+- **What it does**: Submits to TestFlight for internal testing
+- **Result**: NOT published publicly - only for internal testers
+- **Safety**: ✅ Safe - won't appear in App Store
+
+### **Option 2: Test Workflow with Build-Only**
+
+Test the complete workflow without store submission:
+
+#### **2.1 Manual Test (No Store Submission)**
+
+1. Go to **Actions** → **"EAS Build and Store Submission"**
+2. Click **"Run workflow"**
+3. Choose:
+   - **submit_to_stores**: `false` ← Important!
+   - **platform**: `android`
+4. **Result**: Builds successfully but skips store submission
+
+#### **2.2 Full Workflow Test**
+
+```bash
+# Test locally with EAS CLI (if you have credentials set up):
+eas submit --platform android --latest --non-interactive
+# This will do a real submission to internal track (safe)
+```
+
+### **Option 3: Test Store Credentials Setup**
+
+Before doing any submission, test that your credentials work:
+
+#### **3.1 Test EAS Login**
+
+```bash
+# Install EAS CLI locally
+npm install -g eas-cli
+
+# Login as unfoldingword organization
+eas login
+
+# Check project is linked
+eas project:info
+```
+
+#### **3.2 Test Store Credential Access**
+
+```bash
+# Test iOS credentials (will prompt if not set up)
+eas submit --platform ios --help
+
+# Test Android credentials (will prompt if not set up)
+eas submit --platform android --help
+```
+
+### **Testing Strategy: Progressive Safety**
+
+#### **Phase 1: Build Testing** ✅ **SAFE**
+
+- Test GitHub Actions workflows
+- Test EAS builds complete successfully
+- **NO store interaction**
+
+#### **Phase 2: Internal Track Testing** ✅ **SAFE**
+
+- Submit to Google Play internal track
+- Submit to iOS TestFlight
+- **NOT visible to public**
+
+#### **Phase 3: Production Publishing** ⚠️ **LIVE**
+
+- Submit to Google Play production
+- Submit to iOS App Store
+- **Visible to public after review**
 
 ---
 
