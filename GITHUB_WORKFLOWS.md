@@ -33,9 +33,33 @@ This repository uses **5 specialized GitHub Actions workflows** to handle differ
 # Automatic triggers
 push:
   branches: [main]              # Production builds only
+  paths: [src/**, app/**, ...]  # Only when app code changes
 
 # Manual triggers
 workflow_dispatch:              # Manual builds for any branch
+```
+
+### **Skip Build Options**
+You can prevent builds using:
+
+#### **Path-Based Filtering** (Automatic)
+Builds are **automatically skipped** for:
+- ✅ Documentation changes (`*.md` files)
+- ✅ GitHub workflow updates (`.github/**`)
+- ✅ License and configuration files
+- ✅ README updates
+
+#### **Commit Message Filtering**
+Add any of these to your commit message to skip builds:
+```bash
+git commit -m "Update docs [skip build]"
+git commit -m "Fix typo [docs only]"
+git commit -m "Update README [no build]"
+git commit -m "GitHub workflow changes [config only]"
+
+# All supported skip indicators:
+# [skip ci], [ci skip], [skip build], [build skip]
+# [no build], [docs only], [config only]
 ```
 
 ### **What It Does**
