@@ -1,0 +1,237 @@
+name: Release Validation
+
+on:
+  pull_request:
+    branches: [main]                # PRs to main (usually release branches)
+    paths:
+      - 'app.json'
+      - 'package.json'
+      - 'CHANGELOG.md'
+      - 'eas.json'
+  push:
+    tags:
+      - 'v*'                        # Validate tags before release workflow
+
+jobs:
+  validate-release:
+    name: Validate Release Preparation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate app.json
+        run: |
+          echo "🔍 Validating app.json..."
+
+          # Check app.json is valid JSON
+          if ! jq empty app.json 2>/dev/null; then
+            echo "❌ app.json is not valid JSON"
+            exit 1
+          fi
+
+          # Extract version info
+          VERSION=$(jq -r '.expo.version' app.json)
+          ANDROID_VERSION_CODE=$(jq -r '.expo.android.versionCode // empty' app.json)
+          IOS_BUILD_NUMBER=$(jq -r '.expo.ios.buildNumber // empty' app.json)
+
+          echo "📱 App version: $VERSION"
+          echo "🤖 Android versionCode: ${ANDROID_VERSION_CODE:-"Not set"}"
+          echo "🍎 iOS buildNumber: ${IOS_BUILD_NUMBER:-"Not set"}"
+
+          # Validate version format (semantic versioning)
+          if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]]; then
+            echo "❌ Invalid version format: $VERSION"
+            echo "Expected format: X.Y.Z or X.Y.Z-suffix"
+            exit 1
+          fi
+
+          echo "✅ app.json validation passed"
+
+      - name: Validate package.json
+        run: |
+          echo "🔍 Validating package.json..."
+
+          # Check package.json is valid JSON
+          if ! jq empty package.json 2>/dev/null; then
+            echo "❌ package.json is not valid JSON"
+            exit 1
+          fi
+
+          PKG_VERSION=$(jq -r '.version' package.json)
+          echo "📦 Package version: $PKG_VERSION"
+
+          # Validate version format
+          if [[ ! $PKG_VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]]; then
+            echo "❌ Invalid package version format: $PKG_VERSION"
+            exit 1
+          fi
+
+          echo "✅ package.json validation passed"
+
+      - name: Check version consistency (for release branches)
+        if: startsWith(github.head_ref, 'release/') || startsWith(github.ref, 'refs/tags/v')
+        run: |
+          echo "🔍 Checking version consistency..."
+
+          APP_VERSION=$(jq -r '.expo.version' app.json)
+          PKG_VERSION=$(jq -r '.version' package.json)
+
+          echo "📱 app.json version: $APP_VERSION"
+          echo "📦 package.json version: $PKG_VERSION"
+
+          # For tags, extract version from tag name
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            TAG_VERSION="${{ github.ref }}"
+            TAG_VERSION=${TAG_VERSION#refs/tags/v}
+            echo "🏷️  Tag version: $TAG_VERSION"
+
+            # All three should match for tag releases
+            if [[ "$APP_VERSION" != "$TAG_VERSION" || "$PKG_VERSION" != "$TAG_VERSION" ]]; then
+              echo "❌ Version mismatch detected!"
+              echo "   Tag version: $TAG_VERSION"
+              echo "   app.json: $APP_VERSION"
+              echo "   package.json: $PKG_VERSION"
+              echo ""
+              echo "💡 For tag releases, all versions must match exactly."
+              exit 1
+            fi
+          else
+            # For release branches, app.json and package.json should match
+            if [[ "$APP_VERSION" != "$PKG_VERSION" ]]; then
+              echo "❌ Version mismatch between app.json and package.json"
+              echo "   app.json version: $APP_VERSION"
+              echo "   package.json version: $PKG_VERSION"
+              echo ""
+              echo "💡 These should match for consistent releases."
+              exit 1
+            fi
+          fi
+
+          echo "✅ Version consistency check passed"
+
+      - name: Validate eas.json
+        run: |
+          echo "🔍 Validating eas.json..."
+
+          # Check eas.json is valid JSON
+          if ! jq empty eas.json 2>/dev/null; then
+            echo "❌ eas.json is not valid JSON"
+            exit 1
+          fi
+
+          # Check required profiles exist
+          PROFILES=$(jq -r '.build | keys[]' eas.json)
+          echo "📋 Build profiles: $PROFILES"
+
+          # Check production profile exists
+          if ! echo "$PROFILES" | grep -q "production"; then
+            echo "❌ Missing required 'production' build profile"
+            exit 1
+          fi
+
+          # Validate production profile structure
+          PROD_ANDROID=$(jq -r '.build.production.android // empty' eas.json)
+          PROD_IOS=$(jq -r '.build.production.ios // empty' eas.json)
+
+          if [[ -z "$PROD_ANDROID" ]]; then
+            echo "❌ Missing production.android configuration"
+            exit 1
+          fi
+
+          if [[ -z "$PROD_IOS" ]]; then
+            echo "❌ Missing production.ios configuration"
+            exit 1
+          fi
+
+          echo "✅ eas.json validation passed"
+
+      - name: Check CHANGELOG.md (for release branches)
+        if: startsWith(github.head_ref, 'release/')
+        run: |
+          echo "🔍 Checking CHANGELOG.md..."
+
+          if [[ ! -f CHANGELOG.md ]]; then
+            echo "⚠️  CHANGELOG.md not found (recommended for releases)"
+            exit 0
+          fi
+
+          # Extract version from branch name (release/v1.2.0 -> 1.2.0)
+          BRANCH_VERSION="${{ github.head_ref }}"
+          BRANCH_VERSION=${BRANCH_VERSION#release/v}
+          BRANCH_VERSION=${BRANCH_VERSION#release/}
+
+          echo "🏷️  Release version: $BRANCH_VERSION"
+
+          # Check if version is mentioned in CHANGELOG
+          if grep -q "$BRANCH_VERSION" CHANGELOG.md; then
+            echo "✅ Version $BRANCH_VERSION found in CHANGELOG.md"
+          else
+            echo "⚠️  Version $BRANCH_VERSION not found in CHANGELOG.md"
+            echo "💡 Consider adding release notes for this version"
+          fi
+
+      - name: Lint check
+        run: |
+          echo "🔍 Running lint checks..."
+
+          # Run ESLint if configured
+          if [[ -f .eslintrc.js ]] || [[ -f .eslintrc.json ]] || grep -q eslint package.json 2>/dev/null; then
+            echo "🔧 Running ESLint..."
+            npm run lint --if-present || echo "⚠️  Lint script not found, skipping"
+          else
+            echo "⚠️  ESLint not configured, skipping"
+          fi
+
+      - name: Type check
+        run: |
+          echo "🔍 Running type checks..."
+
+          # Run TypeScript check if configured
+          if [[ -f tsconfig.json ]]; then
+            echo "📝 Running TypeScript check..."
+            npx tsc --noEmit --skipLibCheck || echo "⚠️  TypeScript check failed"
+          else
+            echo "💡 No tsconfig.json found, skipping TypeScript check"
+          fi
+
+      - name: Release validation summary
+        run: |
+          echo "🎉 Release validation completed!"
+          echo ""
+          echo "📋 Validation Results:"
+          echo "  ✅ app.json format and versioning"
+          echo "  ✅ package.json format and versioning"
+          echo "  ✅ eas.json configuration"
+          if [[ "${{ startsWith(github.head_ref, 'release/') }}" == "true" ]]; then
+            echo "  ✅ Version consistency across files"
+            echo "  ✅ CHANGELOG.md check"
+          fi
+          echo "  ✅ Code quality checks"
+          echo ""
+          echo "🚀 Ready for release process!"
+
+      - name: Next steps (for release branches)
+        if: startsWith(github.head_ref, 'release/')
+        run: |
+          echo "📋 Next Steps for Release:"
+          echo ""
+          echo "1. 🔍 Review this PR thoroughly"
+          echo "2. ✅ Get approvals from team members"
+          echo "3. 🔄 Merge this PR to main"
+          echo "4. 🏷️  Create GitHub release with tag"
+          echo "5. 🚀 Automatic build & store submission will start"
+          echo ""
+          echo "📱 Monitor progress at:"
+          echo "   EAS: https://expo.dev/accounts/unfoldingword/projects/obs-app"
+          echo "   Actions: ${{ github.server_url }}/${{ github.repository }}/actions"

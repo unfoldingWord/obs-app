@@ -116,11 +116,9 @@ git checkout -b feature/your-feature-name
 
 This project uses **EAS (Expo Application Services)** for professional-grade builds and deployments:
 
-#### **Automatic Builds** 🤖
-- **`main` branch** → Production builds (store-ready)
-- **`develop` branch** → Preview builds (testing)
-- **`release/*` branches** → Production builds (release testing)
-- **Pull Requests** → Preview builds (code review)
+#### **Automatic Builds** 🤖 (Free Plan Optimized)
+- **`main` branch** → Production builds (store-ready releases only)
+- **All other builds** → Manual trigger only (conserves build minutes)
 
 #### **Manual Builds** 🔧
 ```bash
@@ -146,6 +144,7 @@ eas build --platform all --profile production
 
 - **[Contributing Guide](CONTRIBUTING.md)** - Development workflow and coding standards
 - **[Gitflow Strategy](GITFLOW_STRATEGY.md)** - Branching strategy and release process
+- **[EAS Build Strategy](EAS_BUILD_STRATEGY.md)** - Conservative build approach for free plans
 - **[GitHub Setup Guide](GITHUB_SECRETS_SETUP.md)** - Repository configuration
 - **[EAS Credentials Guide](eas-credentials-template.md)** - Secure credential management
 - **[Development Guide](docs/DEVELOPMENT.md)** - Detailed setup and development workflow
