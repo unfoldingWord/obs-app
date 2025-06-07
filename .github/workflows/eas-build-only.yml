@@ -1,33 +1,33 @@
-name: EAS Build (Gitflow)
+name: EAS Build (Conservative - Free Plan)
 
 on:
   push:
     branches:
-      - main                    # Production builds
-      - develop                 # Preview builds
-      - 'release/**'            # Release testing
-      - 'hotfix/**'             # Emergency fixes
-  pull_request:
-    branches: [main, develop]   # Review builds
-  workflow_dispatch:
+      - main                    # Only production builds on actual releases
+  workflow_dispatch:            # Manual trigger for all other builds
     inputs:
       platform:
         description: 'Platform to build for'
         required: true
-        default: 'all'
+        default: 'android'
         type: choice
         options:
-        - all
         - android
         - ios
+        - all
       profile:
         description: 'Build profile'
         required: true
         default: 'preview'
         type: choice
         options:
+        - development
         - preview
         - production
+      branch:
+        description: 'Branch to build from (leave empty for current)'
+        required: false
+        type: string
 
 jobs:
   build:
@@ -43,8 +43,21 @@ jobs:
             exit 1
           fi
 
+      - name: Determine branch to checkout
+        id: branch
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ github.event.inputs.branch }}" ]]; then
+            echo "branch=${{ github.event.inputs.branch }}" >> $GITHUB_OUTPUT
+            echo "🔧 Manual build requested for branch: ${{ github.event.inputs.branch }}"
+          else
+            echo "branch=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+            echo "🚀 Building current branch: ${{ github.ref_name }}"
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.branch.outputs.branch }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -62,44 +75,52 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Determine build profile
-        id: build-profile
+      - name: Determine build configuration
+        id: build-config
         run: |
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            # Manual build - use user inputs
+            echo "platform=${{ github.event.inputs.platform }}" >> $GITHUB_OUTPUT
+            echo "profile=${{ github.event.inputs.profile }}" >> $GITHUB_OUTPUT
+            echo "🔧 Manual build: ${{ github.event.inputs.platform }} / ${{ github.event.inputs.profile }}"
+          elif [[ "${{ github.ref_name }}" == "main" ]]; then
+            # Main branch - production build
+            echo "platform=all" >> $GITHUB_OUTPUT
             echo "profile=production" >> $GITHUB_OUTPUT
-            echo "🏭 Building for PRODUCTION (main branch)"
-          elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
-            echo "profile=preview" >> $GITHUB_OUTPUT
-            echo "🚀 Building for TESTING (develop branch)"
-          elif [[ "${{ github.ref }}" == refs/heads/release/* ]]; then
-            echo "profile=production" >> $GITHUB_OUTPUT
-            echo "📦 Building for RELEASE TESTING (release branch)"
-          elif [[ "${{ github.ref }}" == refs/heads/hotfix/* ]]; then
-            echo "profile=production" >> $GITHUB_OUTPUT
-            echo "🚨 Building for HOTFIX (hotfix branch)"
-          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "profile=preview" >> $GITHUB_OUTPUT
-            echo "🔍 Building for REVIEW (pull request)"
+            echo "🏭 Production build for MAIN branch (store release)"
           else
+            # Fallback (shouldn't happen with current triggers)
+            echo "platform=android" >> $GITHUB_OUTPUT
             echo "profile=preview" >> $GITHUB_OUTPUT
-            echo "🔧 Building for FEATURE (feature branch)"
+            echo "🔧 Fallback build configuration"
           fi
 
       - name: Build with EAS
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            # Manual trigger - use user selection
-            eas build --platform ${{ github.event.inputs.platform }} --profile ${{ github.event.inputs.profile }} --non-interactive
-          else
-            # Automatic trigger - use determined profile
-            eas build --platform all --profile ${{ steps.build-profile.outputs.profile }} --non-interactive
-          fi
+          echo "🚀 Starting EAS build..."
+          echo "Platform: ${{ steps.build-config.outputs.platform }}"
+          echo "Profile: ${{ steps.build-config.outputs.profile }}"
+          echo "Branch: ${{ steps.branch.outputs.branch }}"
+
+          eas build \
+            --platform ${{ steps.build-config.outputs.platform }} \
+            --profile ${{ steps.build-config.outputs.profile }} \
+            --non-interactive
 
       - name: Build summary
         run: |
           echo "🎉 Build completed successfully!"
-          echo "Branch: ${{ github.ref_name }}"
-          echo "Profile: ${{ steps.build-profile.outputs.profile }}"
-          echo "Trigger: ${{ github.event_name }}"
           echo ""
-          echo "📱 Check build status: https://expo.dev/accounts/unfoldingword/projects"
+          echo "📊 Build Details:"
+          echo "  Branch: ${{ steps.branch.outputs.branch }}"
+          echo "  Platform: ${{ steps.build-config.outputs.platform }}"
+          echo "  Profile: ${{ steps.build-config.outputs.profile }}"
+          echo "  Trigger: ${{ github.event_name }}"
+          echo ""
+          echo "📱 Monitor builds: https://expo.dev/accounts/unfoldingword/projects/obs-app"
+          echo ""
+          if [[ "${{ steps.build-config.outputs.profile }}" == "production" ]]; then
+            echo "🏪 This is a PRODUCTION build ready for store submission!"
+          else
+            echo "🧪 This is a ${{ steps.build-config.outputs.profile }} build for testing."
+          fi

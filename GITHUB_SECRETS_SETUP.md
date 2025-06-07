@@ -1,74 +1,176 @@
-# GitHub Secrets Setup for EAS Builds
+# 🔐 GitHub Secrets Setup Guide
 
-**For unfoldingword Account Manager** 👤
+## 📋 **Overview**
 
-This document explains what GitHub secrets need to be configured to enable automatic EAS builds.
+This guide covers GitHub repository secrets needed for your EAS workflows and explains the **better alternatives** for store credentials.
 
-## 🔑 Required GitHub Secrets
+## 🚨 **Critical Requirements**
 
-### 1. **EXPO_TOKEN** (Essential)
-- **What**: Authentication token for EAS CLI
-- **How to get**:
-  1. Login to [expo.dev](https://expo.dev) with unfoldingword account
-  2. Go to Account Settings → Access Tokens
-  3. Create new token with name "GitHub Actions - Open Bible Stories"
-  4. Copy the token value
-- **Where to add**: GitHub repo Settings → Secrets and variables → Actions → New repository secret
+### **1. EXPO_TOKEN (Essential - Required for ALL builds)**
 
-### 2. **Store Submission Secrets** (Optional - for auto-submit)
-Only needed if you want automatic store submission:
+**Status**: ⚠️ **MISSING - Must be added by unfoldingword account manager**
 
-#### Apple App Store:
-- `APPLE_ID`: Apple ID email (e.g., developer@unfoldingword.org)
-- `ASC_APP_ID`: App Store Connect App ID (10-digit number)
-- `APPLE_TEAM_ID`: Apple Developer Team ID
+```bash
+# What it is:
+Personal access token from your Expo account
 
-#### Google Play Store:
-- `GOOGLE_PLAY_SERVICE_ACCOUNT_KEY_PATH`: Path to service account JSON file
-- Or upload the JSON content as `GOOGLE_PLAY_SERVICE_ACCOUNT_KEY` secret
+# Where to get it:
+1. Go to https://expo.dev/accounts/unfoldingword/settings/access-tokens
+2. Click "Create Token"
+3. Name: "GitHub Actions CI/CD"
+4. Copy the token (save it securely!)
 
-## 📋 Setup Steps
+# How to add to GitHub:
+Repository Settings → Secrets and variables → Actions → New repository secret
+Name: EXPO_TOKEN
+Value: [paste your token]
+```
 
-1. **Go to GitHub Repository**:
-   ```
-   https://github.com/unfoldingword/my-expo-app/settings/secrets/actions
-   ```
+**⚠️ Important**: This token must be from the **unfoldingword** organization account, not a personal account.
 
-2. **Add Required Secrets**:
-   - Click "New repository secret"
-   - Name: `EXPO_TOKEN`
-   - Value: [paste the token from expo.dev]
-   - Click "Add secret"
+## 🎯 **Store Credentials: Better Options Available!**
 
-3. **Test the Setup**:
-   - Go to Actions tab
-   - Run "EAS Build Only" workflow manually
-   - Should build successfully
+### **🚫 OLD WAY: GitHub Secrets (Not Recommended)**
+```bash
+# ❌ Your old setup required these GitHub secrets:
+# APPLE_ID, ASC_APP_ID, APPLE_TEAM_ID, GOOGLE_PLAY_SERVICE_ACCOUNT_KEY_PATH
+```
 
-## 🚀 How It Works
+### **✅ NEW WAY: EAS Secrets (RECOMMENDED)**
 
-### Automatic Triggers:
-- **Pull Requests** → Preview builds (APK/IPA for testing)
-- **Main/Master branch** → Production builds (AAB/IPA for stores)
-- **Develop branch** → Preview builds
-- **Manual trigger** → Choose platform and profile
+**Benefits**:
+- 🔒 **More secure**: Stored directly on EAS servers
+- 🚀 **Easier setup**: No GitHub secrets needed
+- 🔧 **Better management**: Use EAS CLI to manage credentials
+- 🌐 **Cross-project**: Can be shared across projects
 
-### Build Profiles:
-- **Preview**: Internal distribution, APK for Android
-- **Production**: Store-ready builds, AAB for Google Play
+### **Option 1: EAS Secrets (Best for Production)**
 
-## 🛠️ Troubleshooting
+```bash
+# Set up store credentials directly on EAS:
+eas secret:create --scope project --name APPLE_ID --value "developer@unfoldingword.org"
+eas secret:create --scope project --name ASC_APP_ID --value "1234567890"
+eas secret:create --scope project --name APPLE_TEAM_ID --value "ABCD123456"
 
-If builds fail:
-1. Check EXPO_TOKEN is valid and not expired
-2. Verify unfoldingword account has access to this project
-3. Check EAS project is properly initialized
+# For Google Play - upload the JSON file:
+eas secret:create --scope project --name GOOGLE_SERVICES_JSON --type file --value ./google-services.json
+```
 
-## 📞 Contact
-If you need help with setup, contact the developer team.
+### **Option 2: Interactive Setup (Easiest)**
+
+```bash
+# Even simpler - EAS will prompt for credentials when needed:
+eas submit --platform ios
+# EAS CLI will ask for Apple ID, App Store Connect App ID, etc.
+# Credentials are stored securely for future use
+```
+
+## 🔧 **Updated Setup Process**
+
+### **Required GitHub Secrets (Minimal)**
+
+| Secret Name | Required | Purpose | Who Sets Up |
+|-------------|----------|---------|-------------|
+| `EXPO_TOKEN` | ⚠️ **YES** | EAS builds & operations | unfoldingword manager |
+
+### **Store Credentials (Use EAS Secrets Instead)**
+
+| Platform | Setup Method | Command |
+|----------|--------------|---------|
+| **iOS** | EAS Secrets | `eas secret:create --scope project --name APPLE_ID --value "developer@unfoldingword.org"` |
+| **Android** | EAS Secrets | `eas secret:create --scope project --name GOOGLE_SERVICES_JSON --type file --value ./google-services.json` |
+| **Both** | Interactive | `eas submit` (will prompt for credentials) |
+
+## 🎯 **Migration Guide**
+
+### **From GitHub Secrets to EAS Secrets**
+
+If you previously set up GitHub secrets, here's how to migrate:
+
+#### **Step 1: Remove GitHub Secrets (Optional)**
+```bash
+# These GitHub secrets are no longer needed:
+# - APPLE_ID
+# - ASC_APP_ID
+# - APPLE_TEAM_ID
+# - GOOGLE_PLAY_SERVICE_ACCOUNT_KEY_PATH
+
+# You can delete them from: Repository → Settings → Secrets and variables → Actions
+```
+
+#### **Step 2: Set Up EAS Secrets**
+```bash
+# For iOS (after getting Apple Developer account):
+eas secret:create --scope project --name APPLE_ID --value "developer@unfoldingword.org"
+eas secret:create --scope project --name ASC_APP_ID --value "1234567890"
+eas secret:create --scope project --name APPLE_TEAM_ID --value "ABCD123456"
+
+# For Android (after setting up Google Play):
+eas secret:create --scope project --name GOOGLE_SERVICES_JSON --type file --value ./path/to/google-services.json
+```
+
+#### **Step 3: Test Store Submission**
+```bash
+# Test that credentials work:
+eas submit --platform ios --latest
+eas submit --platform android --latest
+```
+
+## 🏗️ **App Store Setup Requirements**
+
+### **Apple App Store Setup**
+1. **Apple Developer Program** ($99/year)
+2. **Create app in App Store Connect**
+3. **Use EAS secrets** or interactive setup
+
+### **Google Play Store Setup**
+1. **Google Play Console** ($25 one-time)
+2. **Create app in Play Console**
+3. **Set up service account** for API access
+4. **Use EAS secrets** or interactive setup
+
+## ⚡ **Quick Setup Checklist**
+
+### **Phase 1: Get Building (This Week)**
+- [ ] **EXPO_TOKEN**: Must be added by unfoldingword account manager
+- [ ] Test first build after EXPO_TOKEN is added
+
+### **Phase 2: Store Publishing (When Ready)**
+- [ ] Set up Apple Developer Program (for iOS)
+- [ ] Set up Google Play Console (for Android)
+- [ ] Use **EAS secrets** for credentials (recommended)
+- [ ] OR use **interactive setup** for simplicity
+
+### **No Longer Needed**
+- [ ] ~~GitHub secrets for store credentials~~ ✅ **Not needed!**
+- [ ] ~~Manual credential management~~ ✅ **EAS handles this!**
+
+## 💡 **Why EAS Secrets Are Better**
+
+### **Security Benefits**
+- 🔒 **Encrypted storage** on EAS servers
+- 🛡️ **No exposure** in GitHub repository
+- 🔐 **Granular access** control
+- 📊 **Audit logging** of credential usage
+
+### **Operational Benefits**
+- 🚀 **Easier CI/CD** - no GitHub secret management
+- 🔄 **Credential rotation** without updating workflows
+- 📱 **Cross-platform** credential sharing
+- 🎯 **Project-specific** or account-wide options
+
+## 📞 **Who to Contact**
+
+### **For EXPO_TOKEN Setup**
+- **Contact**: unfoldingword organization account manager
+- **Needed**: Admin access to unfoldingword Expo organization
+- **Action**: Create access token and add to GitHub secrets
+
+### **For Store Credentials**
+- **Apple**: Team member with Apple Developer access
+- **Google**: Team member with Google Play Console access
+- **Setup**: Use `eas secret:create` commands above
 
 ---
-**Next Steps After Setup**:
-1. Merge this branch to main
-2. First automatic build will trigger
-3. Monitor builds at [expo.dev/accounts/unfoldingword/projects](https://expo.dev/accounts/unfoldingword/projects)
+
+**🎉 Result**: Simplified setup with better security! Only EXPO_TOKEN needed in GitHub, everything else handled by EAS directly.

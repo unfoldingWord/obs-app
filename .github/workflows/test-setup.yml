@@ -2,7 +2,7 @@ name: Test EAS Setup
 
 on:
   push:
-    branches: [feature/eas-configuration]
+    branches: [feature/eas-configuration, feature/github-setup-checklist]
   workflow_dispatch:
 
 jobs:
@@ -84,5 +84,10 @@ jobs:
           echo ""
           echo "🔑 Next step: unfoldingword account manager needs to:"
           echo "   1. Add EXPO_TOKEN to GitHub secrets"
-          echo "   2. Initialize EAS project"
-          echo "   3. Test first build"
+          echo "   2. Initialize EAS project (✅ DONE)"
+          echo "   3. Test first build manually"
+          echo ""
+          echo "💡 To trigger builds manually:"
+          echo "   - Go to Actions → 'EAS Build (Conservative)'"
+          echo "   - Click 'Run workflow'"
+          echo "   - Choose platform and profile"
