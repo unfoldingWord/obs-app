@@ -10,6 +10,11 @@ on:
         required: true
         default: false
         type: boolean
+      testing_mode:
+        description: 'Use testing profiles (safe - internal tracks only)?'
+        required: true
+        default: true
+        type: boolean
       platform:
         description: 'Platform to build for'
         required: true
@@ -50,6 +55,7 @@ jobs:
           else
             echo "🔧 Manual workflow triggered"
             echo "🏪 Store submission: ${{ github.event.inputs.submit_to_stores }}"
+            echo "🧪 Testing mode: ${{ github.event.inputs.testing_mode }}"
             echo "version=manual" >> $GITHUB_OUTPUT
           fi
 
@@ -143,13 +149,22 @@ jobs:
           if [[ "${{ steps.platform.outputs.platform }}" == "ios" || "${{ steps.platform.outputs.platform }}" == "all" ]]; then
             echo "🍎 Submitting to App Store Connect..."
 
-            # Add release notes to submission if it's a release
+            # Determine submit profile based on testing mode
             if [[ "${{ github.event_name }}" == "release" ]]; then
+              SUBMIT_PROFILE="production"
               SUBMIT_MESSAGE="Release ${{ github.event.release.tag_name }}"
-              eas submit --platform ios --message "${SUBMIT_MESSAGE}" --non-interactive
+              echo "📱 Using PRODUCTION profile (public release)"
+            elif [[ "${{ github.event.inputs.testing_mode }}" == "true" ]]; then
+              SUBMIT_PROFILE="testing"
+              SUBMIT_MESSAGE="Testing build - $(date +'%Y-%m-%d %H:%M:%S')"
+              echo "🧪 Using TESTING profile (internal only - SAFE)"
             else
-              eas submit --platform ios --non-interactive
+              SUBMIT_PROFILE="production"
+              SUBMIT_MESSAGE="Manual production build - $(date +'%Y-%m-%d %H:%M:%S')"
+              echo "📱 Using PRODUCTION profile (public release)"
             fi
+
+            eas submit --platform ios --profile ${SUBMIT_PROFILE} --message "${SUBMIT_MESSAGE}" --non-interactive
           else
             echo "⏭️ Skipping iOS submission (not building iOS)"
           fi
@@ -162,13 +177,22 @@ jobs:
           if [[ "${{ steps.platform.outputs.platform }}" == "android" || "${{ steps.platform.outputs.platform }}" == "all" ]]; then
             echo "🤖 Submitting to Google Play Store..."
 
-            # Add release notes to submission if it's a release
+            # Determine submit profile based on testing mode
             if [[ "${{ github.event_name }}" == "release" ]]; then
+              SUBMIT_PROFILE="production"
               SUBMIT_MESSAGE="Release ${{ github.event.release.tag_name }}"
-              eas submit --platform android --message "${SUBMIT_MESSAGE}" --non-interactive
+              echo "📱 Using PRODUCTION profile (public release)"
+            elif [[ "${{ github.event.inputs.testing_mode }}" == "true" ]]; then
+              SUBMIT_PROFILE="testing"
+              SUBMIT_MESSAGE="Testing build - $(date +'%Y-%m-%d %H:%M:%S')"
+              echo "🧪 Using TESTING profile (internal track - SAFE)"
             else
-              eas submit --platform android --non-interactive
+              SUBMIT_PROFILE="production"
+              SUBMIT_MESSAGE="Manual production build - $(date +'%Y-%m-%d %H:%M:%S')"
+              echo "📱 Using PRODUCTION profile (public release)"
             fi
+
+            eas submit --platform android --profile ${SUBMIT_PROFILE} --message "${SUBMIT_MESSAGE}" --non-interactive
           else
             echo "⏭️ Skipping Android submission (not building Android)"
           fi
@@ -223,6 +247,11 @@ jobs:
           if [[ "${{ github.event_name }}" == "release" ]]; then
             echo "  Release: ${{ github.event.release.tag_name }}"
             echo "  Version: ${{ steps.release-info.outputs.version }}"
+            echo "  Profile: PRODUCTION (public release)"
+          elif [[ "${{ github.event.inputs.testing_mode }}" == "true" ]]; then
+            echo "  Profile: TESTING (internal only - safe)"
+          else
+            echo "  Profile: PRODUCTION (public release)"
           fi
           echo ""
           echo "📱 Monitor submissions:"
