@@ -303,5 +303,5 @@ Missing or unsupported collections? [Create an issue](https://github.com/unfoldi
 
 <div align="center">
   <strong>Ready to share God's Word worldwide! 📱📖✨</strong><br/>
-  Made with ❤️ by the unfoldingWord community
+  Made with ❤️ by the Open Component Ecosystem community
 </div>
