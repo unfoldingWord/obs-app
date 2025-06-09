@@ -385,7 +385,7 @@ export default function ReadScreen() {
         }
         contentContainerStyle={{
           paddingHorizontal: collections.length > 0 ? 24 : 0,
-          paddingBottom: 32,
+          paddingBottom: collections.length > 0 ? 32 : 0,
         }}
       />
 

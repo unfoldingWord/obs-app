@@ -1,5 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { hashStringToNumber } from 'core/hashStringToNumber';
+import { hashStringToNumber } from '../core/hashStringToNumber';
 import { useObsImage } from 'hooks/useObsImage';
 import React, { useState, useEffect } from 'react';
 import { View, Text, Image, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
@@ -114,8 +114,7 @@ export function CollectionItem({
             <View style={{ flex: 1, paddingRight: 16 }}>
               <Text
                 className={`text-base font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}
-                style={{ textAlign: isRTL ? 'right' : 'left' }}
-                numberOfLines={1}>
+                style={{ textAlign: isRTL ? 'right' : 'left' }}>
                 {item.displayName}
               </Text>
               <View
@@ -150,7 +149,7 @@ export function CollectionItem({
       </TouchableOpacity>
 
       <CollectionInfoModal
-        collection={item}
+        collection={{ ...item, isValid: true }}
         visible={showInfoModal}
         onClose={handleCloseInfo}
         onCollectionDeleted={handleCollectionDeletedFromModal}
