@@ -19,16 +19,11 @@ import {
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { NotesSection } from '../../../../../../src/components/CommentsSection';
-import {
-  CollectionsManager,
-  Collection,
-  Story,
-  Frame,
-} from '../../../../../../src/core/CollectionsManager';
-import { UnifiedLanguagesManager } from '../../../../../../src/core/UnifiedLanguagesManager';
-import { StoryManager, UserMarker } from '../../../../../../src/core/storyManager';
-import { useObsImage } from '../../../../../../src/hooks/useObsImage';
+import { NotesSection } from '@/components/CommentsSection';
+import { CollectionsManager, Collection, Story, Frame } from '@/core/CollectionsManager';
+import { UnifiedLanguagesManager } from '@/core/UnifiedLanguagesManager';
+import { StoryManager, UserMarker } from '@/core/storyManager';
+import { useObsImage } from '@/hooks/useObsImage';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 

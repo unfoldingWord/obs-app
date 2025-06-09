@@ -20,11 +20,11 @@ import {
   CollectionsManager,
   Collection,
   Story as CollectionStory,
-} from '../../../../src/core/CollectionsManager';
-import { UnifiedLanguagesManager } from '../../../../src/core/UnifiedLanguagesManager';
-import { StoryManager, UserProgress } from '../../../../src/core/storyManager';
-import { useObsImage } from '../../../../src/hooks/useObsImage';
-import { useStoryNavigation } from '../../../../src/hooks/useStoryNavigation';
+} from '@/core/CollectionsManager';
+import { UnifiedLanguagesManager } from '@/core/UnifiedLanguagesManager';
+import { StoryManager, UserProgress } from '@/core/storyManager';
+import { useObsImage } from '@/hooks/useObsImage';
+import { useStoryNavigation } from '@/hooks/useStoryNavigation';
 
 type ReadingMode = 'horizontal' | 'vertical';
 

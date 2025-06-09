@@ -9,8 +9,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { enableScreens } from 'react-native-screens';
 
 import '../global.css';
-import { DatabaseManager } from '../src/core/DatabaseManager';
-import { DataMigration } from '../src/db/migration';
+import { DatabaseManager } from '@/core/DatabaseManager';
+import { DataMigration } from '@/db/migration';
 
 // Enable react-native-screens
 enableScreens();

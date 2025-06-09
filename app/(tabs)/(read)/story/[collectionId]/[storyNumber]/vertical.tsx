@@ -17,11 +17,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { FrameBadge } from '../../../../../../src/components/FrameBadge';
-import { CollectionsManager, Story, Frame } from '../../../../../../src/core/CollectionsManager';
-import { UnifiedLanguagesManager } from '../../../../../../src/core/UnifiedLanguagesManager';
-import { StoryManager, UserMarker } from '../../../../../../src/core/storyManager';
-import { useObsImage } from '../../../../../../src/hooks/useObsImage';
+import { FrameBadge } from '@/components/FrameBadge';
+import { CollectionsManager, Story, Frame } from '@/core/CollectionsManager';
+import { UnifiedLanguagesManager } from '@/core/UnifiedLanguagesManager';
+import { StoryManager, UserMarker } from '@/core/storyManager';
+import { useObsImage } from '@/hooks/useObsImage';
 
 interface BookmarkModalProps {
   visible: boolean;
