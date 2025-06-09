@@ -1,6 +1,6 @@
 import { injectable } from 'inversify';
 
-import { INetworkService } from '../interfaces/INetworkService';
+import { INetworkService } from '@/interfaces/INetworkService';
 
 @injectable()
 export class NetworkService implements INetworkService {
@@ -20,6 +20,7 @@ export class NetworkService implements INetworkService {
       const response = (await Promise.race([fetchPromise, timeoutPromise])) as Response;
       return response.ok;
     } catch (error) {
+      console.error('Error checking network:', error);
       return false;
     }
   }

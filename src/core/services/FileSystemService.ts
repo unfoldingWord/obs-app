@@ -1,7 +1,7 @@
 import * as FileSystem from 'expo-file-system';
 import { injectable } from 'inversify';
 
-import { IFileSystem } from '../interfaces/IFileSystem';
+import { IFileSystem } from '@/interfaces/IFileSystem';
 
 @injectable()
 export class FileSystemService implements IFileSystem {

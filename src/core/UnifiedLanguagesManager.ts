@@ -1,5 +1,6 @@
 import { DatabaseManager } from './DatabaseManager';
-import type { Language } from '../db/schema';
+
+import type { Language } from '@/db/schema';
 
 export interface LanguageCompatible {
   lc: string;

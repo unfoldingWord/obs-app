@@ -1,17 +1,11 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ActivityIndicator,
-  useColorScheme,
-  Modal,
-} from 'react-native';
+import { View, TouchableOpacity, ActivityIndicator, useColorScheme, Modal } from 'react-native';
 
 import { IconModal } from './IconModal';
 import { VersionComparison, CollectionInfo } from './VersionComparison';
-import { CollectionImportExportManager } from '../core/CollectionImportExportManager';
+
+import { CollectionImportExportManager } from '@/core/CollectionImportExportManager';
 
 export interface FileImportModalProps {
   visible: boolean;

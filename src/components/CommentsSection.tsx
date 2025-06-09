@@ -2,9 +2,9 @@ import { MaterialIcons } from '@expo/vector-icons';
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, FlatList, Alert, useColorScheme } from 'react-native';
 
-import { AddCommentModal } from '../components/AddCommentModal';
-import { CommentItem } from '../components/CommentItem';
-import { CommentsManager, FrameComment } from '../core/CommentsManager';
+import { AddCommentModal } from '@/components/AddCommentModal';
+import { CommentItem } from '@/components/CommentItem';
+import { CommentsManager, FrameComment } from '@/core/CommentsManager';
 
 interface NotesSectionProps {
   collectionId: string;
@@ -22,7 +22,6 @@ export const NotesSection: React.FC<NotesSectionProps> = ({
   onToggleVisibility,
 }) => {
   const [notes, setNotes] = useState<FrameComment[]>([]);
-  const [loading, setLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingNote, setEditingNote] = useState<FrameComment | null>(null);
   const [notesCount, setNotesCount] = useState(0);
@@ -31,7 +30,6 @@ export const NotesSection: React.FC<NotesSectionProps> = ({
 
   const loadNotes = useCallback(async () => {
     try {
-      setLoading(true);
       const commentsManager = CommentsManager.getInstance();
       await commentsManager.initialize();
 
@@ -47,8 +45,6 @@ export const NotesSection: React.FC<NotesSectionProps> = ({
     } catch (error) {
       console.error('Error loading notes:', error);
       Alert.alert('Error', 'Failed to load notes. Please try again.');
-    } finally {
-      setLoading(false);
     }
   }, [collectionId, storyNumber, frameNumber]);
 

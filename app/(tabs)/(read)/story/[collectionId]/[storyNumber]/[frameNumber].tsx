@@ -13,17 +13,13 @@ import {
   ScrollView,
   FlatList,
   Dimensions,
-  Alert,
   Modal,
   TextInput,
-  Animated,
-  PanResponder,
 } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { NotesSection } from '../../../../../../src/components/CommentsSection';
-import { FrameBadge } from '../../../../../../src/components/FrameBadge';
 import {
   CollectionsManager,
   Collection,
@@ -60,18 +56,15 @@ export default function StoryFrameScreen() {
   const [currentFrameNumber, setCurrentFrameNumber] = useState(
     frameNumber ? parseInt(frameNumber as string, 10) : 1
   );
-  const [markers, setMarkers] = useState<UserMarker[]>([]);
   const [showComments, setShowComments] = useState(false);
   const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large' | 'xlarge'>('medium');
   const [showFontSizeMenu, setShowFontSizeMenu] = useState(false);
   const [showBookmarkModal, setShowBookmarkModal] = useState(false);
   const [allStories, setAllStories] = useState<Story[]>([]);
   const [isRTL, setIsRTL] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [auxiliaryFrames, setAuxiliaryFrames] = useState<Frame[]>([]);
   const flatListRef = useRef<FlatList>(null);
   const currentFrameNumberRef = useRef(currentFrameNumber);
-  const scrollStartOffsetRef = useRef<number>(0);
   const isProgrammaticScrollRef = useRef(false);
   const router = useRouter();
   const colorScheme = useColorScheme();
@@ -245,19 +238,6 @@ export default function StoryFrameScreen() {
       if (initialFrame) {
         setCurrentFrame(initialFrame);
         setCurrentFrameNumber(initialFrame.frameNumber);
-
-        // Load initial markers for the frame
-        const storyManager = StoryManager.getInstance();
-        try {
-          const frameMarkers = await storyManager.getMarkersForFrame(
-            collectionId as string,
-            parseInt(storyNumber as string, 10),
-            initialFrame.frameNumber
-          );
-          setMarkers(frameMarkers);
-        } catch (markerError) {
-          console.error('Error loading initial markers:', markerError);
-        }
       } else {
         setError(`Frame ${frameNum} not found`);
         setLoading(false);
@@ -270,22 +250,6 @@ export default function StoryFrameScreen() {
       setError(`Failed to load story: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadMarkers = async () => {
-    if (!collectionId || !storyNumber || !currentFrameNumber) return;
-
-    try {
-      const storyManager = StoryManager.getInstance();
-      const frameMarkers = await storyManager.getMarkersForFrame(
-        collectionId as string,
-        parseInt(storyNumber as string, 10),
-        currentFrameNumber
-      );
-      setMarkers(frameMarkers);
-    } catch (error) {
-      console.error('Error loading markers:', error);
     }
   };
 
@@ -318,14 +282,6 @@ export default function StoryFrameScreen() {
     const loadMarkersAndSaveProgress = async () => {
       try {
         const storyManager = StoryManager.getInstance();
-
-        // Load markers for the new frame
-        const frameMarkers = await storyManager.getMarkersForFrame(
-          collectionId as string,
-          parseInt(storyNumber as string, 10),
-          frameNum
-        );
-        setMarkers(frameMarkers);
 
         // Save reading progress for continue reading feature
         await storyManager.saveReadingProgress(
@@ -381,12 +337,6 @@ export default function StoryFrameScreen() {
           const loadMarkersForNewFrame = async () => {
             try {
               const storyManager = StoryManager.getInstance();
-              const frameMarkers = await storyManager.getMarkersForFrame(
-                collectionId as string,
-                parseInt(storyNumber as string, 10),
-                newFrameNumber
-              );
-              setMarkers(frameMarkers);
 
               // Save reading progress for continue reading feature
               await storyManager.saveReadingProgress(
@@ -407,166 +357,6 @@ export default function StoryFrameScreen() {
       }
     },
     [auxiliaryFrames, collectionId, storyNumber, totalFrames]
-  );
-
-  // Simple boundary detection using FlatList's built-in callbacks
-  const handleEndReached = useCallback(() => {
-    const currentFrame = currentFrameNumberRef.current;
-
-    console.log('🚀 END REACHED!', {
-      currentFrame,
-      totalFrames,
-      isLastFrame: currentFrame === totalFrames,
-    });
-
-    // Only trigger if we're actually on the last frame
-    if (currentFrame === totalFrames) {
-      console.log('🚀 END: User reached end, navigating to next story');
-      const nextStory = getNextStory();
-      if (nextStory) {
-        navigateToNextStory(nextStory);
-      }
-    }
-  }, [currentFrameNumberRef.current, totalFrames]);
-
-  // For start boundary, we'll use a simple scroll check since onStartReached doesn't exist
-  const handleScrollBegin = useCallback((event: any) => {
-    const { contentOffset } = event.nativeEvent;
-    scrollStartOffsetRef.current = contentOffset.x;
-  }, []);
-
-  const handleScrollEnd = useCallback(
-    (event: any) => {
-      const { contentOffset } = event.nativeEvent;
-      const startOffset = scrollStartOffsetRef.current;
-      const endOffset = contentOffset.x;
-      const currentFrame = currentFrameNumberRef.current;
-
-      // Only check start boundary (left side)
-      if (currentFrame === 1 && endOffset <= 20 && startOffset > endOffset) {
-        console.log('🚀 START: User tried to scroll beyond first frame');
-        const previousStory = getPreviousStory();
-        if (previousStory) {
-          navigateToPreviousStoryLastFrame(previousStory);
-        }
-      }
-    },
-    [totalFrames]
-  );
-
-  const handleRefresh = useCallback(async () => {
-    const currentFrame = currentFrameNumberRef.current;
-
-    console.log('🔄 REFRESH TRIGGERED!', {
-      currentFrame,
-      totalFrames,
-      isFirstFrame: currentFrame === 1,
-    });
-
-    // Only handle refresh on first frame (attempt to go to previous story)
-    if (currentFrame === 1) {
-      console.log('🚀 REFRESH: User tried to scroll beyond first frame');
-      const previousStory = getPreviousStory();
-      if (previousStory) {
-        setIsRefreshing(true);
-        try {
-          await navigateToPreviousStoryLastFrame(previousStory);
-        } finally {
-          setIsRefreshing(false);
-        }
-      } else {
-        // No previous story, just reset refresh state
-        setIsRefreshing(false);
-      }
-    } else {
-      // Not on first frame, just reset refresh state
-      setIsRefreshing(false);
-    }
-  }, [currentFrameNumberRef.current, totalFrames]);
-
-  const handleMomentumScrollBegin = useCallback(
-    (event: any) => {
-      const { contentOffset, velocity } = event.nativeEvent;
-      const currentFrame = currentFrameNumberRef.current;
-
-      // Ignore boundary detection if this was programmatic scrolling
-      if (isProgrammaticScrollRef.current) {
-        return;
-      }
-
-      const maxOffset = (frames.length - 1) * SCREEN_WIDTH;
-      const velocityThreshold = 0.3; // Lower threshold since we're capturing during momentum
-
-      console.log('=== MOMENTUM SCROLL DEBUG START ===');
-      console.log('Momentum values:', {
-        endOffset: contentOffset.x,
-        velocity: velocity?.x || 0,
-        currentFrame,
-        totalFrames,
-        framesLength: frames.length,
-        screenWidth: SCREEN_WIDTH,
-        maxOffset,
-        isRTL,
-      });
-
-      // Check if user tried to scroll beyond end (last frame)
-      if (currentFrame === totalFrames) {
-        const isAtRightBoundary = contentOffset.x >= maxOffset - 20;
-        const hasRightwardVelocity = (velocity?.x || 0) > velocityThreshold;
-
-        console.log('Last frame momentum check:', {
-          isAtRightBoundary,
-          hasRightwardVelocity,
-          velocity: velocity?.x || 0,
-          endOffset: contentOffset.x,
-          maxOffset,
-          velocityThreshold,
-        });
-
-        if (isAtRightBoundary && hasRightwardVelocity) {
-          console.log('🚀 MOMENTUM TRIGGERING: User tried to scroll beyond last frame');
-          const nextStory = getNextStory();
-          if (nextStory) {
-            console.log(`Navigating to next story ${nextStory.storyNumber}, frame 1`);
-            navigateToNextStory(nextStory);
-          }
-        }
-      }
-
-      console.log('=== MOMENTUM SCROLL DEBUG END ===');
-    },
-    [frames.length, totalFrames, isRTL]
-  );
-
-  const handleScroll = useCallback(
-    (event: any) => {
-      const { contentOffset } = event.nativeEvent;
-      const currentFrame = currentFrameNumberRef.current;
-
-      // Ignore boundary detection if this was programmatic scrolling
-      if (isProgrammaticScrollRef.current) {
-        return;
-      }
-
-      // Simple boundary detection for first frame (left boundary)
-      if (currentFrame === 1) {
-        // If user is trying to scroll to negative offset (beyond first frame)
-        if (contentOffset.x < -30) {
-          console.log('🚀 SCROLL: User tried to scroll beyond first frame', {
-            currentFrame,
-            contentOffsetX: contentOffset.x,
-          });
-
-          const previousStory = getPreviousStory();
-          if (previousStory) {
-            // Prevent multiple triggers
-            isProgrammaticScrollRef.current = true;
-            navigateToPreviousStoryLastFrame(previousStory);
-          }
-        }
-      }
-    },
-    [frames.length, totalFrames, isRTL]
   );
 
   const navigateToPreviousStoryLastFrame = async (previousStory: Story) => {
@@ -666,14 +456,6 @@ export default function StoryFrameScreen() {
         currentFrameNumber,
         note
       );
-
-      // Reload markers for current frame
-      const frameMarkers = await storyManager.getMarkersForFrame(
-        collectionId as string,
-        parseInt(storyNumber as string, 10),
-        currentFrameNumber
-      );
-      setMarkers(frameMarkers);
     } catch (error) {
       console.error('Error adding marker:', error);
     }

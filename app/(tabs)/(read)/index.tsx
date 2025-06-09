@@ -14,14 +14,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { CollectionItem } from '../../../src/components/CollectionItem';
-import { ContinueReading } from '../../../src/components/ContinueReading';
-import FileImportModal from '../../../src/components/FileImportModal';
-import ImportModal from '../../../src/components/ImportModal';
-import { CollectionsManager, Collection } from '../../../src/core/CollectionsManager';
-import { StoryManager, UserProgress } from '../../../src/core/storyManager';
-import { useFileImport } from '../../../src/hooks/useFileImport';
-import { useStoryNavigation } from '../../../src/hooks/useStoryNavigation';
+import { CollectionItem } from '@/components/CollectionItem';
+import { ContinueReading } from '@/components/ContinueReading';
+import FileImportModal from '@/components/FileImportModal';
+import ImportModal from '@/components/ImportModal';
+import { CollectionsManager, Collection } from '@/core/CollectionsManager';
+import { StoryManager, UserProgress } from '@/core/storyManager';
+import { useFileImport } from '@/hooks/useFileImport';
+import { useStoryNavigation } from '@/hooks/useStoryNavigation';
 
 export default function ReadScreen() {
   const { importPath } = useLocalSearchParams<{ importPath?: string }>();

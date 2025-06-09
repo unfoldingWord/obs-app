@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 
-import { CollectionImportExportManager } from '../core/CollectionImportExportManager';
+import { CollectionImportExportManager } from '@/core/CollectionImportExportManager';
 
 export interface StorageLocation {
   name: string;

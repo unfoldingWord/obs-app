@@ -1,13 +1,13 @@
 import { injectable, inject } from 'inversify';
 import JSZip from 'jszip';
 
-import { TYPES } from '../container';
-import { IFileSystem } from '../interfaces/IFileSystem';
-import { INetworkService } from '../interfaces/INetworkService';
-import { IRepositoryService } from '../interfaces/IRepositoryService';
-import { IStorage } from '../interfaces/IStorage';
-import { Repository } from '../interfaces/Repository';
-import { warn } from '../utils';
+import { TYPES } from '@/container';
+import { IFileSystem } from '@/interfaces/IFileSystem';
+import { INetworkService } from '@/interfaces/INetworkService';
+import { IRepositoryService } from '@/interfaces/IRepositoryService';
+import { IStorage } from '@/interfaces/IStorage';
+import { Repository } from '@/interfaces/Repository';
+import { warn } from '@/utils';
 
 @injectable()
 export class RepositoryService implements IRepositoryService {

@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { injectable } from 'inversify';
 
-import { IStorage } from '../interfaces/IStorage';
+import { IStorage } from '@/interfaces/IStorage';
 
 @injectable()
 export class AsyncStorageService implements IStorage {

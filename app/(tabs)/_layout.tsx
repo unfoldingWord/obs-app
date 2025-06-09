@@ -3,11 +3,6 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 import { useColorScheme } from 'react-native';
 
-interface TabBarIconProps {
-  color: string;
-  size: number;
-}
-
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';

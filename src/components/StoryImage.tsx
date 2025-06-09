@@ -11,7 +11,7 @@ import {
   Text,
 } from 'react-native';
 
-import { BundledImageKey } from '../core/bundledImageManager';
+import { BundledImageKey } from '@/core/bundledImageManager';
 
 interface StoryImageProps {
   /**

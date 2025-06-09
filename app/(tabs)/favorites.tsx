@@ -1,6 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -21,9 +20,6 @@ import { CommentsManager, FrameComment } from '../../src/core/CommentsManager';
 import { UnifiedLanguagesManager } from '../../src/core/UnifiedLanguagesManager';
 import { StoryManager, UserMarker } from '../../src/core/storyManager';
 import { useStoryNavigation } from '../../src/hooks/useStoryNavigation';
-
-type ReadingMode = 'horizontal' | 'vertical';
-
 interface FavoriteStory extends Story {
   collectionDisplayName?: string;
   thumbnailUrl?: string;
@@ -55,7 +51,6 @@ export default function FavoritesScreen() {
   const [favoriteFrames, setFavoriteFrames] = useState<FavoriteFrame[]>([]);
   const [markers, setMarkers] = useState<FavoriteMarker[]>([]);
   const [comments, setComments] = useState<FavoriteComment[]>([]);
-  const router = useRouter();
   const { navigateToStory, navigateToStoryStart } = useStoryNavigation();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';

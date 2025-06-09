@@ -1,7 +1,8 @@
 import * as FileSystem from 'expo-file-system';
 
-import { StoryFrame } from '../types';
 import { warn } from './utils';
+
+import { StoryFrame } from '@/types';
 
 // Define bundled images as a type rather than actual imports
 // These should be used in a component's source prop directly

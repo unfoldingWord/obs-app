@@ -1,9 +1,10 @@
 import * as FileSystem from 'expo-file-system';
 import * as ImageManipulator from 'expo-image-manipulator';
 
-import { ImageSet } from '../types';
 import { warn } from './utils';
-import { StoriesData, StoryFrame } from '../types/index';
+
+import { ImageSet } from '@/types';
+import { StoriesData, StoryFrame } from '@/types/index';
 
 const IMAGE_CACHE_DIR = 'image-cache';
 const BUNDLED_IMAGES_DIR = 'bundled-images';

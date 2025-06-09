@@ -15,13 +15,14 @@ import {
 
 import { IconModal } from './IconModal';
 import { VersionComparison } from './VersionComparison';
-import { CollectionImportExportManager } from '../core/CollectionImportExportManager';
-import { CollectionsManager } from '../core/CollectionsManager';
+
+import { CollectionImportExportManager } from '@/core/CollectionImportExportManager';
+import { CollectionsManager } from '@/core/CollectionsManager';
 import {
   scanForImportableCollections,
   ImportableCollection,
   formatDate,
-} from '../utils/importHelpers';
+} from '@/utils/importHelpers';
 
 export interface ImportModalProps {
   visible: boolean;

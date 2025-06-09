@@ -1,6 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,10 +15,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { CollectionInfoModal } from '../../../../src/components/CollectionInfoModal';
-import { SearchBar } from '../../../../src/components/SearchBar';
-import { CollectionsManager, Collection } from '../../../../src/core/CollectionsManager';
-import { hashStringToNumber } from '../../../../src/core/hashStringToNumber';
+import { CollectionInfoModal } from '@/components/CollectionInfoModal';
+import { SearchBar } from '@/components/SearchBar';
+import { CollectionsManager, Collection } from '@/core/CollectionsManager';
+import { hashStringToNumber } from '@/core/hashStringToNumber';
 
 // Icon-based Delete Confirmation Modal Component
 interface DeleteConfirmationModalProps {
