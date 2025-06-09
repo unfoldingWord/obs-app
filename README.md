@@ -112,6 +112,59 @@ git checkout -b feature/your-feature-name
 - **Build System**: EAS Build (Expo Application Services)
 - **CI/CD**: GitHub Actions with automated builds
 
+### 🏗️ App Architecture
+
+The app follows a modern **file-based routing** architecture using Expo Router, with a clean separation of concerns:
+
+```
+app/
+├── _layout.tsx                    # 🌍 Root layout (global setup, database initialization)
+├── +native-intent.tsx            # 🔗 Deep linking & file import handler
+├── error-handling.tsx            # ❌ Global error handling page
+├── +not-found.tsx               # 🚫 404 fallback page
+├── story/                       # 📖 Standalone story routes (deep linking)
+│   └── [storyNumber]/
+│       └── [frameNumber].tsx    # Direct story access via URLs
+└── (tabs)/                      # 📱 Main app navigation
+    ├── _layout.tsx              # Tab bar configuration
+    ├── favorites.tsx            # ❤️ Favorites management
+    ├── search.tsx              # 🔍 Content search
+    └── (read)/                  # 📚 Reading interface
+        ├── index.tsx            # 🏠 Library home/collections view
+        ├── downloads/           # 📥 Content management
+        │   ├── index.tsx        # 🌍 Language selection
+        │   └── [language].tsx   # 📦 Collections by language
+        ├── stories/             # 📋 Story browser
+        │   └── index.tsx        # Story list for collection
+        └── story/               # 📖 Story reading modes
+            └── [collectionId]/
+                └── [storyNumber]/
+                    ├── [frameNumber].tsx  # 📄 Frame-by-frame reading
+                    └── vertical.tsx       # 📜 Vertical scroll reading
+```
+
+#### 🎯 Key Architectural Patterns
+
+**📱 Navigation Structure**
+- **Tab-based main navigation**: Read, Favorites, Search
+- **Nested route groups**: `(tabs)` and `(read)` for logical organization
+- **Dynamic routing**: `[collectionId]`, `[storyNumber]`, `[frameNumber]` for flexible content access
+
+**🔗 Deep Linking & File Handling**
+- **Native intent handler**: Processes `.obs` files and content URIs from external apps
+- **Direct story access**: URL-based navigation to specific stories/frames
+- **File import integration**: Seamless import from WhatsApp, email, and file managers
+
+**📖 Reading Experience**
+- **Multiple reading modes**: Frame-by-frame navigation vs. continuous vertical scrolling
+- **Progressive loading**: Efficient content delivery for large story collections
+- **Offline-first design**: All content accessible without internet connection
+
+**🗂️ Content Organization**
+- **Language-based browsing**: Organized by language families and regions
+- **Collection management**: Download, organize, and manage story collections
+- **User data persistence**: Favorites, notes, and reading progress stored locally
+
 ### 🚀 Build & Deploy (EAS)
 
 This project uses **EAS (Expo Application Services)** for professional-grade builds and deployments:
