@@ -2,8 +2,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect } from 'react';
 import { View, ActivityIndicator, useColorScheme } from 'react-native';
 
-import { StoryManager } from '../../../src/core/storyManager';
-import { useStoryNavigation } from '../../../src/hooks/useStoryNavigation';
+import { StoryManager } from '@/core/storyManager';
+import { useStoryNavigation } from '@/hooks/useStoryNavigation';
 
 export default function StoryRedirect() {
   const { storyNumber, frameNumber } = useLocalSearchParams<{

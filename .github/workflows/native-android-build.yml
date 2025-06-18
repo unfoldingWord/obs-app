@@ -1,0 +1,446 @@
+name: Android APK Build (Native - Develop & Release)
+
+# 🎯 Smart Build Strategy:
+# - Triggers on 'develop' branch pushes (integration testing)
+# - Triggers on version tags (releases)
+# - Skips builds for documentation, style, and cleanup changes
+# - Uses native Android build (faster, no EAS quota usage)
+# - Produces APK files for direct testing
+
+on:
+  # Trigger automatically on develop branch (integration testing) and tags
+  push:
+    branches:
+      - develop                 # APK builds for integration testing
+    tags:
+      - 'v*.*.*'               # Release builds on version tags
+    paths:
+      # Include: Files that affect the actual app build
+      - 'src/**'                # Source code changes
+      - 'app/**'                # App directory changes
+      - 'assets/**'             # Asset changes (excluding obs-images)
+      - 'app.json'              # App configuration
+      - 'package.json'          # Dependencies
+      - 'package-lock.json'     # Lock file changes
+      - 'eas.json'              # EAS configuration
+      - 'metro.config.js'       # Metro bundler config
+      - 'babel.config.js'       # Babel config
+      - 'tailwind.config.js'    # Tailwind config
+      - 'global.css'            # Global styles
+      - 'nativewind-env.d.ts'   # NativeWind types
+      - 'tsconfig.json'         # TypeScript config
+
+      # Exclude: Files that don't affect app functionality
+      - '!**/*.md'              # Ignore all markdown files
+      - '!.github/**'           # Ignore GitHub workflows/templates
+      - '!docs/**'              # Ignore documentation
+      - '!scripts/**'           # Ignore utility scripts
+      - '!.gitignore'           # Ignore git configuration
+      - '!LICENSE'              # Ignore license file
+      - '!README.md'            # Ignore README updates
+      - '!*.code-workspace'     # Ignore workspace files
+      - '!prettier.config.js'   # Ignore prettier config
+      - '!setup-gitflow.sh'     # Ignore setup scripts
+      - '!EAS_BUILD_STRATEGY.md' # Ignore strategy docs
+      - '!GITFLOW_STRATEGY.md'  # Ignore gitflow docs
+      - '!GITHUB_*.md'          # Ignore GitHub documentation
+      - '!RELEASE_PROCESS.md'   # Ignore release docs
+      - '!CONTRIBUTING.md'      # Ignore contributing guide
+      - '!assets/obs-images/**' # Ignore OBS story images (too many, rarely change)
+
+  # Trigger manually
+  workflow_dispatch:
+    inputs:
+      version_bump:
+        description: 'Version bump type (optional)'
+        required: false
+        default: 'none'
+        type: choice
+        options:
+        - patch
+        - minor
+        - major
+        - none
+      create_release:
+        description: 'Create GitHub release after build'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 🏗 Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Check for skip build indicators
+      run: |
+        # Check commit message for skip indicators
+        COMMIT_MESSAGE="${{ github.event.head_commit.message }}"
+        BRANCH_NAME="${{ github.ref_name }}"
+
+        # List of skip indicators (case insensitive)
+        SKIP_PATTERNS=(
+          "[skip ci]"
+          "[ci skip]"
+          "[skip build]"
+          "[build skip]"
+          "[no build]"
+          "[docs only]"
+          "[config only]"
+          "[chore only]"
+          "[style only]"
+        )
+
+        # Branch patterns to skip (docs, minor fixes, etc.)
+        SKIP_BRANCH_PATTERNS=(
+          "docs/"
+          "documentation/"
+          "readme/"
+          "typo/"
+          "formatting/"
+          "style/"
+          "lint/"
+          "cleanup/"
+        )
+
+        echo "🔍 Analyzing build necessity..."
+        echo "Branch: $BRANCH_NAME"
+        echo "Commit: $COMMIT_MESSAGE"
+
+        # Check commit message for skip indicators
+        for pattern in "${SKIP_PATTERNS[@]}"; do
+          if [[ "${COMMIT_MESSAGE,,}" == *"${pattern,,}"* ]]; then
+            echo "⏭️ Found skip indicator in commit: $pattern"
+            echo "🚫 Skipping build as requested"
+            exit 0
+          fi
+        done
+
+        # Check branch name patterns (only for develop branch builds)
+        if [[ "$BRANCH_NAME" == "develop" ]]; then
+          for pattern in "${SKIP_BRANCH_PATTERNS[@]}"; do
+            if [[ "${COMMIT_MESSAGE,,}" == *"${pattern,,}"* ]] || [[ "${COMMIT_MESSAGE,,}" == *"merge branch"* && "${COMMIT_MESSAGE,,}" == *"${pattern,,}"* ]]; then
+              echo "⏭️ Detected non-functional change branch pattern: $pattern"
+              echo "🚫 Skipping build for documentation/style changes"
+              exit 0
+            fi
+          done
+        fi
+
+        # Additional smart filtering for common non-build scenarios
+        if [[ "${COMMIT_MESSAGE,,}" == *"delete"* && "${COMMIT_MESSAGE,,}" == *"unused"* ]]; then
+          echo "⏭️ Detected unused file deletion"
+          echo "🚫 Skipping build for cleanup changes"
+          exit 0
+        fi
+
+        if [[ "${COMMIT_MESSAGE,,}" == *"update readme"* ]] || [[ "${COMMIT_MESSAGE,,}" == *"fix typo"* ]]; then
+          echo "⏭️ Detected documentation/typo fix"
+          echo "🚫 Skipping build for non-functional changes"
+          exit 0
+        fi
+
+        echo "✅ Build is necessary, proceeding with APK creation"
+
+    - name: 🏗 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: 📦 Install dependencies
+      run: npm ci
+
+    - name: 🔧 Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: 🔢 Generate version for build
+      run: |
+        BASE_VERSION=$(node -p "require('./package.json').version")
+        BRANCH_NAME="${{ github.ref_name }}"
+
+        # Determine version strategy based on trigger
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.version_bump }}" != "none" && -n "${{ github.event.inputs.version_bump }}" ]]; then
+          # Manual version bump requested
+          echo "📝 Manual version bump: ${{ github.event.inputs.version_bump }}"
+          npm version ${{ github.event.inputs.version_bump }} --no-git-tag-version
+          FINAL_VERSION=$(node -p "require('./package.json').version")
+          echo "FINAL_VERSION=$FINAL_VERSION" >> $GITHUB_ENV
+          echo "VERSION_TYPE=manual" >> $GITHUB_ENV
+
+        elif [[ "$BRANCH_NAME" == "develop" ]]; then
+          # Develop branch: create development version
+          BUILD_NUMBER=${{ github.run_number }}
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          DEV_VERSION="${BASE_VERSION}-dev.${BUILD_NUMBER}+${SHORT_SHA}"
+          echo "FINAL_VERSION=$DEV_VERSION" >> $GITHUB_ENV
+          echo "VERSION_TYPE=development" >> $GITHUB_ENV
+          echo "🚀 Development version: $DEV_VERSION"
+
+        elif [[ "${{ github.ref_type }}" == "tag" ]]; then
+          # Tag build: use tag version
+          TAG_VERSION="${{ github.ref_name }}"
+          FINAL_VERSION="${TAG_VERSION#v}"  # Remove 'v' prefix if present
+          echo "FINAL_VERSION=$FINAL_VERSION" >> $GITHUB_ENV
+          echo "VERSION_TYPE=release" >> $GITHUB_ENV
+          echo "🏷️ Release version: $FINAL_VERSION"
+
+        else
+          # Fallback: use base version
+          echo "FINAL_VERSION=$BASE_VERSION" >> $GITHUB_ENV
+          echo "VERSION_TYPE=fallback" >> $GITHUB_ENV
+          echo "📦 Base version: $BASE_VERSION"
+        fi
+
+        # Update app.json with the final version (for expo prebuild)
+        node -e "
+          const fs = require('fs');
+          const appConfig = JSON.parse(fs.readFileSync('app.json', 'utf8'));
+          appConfig.expo.version = process.env.FINAL_VERSION;
+          fs.writeFileSync('app.json', JSON.stringify(appConfig, null, 2));
+          console.log('✅ Updated app.json version to:', process.env.FINAL_VERSION);
+        "
+
+        echo "📱 Final version for build: $FINAL_VERSION"
+
+    - name: 🏗 Prebuild for Android
+      run: |
+        echo "Prebuilding Open Bible Stories for Android..."
+        npx expo prebuild --platform android --clean
+
+    - name: 🔑 Make Gradle wrapper executable
+      run: chmod +x android/gradlew
+
+    - name: 🔨 Build Android Release APK
+      run: |
+        echo "Building Open Bible Stories Android release..."
+        npm run build:android:release
+
+    - name: 📦 Prepare build artifacts
+      run: |
+        # Create artifacts directory
+        mkdir -p artifacts
+
+        # Use the version generated in previous step
+        VERSION="${{ env.FINAL_VERSION }}"
+        VERSION_TYPE="${{ env.VERSION_TYPE }}"
+
+        echo "📦 Preparing artifacts for version: $VERSION ($VERSION_TYPE)"
+
+        # Copy the APK with version in filename
+        cp android/app/build/outputs/apk/release/app-release.apk artifacts/obs-app-v${VERSION}.apk
+
+        # Create build info
+        cat > artifacts/build-info.json << EOF
+        {
+          "app": "Open Bible Stories",
+          "version": "$VERSION",
+          "versionType": "$VERSION_TYPE",
+          "buildDate": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+          "platform": "android",
+          "buildType": "release",
+          "commit": "${{ github.sha }}",
+          "branch": "${{ github.ref_name }}",
+          "tag": "${{ github.ref_type == 'tag' && github.ref_name || 'none' }}",
+          "buildNumber": "${{ github.run_number }}",
+          "workflowRun": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+          "ministry": "unfoldingWord",
+          "project": "Open Bible Stories"
+        }
+        EOF
+
+        # Create release notes
+        VERSION_TITLE=""
+        case "$VERSION_TYPE" in
+          "development")
+            VERSION_TITLE="Development Build"
+            ;;
+          "release")
+            VERSION_TITLE="Release Build"
+            ;;
+          "manual")
+            VERSION_TITLE="Manual Build"
+            ;;
+          *)
+            VERSION_TITLE="Android Build"
+            ;;
+        esac
+
+        cat > artifacts/RELEASE-NOTES.md << EOF
+        # Open Bible Stories v${VERSION} - ${VERSION_TITLE}
+
+        ## 📱 Installation
+        1. Download **obs-app-v${VERSION}.apk**
+        2. Enable "Unknown Sources" in Android Settings → Security
+        3. Install the APK file
+        4. Launch **Open Bible Stories** from your app drawer
+
+        ## ✨ Features
+        - 📚 50 Bible stories with beautiful illustrations
+        - 🌍 Multiple language support
+        - 📱 Offline reading capability
+        - 💾 SQLite database for local storage
+        - 📊 Progress tracking and bookmarks
+        - 🔍 Search functionality
+        - ❤️ Favorites management
+        - 🌙 Dark mode support
+
+        ## 🌍 Perfect For Ministry
+        - 🌏 **Missionaries**: Offline access in remote areas
+        - ⛪ **Churches**: Share with congregation members
+        - 📚 **Translation Teams**: Test new language versions
+        - 👨‍👩‍👧‍👦 **Family Devotions**: Engaging stories for children
+        - 📖 **Bible Study Groups**: Illustrated Bible stories
+
+        ## 🔧 Build Information
+        - **Version**: v${VERSION}
+        - **Build Date**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+        - **Platform**: Android
+        - **Commit**: ${{ github.sha }}
+
+        ## 📞 Support
+        - **Issues**: [GitHub Issues](https://github.com/unfoldingword/obs-app/issues)
+        - **Documentation**: [README](https://github.com/unfoldingword/obs-app#readme)
+
+        ---
+        **Built with ❤️ for global Bible translation and distribution by unfoldingWord**
+        EOF
+
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+        echo "✅ Build artifacts prepared for version $VERSION"
+
+    - name: 📤 Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: obs-android-apk-v${{ env.VERSION }}-${{ github.run_number }}
+        path: artifacts/
+        retention-days: 90
+
+    - name: 📱 Build Success Summary
+      run: |
+        VERSION="${{ env.FINAL_VERSION }}"
+        VERSION_TYPE="${{ env.VERSION_TYPE }}"
+
+        echo "## 🎉 Android APK Build Completed Successfully!" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📱 Download APK:" >> $GITHUB_STEP_SUMMARY
+        echo "1. **Go to this workflow run's artifacts section** (scroll down)" >> $GITHUB_STEP_SUMMARY
+        echo "2. **Download**: \`obs-android-apk-v${VERSION}-${{ github.run_number }}.zip\`" >> $GITHUB_STEP_SUMMARY
+        echo "3. **Extract**: \`obs-app-v${VERSION}.apk\`" >> $GITHUB_STEP_SUMMARY
+        echo "4. **Install**: Enable 'Unknown Sources' in Android settings" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📊 Build Info:" >> $GITHUB_STEP_SUMMARY
+        echo "- **Version**: v${VERSION}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Version Type**: ${VERSION_TYPE}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Build Number**: ${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Build Type**: Android APK (Native)" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        # Add version-specific information
+        case "$VERSION_TYPE" in
+          "development")
+            echo "### 🚀 Development Build Info:" >> $GITHUB_STEP_SUMMARY
+            echo "- This is a **development build** from the \`develop\` branch" >> $GITHUB_STEP_SUMMARY
+            echo "- Version includes build number and commit hash for tracking" >> $GITHUB_STEP_SUMMARY
+            echo "- Perfect for integration testing and QA validation" >> $GITHUB_STEP_SUMMARY
+            ;;
+          "release")
+            echo "### 🏷️ Release Build Info:" >> $GITHUB_STEP_SUMMARY
+            echo "- This is an **official release** build from a version tag" >> $GITHUB_STEP_SUMMARY
+            echo "- Ready for distribution and production use" >> $GITHUB_STEP_SUMMARY
+            ;;
+          "manual")
+            echo "### 🔧 Manual Build Info:" >> $GITHUB_STEP_SUMMARY
+            echo "- This is a **manual build** triggered by a developer" >> $GITHUB_STEP_SUMMARY
+            echo "- Used for testing specific branches or features" >> $GITHUB_STEP_SUMMARY
+            ;;
+        esac
+
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🔧 For Developers:" >> $GITHUB_STEP_SUMMARY
+        echo "- **Workflow**: [Android APK Build](https://github.com/${{ github.repository }}/actions/workflows/native-android-build.yml)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Artifacts**: Available for 90 days" >> $GITHUB_STEP_SUMMARY
+
+    - name: 🚀 Create GitHub Release (for tags)
+      if: github.ref_type == 'tag'
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          artifacts/obs-app-v${{ env.VERSION }}.apk
+          artifacts/build-info.json
+          artifacts/RELEASE-NOTES.md
+        body_path: artifacts/RELEASE-NOTES.md
+        name: "Open Bible Stories v${{ env.VERSION }}"
+        draft: false
+        prerelease: false
+        tag_name: ${{ github.ref_name }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 🚀 Create GitHub Release (manual with option)
+      if: github.event.inputs.create_release == 'true' && github.ref_type != 'tag'
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          artifacts/obs-app-v${{ env.VERSION }}.apk
+          artifacts/build-info.json
+          artifacts/RELEASE-NOTES.md
+        body_path: artifacts/RELEASE-NOTES.md
+        name: "Open Bible Stories v${{ env.VERSION }}"
+        tag_name: "v${{ env.VERSION }}"
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 📋 Build Summary
+      run: |
+        APK_SIZE=$(du -h artifacts/obs-app-v${{ env.VERSION }}.apk | cut -f1)
+
+        echo "## 🎉 Open Bible Stories v${{ env.VERSION }} Build Completed!" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📱 Build Details:" >> $GITHUB_STEP_SUMMARY
+        echo "- **App Name**: Open Bible Stories" >> $GITHUB_STEP_SUMMARY
+        echo "- **Version**: v${{ env.VERSION }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Platform**: Android" >> $GITHUB_STEP_SUMMARY
+        echo "- **Build Type**: Release" >> $GITHUB_STEP_SUMMARY
+        echo "- **APK Size**: $APK_SIZE" >> $GITHUB_STEP_SUMMARY
+        echo "- **APK Name**: obs-app-v${{ env.VERSION }}.apk" >> $GITHUB_STEP_SUMMARY
+        echo "- **Build Number**: ${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+          echo "### 🎊 GitHub Release Created!" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release**: [Open Bible Stories v${{ env.VERSION }}](https://github.com/unfoldingword/obs-app/releases/tag/${{ github.ref_name }})" >> $GITHUB_STEP_SUMMARY
+          echo "- **APK Download**: Ready on the release page" >> $GITHUB_STEP_SUMMARY
+        elif [[ "${{ github.event.inputs.create_release }}" == "true" ]]; then
+          echo "### 🎊 GitHub Release Created!" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release**: [Open Bible Stories v${{ env.VERSION }}](https://github.com/unfoldingword/obs-app/releases/tag/v${{ env.VERSION }})" >> $GITHUB_STEP_SUMMARY
+          echo "- **APK Download**: Ready on the release page" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "### 📥 Download from Artifacts:" >> $GITHUB_STEP_SUMMARY
+          echo "1. Go to the **Artifacts** section of this workflow run" >> $GITHUB_STEP_SUMMARY
+          echo "2. Download **obs-android-release-v${{ env.VERSION }}-${{ github.run_number }}**" >> $GITHUB_STEP_SUMMARY
+          echo "3. Extract to get **obs-app-v${{ env.VERSION }}.apk**" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📱 Installation:" >> $GITHUB_STEP_SUMMARY
+        echo "1. Transfer APK to Android device" >> $GITHUB_STEP_SUMMARY
+        echo "2. Enable **Unknown Sources** in Android Settings" >> $GITHUB_STEP_SUMMARY
+        echo "3. Install the APK file" >> $GITHUB_STEP_SUMMARY
+        echo "4. Launch **Open Bible Stories** from app drawer" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🌍 Ministry Distribution:" >> $GITHUB_STEP_SUMMARY
+        echo "Ready to share God's Word worldwide! 📖✨" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**unfoldingWord** - Providing unrestricted biblical content in every language" >> $GITHUB_STEP_SUMMARY

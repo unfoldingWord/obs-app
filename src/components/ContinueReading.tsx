@@ -1,11 +1,12 @@
-import { useObsImage } from 'hooks/useObsImage';
 import React, { useState, useEffect } from 'react';
 import { View, Text, Image, TouchableOpacity } from 'react-native';
 
 import { FrameBadge } from './FrameBadge';
-import { CollectionsManager, Story, Collection } from '../core/CollectionsManager';
-import { UnifiedLanguagesManager } from '../core/UnifiedLanguagesManager';
-import { UserProgress } from '../core/storyManager';
+
+import { CollectionsManager, Story, Collection } from '@/core/CollectionsManager';
+import { UnifiedLanguagesManager } from '@/core/UnifiedLanguagesManager';
+import { UserProgress } from '@/core/storyManager';
+import { useObsImage } from '@/hooks/useObsImage';
 
 interface ContinueReadingProps {
   lastReadProgress: UserProgress;

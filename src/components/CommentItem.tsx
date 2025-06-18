@@ -2,7 +2,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 
-import { FrameComment } from '../core/CommentsManager';
+import { FrameComment } from '@/core/CommentsManager';
 
 interface CommentItemProps {
   comment: FrameComment;

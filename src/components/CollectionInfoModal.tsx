@@ -14,11 +14,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { CollectionImportExportManager } from '../core/CollectionImportExportManager';
-import { Collection, CollectionsManager } from '../core/CollectionsManager';
-import { UnifiedLanguagesManager } from '../core/UnifiedLanguagesManager';
-import { hashStringToNumber } from '../core/hashStringToNumber';
-import { useObsImage } from '../hooks/useObsImage';
+import { CollectionImportExportManager } from '@/core/CollectionImportExportManager';
+import { Collection, CollectionsManager } from '@/core/CollectionsManager';
+import { UnifiedLanguagesManager } from '@/core/UnifiedLanguagesManager';
+import { hashStringToNumber } from '@/core/hashStringToNumber';
+import { useObsImage } from '@/hooks/useObsImage';
 
 // Extended Collection interface to match the one in [language].tsx
 interface CollectionWithValidation extends Collection {

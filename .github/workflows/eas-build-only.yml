@@ -1,0 +1,171 @@
+name: EAS Build - Manual & Production
+
+on:
+  push:
+    branches:
+      - main                    # Only production builds on actual releases
+    paths:
+      - 'src/**'                # Source code changes
+      - 'app/**'                # App directory changes
+      - 'assets/**'             # Asset changes
+      - 'app.json'              # App configuration
+      - 'package.json'          # Dependencies
+      - 'package-lock.json'     # Lock file
+      - 'eas.json'              # EAS configuration
+      - 'metro.config.js'       # Metro bundler config
+      - 'babel.config.js'       # Babel config
+      - 'tailwind.config.js'    # Tailwind config
+      - '!**/*.md'              # Ignore all markdown files
+      - '!.github/**'           # Ignore GitHub workflows/templates
+      - '!docs/**'              # Ignore documentation
+      - '!.gitignore'           # Ignore git configuration
+      - '!LICENSE'              # Ignore license file
+      - '!README.md'            # Ignore README updates
+  workflow_dispatch:            # Manual trigger for all other builds
+    inputs:
+      platform:
+        description: 'Platform to build for'
+        required: true
+        default: 'android'
+        type: choice
+        options:
+        - android
+        - ios
+        - all
+      profile:
+        description: 'Build profile'
+        required: true
+        default: 'preview'
+        type: choice
+        options:
+        - development
+        - preview
+        - production
+      branch:
+        description: 'Branch to build from (leave empty for current)'
+        required: false
+        type: string
+
+jobs:
+  build:
+    name: EAS Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check for skip build indicators
+        run: |
+          # Check commit message for skip indicators
+          COMMIT_MESSAGE="${{ github.event.head_commit.message }}"
+
+          # List of skip indicators (case insensitive)
+          SKIP_PATTERNS=(
+            "[skip ci]"
+            "[ci skip]"
+            "[skip build]"
+            "[build skip]"
+            "[no build]"
+            "[docs only]"
+            "[config only]"
+          )
+
+          echo "🔍 Checking commit message: $COMMIT_MESSAGE"
+
+          for pattern in "${SKIP_PATTERNS[@]}"; do
+            if [[ "${COMMIT_MESSAGE,,}" == *"${pattern,,}"* ]]; then
+              echo "⏭️ Found skip indicator: $pattern"
+              echo "🚫 Skipping build as requested"
+              exit 0
+            fi
+          done
+
+          echo "✅ No skip indicators found, proceeding with build"
+
+      - name: Check for EXPO_TOKEN
+        run: |
+          if [ -z "${{ secrets.EXPO_TOKEN }}" ]; then
+            echo "❌ EXPO_TOKEN secret is required. Please ask the unfoldingword account manager to add it."
+            echo "📖 Learn more: https://docs.expo.dev/eas-update/github-actions"
+            exit 1
+          fi
+
+      - name: Determine branch to checkout
+        id: branch
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ github.event.inputs.branch }}" ]]; then
+            echo "branch=${{ github.event.inputs.branch }}" >> $GITHUB_OUTPUT
+            echo "🔧 Manual build requested for branch: ${{ github.event.inputs.branch }}"
+          else
+            echo "branch=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+            echo "🚀 Building current branch: ${{ github.ref_name }}"
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.branch.outputs.branch }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18.x
+          cache: npm
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Determine build configuration
+        id: build-config
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            # Manual build - use user inputs
+            echo "platform=${{ github.event.inputs.platform }}" >> $GITHUB_OUTPUT
+            echo "profile=${{ github.event.inputs.profile }}" >> $GITHUB_OUTPUT
+            echo "🔧 Manual build: ${{ github.event.inputs.platform }} / ${{ github.event.inputs.profile }}"
+          elif [[ "${{ github.ref_name }}" == "main" ]]; then
+            # Main branch - production build
+            echo "platform=all" >> $GITHUB_OUTPUT
+            echo "profile=production" >> $GITHUB_OUTPUT
+            echo "🏭 Production build for MAIN branch (store release)"
+          else
+            # Fallback (shouldn't happen with current triggers)
+            echo "platform=android" >> $GITHUB_OUTPUT
+            echo "profile=preview" >> $GITHUB_OUTPUT
+            echo "🔧 Fallback build configuration"
+          fi
+
+      - name: Build with EAS
+        run: |
+          echo "🚀 Starting EAS build..."
+          echo "Platform: ${{ steps.build-config.outputs.platform }}"
+          echo "Profile: ${{ steps.build-config.outputs.profile }}"
+          echo "Branch: ${{ steps.branch.outputs.branch }}"
+
+          eas build \
+            --platform ${{ steps.build-config.outputs.platform }} \
+            --profile ${{ steps.build-config.outputs.profile }} \
+            --non-interactive
+
+      - name: Build summary
+        run: |
+          echo "🎉 Build completed successfully!"
+          echo ""
+          echo "📊 Build Details:"
+          echo "  Branch: ${{ steps.branch.outputs.branch }}"
+          echo "  Platform: ${{ steps.build-config.outputs.platform }}"
+          echo "  Profile: ${{ steps.build-config.outputs.profile }}"
+          echo "  Trigger: ${{ github.event_name }}"
+          echo ""
+          echo "📱 Monitor builds: https://expo.dev/accounts/unfoldingword/projects/obs-app"
+          echo ""
+          if [[ "${{ steps.build-config.outputs.profile }}" == "production" ]]; then
+            echo "🏪 This is a PRODUCTION build ready for store submission!"
+          else
+            echo "🧪 This is a ${{ steps.build-config.outputs.profile }} build for testing."
+          fi

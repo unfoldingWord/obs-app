@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 
-import { CollectionImportExportManager } from '../core/CollectionImportExportManager';
-import { CollectionsManager } from '../core/CollectionsManager';
+import { CollectionImportExportManager } from '@/core/CollectionImportExportManager';
+import { CollectionsManager } from '@/core/CollectionsManager';
 
 // Version status types
 type VersionStatus = 'new' | 'same' | 'upgrade' | 'downgrade';

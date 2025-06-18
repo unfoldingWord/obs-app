@@ -1,4 +1,4 @@
-import { FontAwesome, MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -20,11 +20,11 @@ import {
   CollectionsManager,
   Collection,
   Story as CollectionStory,
-} from '../../../../src/core/CollectionsManager';
-import { UnifiedLanguagesManager } from '../../../../src/core/UnifiedLanguagesManager';
-import { StoryManager, UserProgress } from '../../../../src/core/storyManager';
-import { useObsImage } from '../../../../src/hooks/useObsImage';
-import { useStoryNavigation } from '../../../../src/hooks/useStoryNavigation';
+} from '@/core/CollectionsManager';
+import { UnifiedLanguagesManager } from '@/core/UnifiedLanguagesManager';
+import { StoryManager, UserProgress } from '@/core/storyManager';
+import { useObsImage } from '@/hooks/useObsImage';
+import { useStoryNavigation } from '@/hooks/useStoryNavigation';
 
 type ReadingMode = 'horizontal' | 'vertical';
 

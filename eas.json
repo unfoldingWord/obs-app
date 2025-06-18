@@ -11,11 +11,38 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "ios": {
+        "simulator": true
       }
     },
-    "production": {}
+    "production": {
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "ios": {
+        "autoIncrement": "buildNumber"
+      }
+    }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "android": {
+        "track": "production"
+      },
+      "ios": {
+        "submitForReview": true,
+        "releaseType": "AFTER_APPROVAL"
+      }
+    },
+    "testing": {
+      "android": {
+        "track": "internal"
+      },
+      "ios": {
+        "submitForReview": false,
+        "releaseType": "MANUAL"
+      }
+    }
   }
 }

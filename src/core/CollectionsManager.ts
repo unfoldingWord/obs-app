@@ -1,5 +1,5 @@
 import { DatabaseManager } from './DatabaseManager';
-import { LanguagesManager } from './LanguagesManager';
+import { UnifiedLanguagesManager } from './UnifiedLanguagesManager';
 import { processAndStoreZipOptimized } from './ZipProcessingUtils';
 import { ImageManager } from './imageManager';
 import { warn } from './utils';
@@ -801,7 +801,7 @@ export class CollectionsManager {
 
   private async saveLanguageData(languageCode: string, languageData?: any): Promise<void> {
     try {
-      const languagesManager = LanguagesManager.getInstance();
+      const languagesManager = UnifiedLanguagesManager.getInstance();
       await languagesManager.initialize();
 
       // If we have language data from the remote source, save it

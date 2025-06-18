@@ -170,9 +170,9 @@ export async function batchSaveStories(stories: ProcessedStoryData[]): Promise<v
   if (stories.length === 0) return;
 
   // Use optimized bulk inserts
-  const database = (await import('../db/database')).default;
+  const database = (await import('@/db/database')).default;
   const { sql } = await import('drizzle-orm');
-  const { stories: storiesTable } = await import('../db/schema');
+  const { stories: storiesTable } = await import('@/db/schema');
 
   await database.transaction(async (tx) => {
     const batchSize = 200; // Larger batch size for stories
@@ -214,9 +214,9 @@ export async function batchSaveFrames(
   if (frames.length === 0) return;
 
   // Use optimized batching with larger batch sizes
-  const database = (await import('../db/database')).default;
+  const database = (await import('@/db/database')).default;
   const { sql } = await import('drizzle-orm');
-  const { frames: framesTable } = await import('../db/schema');
+  const { frames: framesTable } = await import('@/db/schema');
 
   await database.transaction(async (tx) => {
     const batchSize = 500; // Much larger batch size
