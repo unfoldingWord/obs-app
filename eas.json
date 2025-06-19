@@ -30,12 +30,16 @@
   "submit": {
     "production": {
       "android": {
+        "environment": "production",
+        "serviceAccountKeyPath": "$GOOGLE_SERVICES_JSON",
         "track": "production"
       }
     },
     "preview": {
       "android": {
-        "track": "internal"
+        "environment": "preview",
+        "track": "internal",
+        "serviceAccountKeyPath": "$GOOGLE_SERVICES_JSON"
       }
     }
   }
