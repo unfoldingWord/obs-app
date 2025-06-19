@@ -29,19 +29,11 @@
     "production": {
       "android": {
         "track": "production"
-      },
-      "ios": {
-        "submitForReview": true,
-        "releaseType": "AFTER_APPROVAL"
       }
     },
-    "testing": {
+    "preview": {
       "android": {
         "track": "internal"
-      },
-      "ios": {
-        "submitForReview": false,
-        "releaseType": "MANUAL"
       }
     }
   }
