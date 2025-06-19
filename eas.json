@@ -5,10 +5,12 @@
   },
   "build": {
     "development": {
+      "environment": "development",
       "developmentClient": true,
       "distribution": "internal"
     },
     "preview": {
+      "environment": "preview",
       "distribution": "internal",
       "android": {
         "buildType": "apk",
@@ -19,6 +21,7 @@
       }
     },
     "production": {
+      "environment": "production",
       "android": {
         "buildType": "app-bundle"
       },
@@ -30,14 +33,12 @@
   "submit": {
     "production": {
       "android": {
-        "environment": "production",
         "serviceAccountKeyPath": "$GOOGLE_SERVICES_JSON",
         "track": "production"
       }
     },
     "preview": {
       "android": {
-        "environment": "preview",
         "track": "internal",
         "serviceAccountKeyPath": "$GOOGLE_SERVICES_JSON"
       }
