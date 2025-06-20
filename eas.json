@@ -35,12 +35,18 @@
       "android": {
         "serviceAccountKeyPath": "$GOOGLE_SERVICES_JSON",
         "track": "production"
+      },
+      "ios": {
+        "ascAppId": "1234567890"
       }
     },
     "preview": {
       "android": {
-        "track": "internal",
-        "serviceAccountKeyPath": "$GOOGLE_SERVICES_JSON"
+        "serviceAccountKeyPath": "$GOOGLE_SERVICES_JSON",
+        "track": "internal"
+      },
+      "ios": {
+        "ascAppId": "1234567890"
       }
     }
   }
