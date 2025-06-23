@@ -239,6 +239,7 @@ export default function DownloadsScreen() {
         contentContainerStyle={{ paddingVertical: 16 }}
         showsVerticalScrollIndicator={false}
         className={`flex-1 ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}
+        keyboardShouldPersistTaps="handled"
       />
     </SafeAreaView>
   );
