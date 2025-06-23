@@ -33,7 +33,6 @@
   "submit": {
     "production": {
       "android": {
-        "serviceAccountKeyPath": "$GOOGLE_SERVICES_JSON",
         "track": "production"
       },
       "ios": {
@@ -42,7 +41,6 @@
     },
     "preview": {
       "android": {
-        "serviceAccountKeyPath": "$GOOGLE_SERVICES_JSON",
         "track": "internal"
       },
       "ios": {
