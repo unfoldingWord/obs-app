@@ -1,6 +1,6 @@
 import { eq, and, desc, asc, like, count, or, isNotNull, ne } from 'drizzle-orm';
 
-import database, { initializeDatabase } from '../db/database';
+import database, { initializeDatabase } from '@/db/database';
 import {
   languages,
   repositoryOwners,
@@ -19,7 +19,7 @@ import {
   type Frame,
   type NewFrame,
   type FrameComment,
-} from '../db/schema';
+} from '@/db/schema';
 
 export class DatabaseManager {
   private static instance: DatabaseManager;

@@ -66,7 +66,7 @@ src/db/
 ### Basic Database Operations
 
 ```typescript
-import { DatabaseManager } from '../core/DatabaseManager';
+import { DatabaseManager } from '@/core/DatabaseManager';
 
 const db = DatabaseManager.getInstance();
 await db.initialize();
@@ -98,7 +98,7 @@ const frames = await db.getFramesByStory('owner/repo', 1);
 For backward compatibility, use the unified managers that maintain the same interface:
 
 ```typescript
-import { UnifiedLanguagesManager } from '../core/UnifiedLanguagesManager';
+import { UnifiedLanguagesManager } from '@/core/UnifiedLanguagesManager';
 
 const languageManager = UnifiedLanguagesManager.getInstance();
 await languageManager.initialize();
@@ -119,7 +119,7 @@ The migration happens automatically on app startup and includes:
 ### Migration Utility
 
 ```typescript
-import { DataMigration } from '../db/migration';
+import { DataMigration } from '@/db/migration';
 
 const migration = new DataMigration();
 
@@ -135,8 +135,8 @@ await migration.createBackupOfLegacyDatabases();
 If automatic migration fails, you can run it manually:
 
 ```typescript
-import { DatabaseManager } from '../core/DatabaseManager';
-import { DataMigration } from '../db/migration';
+import { DatabaseManager } from '@/core/DatabaseManager';
+import { DataMigration } from '@/db/migration';
 
 // Initialize new database
 const db = DatabaseManager.getInstance();

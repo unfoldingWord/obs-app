@@ -1,7 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 
-import { DatabaseManager } from '../core/DatabaseManager';
-import { warn } from '../core/utils';
+import { DatabaseManager } from '@/core/DatabaseManager';
+import { warn } from '@/core/utils';
 
 export class DataMigration {
   private databaseManager: DatabaseManager;

@@ -1,6 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -15,18 +14,16 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { FrameBadge } from '../../src/components/FrameBadge';
-import { CollectionsManager, Story, Frame } from '../../src/core/CollectionsManager';
-import { CommentsManager, FrameComment } from '../../src/core/CommentsManager';
-import { UnifiedLanguagesManager } from '../../src/core/UnifiedLanguagesManager';
-import { StoryManager, UserMarker } from '../../src/core/storyManager';
-import { useStoryNavigation } from '../../src/hooks/useStoryNavigation';
-
-type ReadingMode = 'horizontal' | 'vertical';
+import { FrameBadge } from '@/components/FrameBadge';
+import { CollectionsManager, Story, Frame } from '@/core/CollectionsManager';
+import { CommentsManager, FrameComment } from '@/core/CommentsManager';
+import { UnifiedLanguagesManager } from '@/core/UnifiedLanguagesManager';
+import { StoryManager, UserMarker } from '@/core/storyManager';
+import { useObsImage } from '@/hooks/useObsImage';
+import { useStoryNavigation } from '@/hooks/useStoryNavigation';
 
 interface FavoriteStory extends Story {
   collectionDisplayName?: string;
-  thumbnailUrl?: string;
   isRTL?: boolean;
 }
 
@@ -55,7 +52,6 @@ export default function FavoritesScreen() {
   const [favoriteFrames, setFavoriteFrames] = useState<FavoriteFrame[]>([]);
   const [markers, setMarkers] = useState<FavoriteMarker[]>([]);
   const [comments, setComments] = useState<FavoriteComment[]>([]);
-  const router = useRouter();
   const { navigateToStory, navigateToStoryStart } = useStoryNavigation();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -91,7 +87,6 @@ export default function FavoritesScreen() {
           return {
             ...story,
             collectionDisplayName: collection?.displayName || story.collectionId,
-            thumbnailUrl: `https://cdn.door43.org/obs/jpg/360px/obs-en-${story.storyNumber.toString().padStart(2, '0')}-01.jpg`,
             isRTL: languageData?.ld === 'rtl',
           };
         })
@@ -187,7 +182,6 @@ export default function FavoritesScreen() {
           return {
             ...story,
             collectionDisplayName: collection?.displayName || story.collectionId,
-            thumbnailUrl: `https://cdn.door43.org/obs/jpg/360px/obs-en-${story.storyNumber.toString().padStart(2, '0')}-01.jpg`,
             isRTL: languageData?.ld === 'rtl',
           };
         })
@@ -308,6 +302,17 @@ export default function FavoritesScreen() {
     }
   };
 
+  const FavoriteStoryThumbnail = ({ storyNumber }: { storyNumber: number }) => {
+    const thumbnailImage = useObsImage({
+      reference: {
+        story: storyNumber,
+        frame: 1, // Always use the first frame for thumbnail
+      },
+    });
+
+    return <Image source={thumbnailImage} className="h-48 w-full" resizeMode="cover" />;
+  };
+
   const renderFavoriteStory = ({ item }: { item: FavoriteStory }) => {
     const sourceReference = item.metadata?.sourceReference;
 
@@ -316,7 +321,7 @@ export default function FavoritesScreen() {
         onPress={() => navigateToFavoriteStory(item)}
         className={`mx-4 mb-6 overflow-hidden rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-white'} border shadow-lg ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
         <View className="relative">
-          <Image source={{ uri: item.thumbnailUrl }} className="h-48 w-full" resizeMode="cover" />
+          <FavoriteStoryThumbnail storyNumber={item.storyNumber} />
           {/* Story badge with icon and number */}
           <View
             className={`absolute top-3 ${item.isRTL ? 'left-3' : 'right-3'} flex-row items-center rounded-full px-3 py-2 ${isDark ? 'bg-blue-600/90' : 'bg-blue-500/90'}`}>
@@ -358,12 +363,29 @@ export default function FavoritesScreen() {
     );
   };
 
+  const FavoriteFrameImage = ({
+    storyNumber,
+    frameNumber,
+  }: {
+    storyNumber: number;
+    frameNumber: number;
+  }) => {
+    const frameImage = useObsImage({
+      reference: {
+        story: storyNumber,
+        frame: frameNumber,
+      },
+    });
+
+    return <Image source={frameImage} className="h-48 w-full" resizeMode="cover" />;
+  };
+
   const renderFavoriteFrame = ({ item }: { item: FavoriteFrame }) => (
     <TouchableOpacity
       onPress={() => navigateToFrame(item)}
       className={`mx-4 mb-6 overflow-hidden rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-white'} border shadow-lg ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
       <View className="relative">
-        <Image source={{ uri: item.imageUrl }} className="h-48 w-full" resizeMode="cover" />
+        <FavoriteFrameImage storyNumber={item.storyNumber} frameNumber={item.frameNumber} />
         {/* Frame badge with icon and reference */}
         <View
           className={`absolute top-3 ${item.isRTL ? 'left-3' : 'right-3'} flex-row items-center rounded-full px-3 py-2 ${isDark ? 'bg-red-600/90' : 'bg-red-500/90'}`}>

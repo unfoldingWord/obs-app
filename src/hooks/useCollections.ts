@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-import { Collection, CollectionsManager } from '../core/CollectionsManager';
+import { Collection, CollectionsManager } from '@/core/CollectionsManager';
 
 export function useCollections() {
   const [loading, setLoading] = useState(true);

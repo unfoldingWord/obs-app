@@ -1,6 +1,6 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { useRouter, useFocusEffect } from 'expo-router';
-import React, { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from 'expo-router';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,10 +13,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { NotesSection } from '../../src/components/CommentsSection';
-import { FrameBadge } from '../../src/components/FrameBadge';
-import { CollectionsManager, SearchResult, Collection } from '../../src/core/CollectionsManager';
-import { useStoryNavigation } from '../../src/hooks/useStoryNavigation';
+import { FrameBadge } from '@/components/FrameBadge';
+import { CollectionsManager, SearchResult, Collection } from '@/core/CollectionsManager';
+import { useStoryNavigation } from '@/hooks/useStoryNavigation';
 
 interface HighlightedTextProps {
   text: string;
@@ -63,7 +62,6 @@ export default function SearchScreen() {
   const [selectedCollections, setSelectedCollections] = useState<Set<string>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
   const [loadingCollections, setLoadingCollections] = useState(true);
-  const router = useRouter();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const { navigateToStory } = useStoryNavigation();

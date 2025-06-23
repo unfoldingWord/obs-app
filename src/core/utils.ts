@@ -107,9 +107,10 @@ export function generateId(length: number = 8): string {
  */
 export function isValidUrl(url: string): boolean {
   try {
+    // eslint-disable-next-line no-new
     new URL(url);
     return true;
-  } catch (error) {
+  } catch {
     return false;
   }
 }

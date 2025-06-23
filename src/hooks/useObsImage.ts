@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { ImageSourcePropType } from 'react-native';
 
 import placeholderImage from '../../assets/placeholder.png';
-import { Reference } from '../types/index';
+
+import { Reference } from '@/types/index';
 
 // Import the placeholder image statically
 

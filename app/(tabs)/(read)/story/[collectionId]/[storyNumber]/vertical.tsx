@@ -11,23 +11,17 @@ import {
   StatusBar,
   useColorScheme,
   ScrollView,
-  Alert,
   Modal,
   TextInput,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { FrameBadge } from '../../../../../../src/components/FrameBadge';
-import {
-  CollectionsManager,
-  Collection,
-  Story,
-  Frame,
-} from '../../../../../../src/core/CollectionsManager';
-import { UnifiedLanguagesManager } from '../../../../../../src/core/UnifiedLanguagesManager';
-import { StoryManager, UserMarker } from '../../../../../../src/core/storyManager';
-import { useObsImage } from '../../../../../../src/hooks/useObsImage';
+import { FrameBadge } from '@/components/FrameBadge';
+import { CollectionsManager, Story, Frame } from '@/core/CollectionsManager';
+import { UnifiedLanguagesManager } from '@/core/UnifiedLanguagesManager';
+import { StoryManager, UserMarker } from '@/core/storyManager';
+import { useObsImage } from '@/hooks/useObsImage';
 
 interface BookmarkModalProps {
   visible: boolean;
@@ -42,7 +36,6 @@ export default function VerticalReadingScreen() {
   const { collectionId: encodedCollectionId, storyNumber, frame } = useLocalSearchParams();
   const collectionId = decodeURIComponent(encodedCollectionId as string);
   const [loading, setLoading] = useState(true);
-  const [collection, setCollection] = useState<Collection | null>(null);
   const [story, setStory] = useState<Story | null>(null);
   const [frames, setFrames] = useState<Frame[]>([]);
   const [allStories, setAllStories] = useState<Story[]>([]);
@@ -91,7 +84,6 @@ export default function VerticalReadingScreen() {
         setLoading(false);
         return;
       }
-      setCollection(collectionDetails);
 
       // Get all stories in the collection
       const allStoriesData = await collectionsManager.getCollectionStories(collectionId as string);

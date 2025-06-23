@@ -1,12 +1,12 @@
 import { MaterialIcons } from '@expo/vector-icons';
-import { hashStringToNumber } from 'core/hashStringToNumber';
-import { useObsImage } from 'hooks/useObsImage';
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, Image, TouchableOpacity } from 'react-native';
 
-import { CollectionInfoModal } from './CollectionInfoModal';
-import { Collection, CollectionsManager } from '../core/CollectionsManager';
-import { UnifiedLanguagesManager } from '../core/UnifiedLanguagesManager';
+import { CollectionInfoModal } from '@/components/CollectionInfoModal';
+import { Collection } from '@/core/CollectionsManager';
+import { UnifiedLanguagesManager } from '@/core/UnifiedLanguagesManager';
+import { hashStringToNumber } from '@/core/hashStringToNumber';
+import { useObsImage } from '@/hooks/useObsImage';
 
 interface CollectionItemProps {
   item: Collection;
@@ -22,7 +22,6 @@ export function CollectionItem({
   isDark,
 }: CollectionItemProps) {
   const [showInfoModal, setShowInfoModal] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [languageName, setLanguageName] = useState<string>('');
   const [isRTL, setIsRTL] = useState(false);
 
@@ -62,33 +61,6 @@ export function CollectionItem({
     setShowInfoModal(false);
   };
 
-  const handleDeleteCollection = async () => {
-    Alert.alert('Delete Collection', `Are you sure you want to delete ${item.displayName}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            setIsDeleting(true);
-            const collectionsManager = CollectionsManager.getInstance();
-            await collectionsManager.deleteCollection(item.id);
-            onCollectionDeleted?.();
-          } catch (err) {
-            console.error('Delete failed:', err);
-            Alert.alert(
-              'Delete Failed',
-              'There was an error deleting this collection. Please try again.',
-              [{ text: 'OK' }]
-            );
-          } finally {
-            setIsDeleting(false);
-          }
-        },
-      },
-    ]);
-  };
-
   const handleCollectionDeletedFromModal = () => {
     setShowInfoModal(false);
     onCollectionDeleted?.();
@@ -114,8 +86,7 @@ export function CollectionItem({
             <View style={{ flex: 1, paddingRight: 16 }}>
               <Text
                 className={`text-base font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}
-                style={{ textAlign: isRTL ? 'right' : 'left' }}
-                numberOfLines={1}>
+                style={{ textAlign: isRTL ? 'right' : 'left' }}>
                 {item.displayName}
               </Text>
               <View
@@ -150,7 +121,7 @@ export function CollectionItem({
       </TouchableOpacity>
 
       <CollectionInfoModal
-        collection={item}
+        collection={{ ...item, isValid: true }}
         visible={showInfoModal}
         onClose={handleCloseInfo}
         onCollectionDeleted={handleCollectionDeletedFromModal}
