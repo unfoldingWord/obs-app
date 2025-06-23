@@ -170,7 +170,7 @@ export const NotesSection: React.FC<NotesSectionProps> = ({
           )}
         </View>
         <MaterialIcons
-          name={isVisible ? 'expand-less' : 'expand-more'}
+          name={isVisible ? 'expand-more' : 'expand-less'}
           size={24}
           color={isDark ? '#9CA3AF' : '#6B7280'}
         />
