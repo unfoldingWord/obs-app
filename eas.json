@@ -1,22 +1,27 @@
 {
   "cli": {
-    "version": ">= 7.3.0"
+    "version": ">= 7.3.0",
+    "appVersionSource": "local"
   },
   "build": {
     "development": {
+      "environment": "development",
       "developmentClient": true,
       "distribution": "internal"
     },
     "preview": {
+      "environment": "preview",
       "distribution": "internal",
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "withoutCredentials": true
       },
       "ios": {
         "simulator": true
       }
     },
     "production": {
+      "environment": "production",
       "android": {
         "buildType": "app-bundle"
       },
@@ -31,17 +36,15 @@
         "track": "production"
       },
       "ios": {
-        "submitForReview": true,
-        "releaseType": "AFTER_APPROVAL"
+        "ascAppId": "1234567890"
       }
     },
-    "testing": {
+    "preview": {
       "android": {
         "track": "internal"
       },
       "ios": {
-        "submitForReview": false,
-        "releaseType": "MANUAL"
+        "ascAppId": "1234567890"
       }
     }
   }

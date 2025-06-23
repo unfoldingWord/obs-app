@@ -111,6 +111,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+
+
       - name: Determine build platform
         id: platform
         run: |
@@ -138,7 +140,6 @@ jobs:
           eas build \
             --platform ${{ steps.platform.outputs.platform }} \
             --profile production \
-            --message "${BUILD_MESSAGE}" \
             --non-interactive
 
       - name: Submit to App Store (iOS)
@@ -152,19 +153,16 @@ jobs:
             # Determine submit profile based on testing mode
             if [[ "${{ github.event_name }}" == "release" ]]; then
               SUBMIT_PROFILE="production"
-              SUBMIT_MESSAGE="Release ${{ github.event.release.tag_name }}"
               echo "📱 Using PRODUCTION profile (public release)"
             elif [[ "${{ github.event.inputs.testing_mode }}" == "true" ]]; then
-              SUBMIT_PROFILE="testing"
-              SUBMIT_MESSAGE="Testing build - $(date +'%Y-%m-%d %H:%M:%S')"
-              echo "🧪 Using TESTING profile (internal only - SAFE)"
+              SUBMIT_PROFILE="preview"
+              echo "🧪 Using PREVIEW profile (internal only - SAFE)"
             else
               SUBMIT_PROFILE="production"
-              SUBMIT_MESSAGE="Manual production build - $(date +'%Y-%m-%d %H:%M:%S')"
               echo "📱 Using PRODUCTION profile (public release)"
             fi
 
-            eas submit --platform ios --profile ${SUBMIT_PROFILE} --message "${SUBMIT_MESSAGE}" --non-interactive
+            eas submit --platform ios --profile ${SUBMIT_PROFILE} --latest --non-interactive
           else
             echo "⏭️ Skipping iOS submission (not building iOS)"
           fi
@@ -180,19 +178,16 @@ jobs:
             # Determine submit profile based on testing mode
             if [[ "${{ github.event_name }}" == "release" ]]; then
               SUBMIT_PROFILE="production"
-              SUBMIT_MESSAGE="Release ${{ github.event.release.tag_name }}"
               echo "📱 Using PRODUCTION profile (public release)"
             elif [[ "${{ github.event.inputs.testing_mode }}" == "true" ]]; then
-              SUBMIT_PROFILE="testing"
-              SUBMIT_MESSAGE="Testing build - $(date +'%Y-%m-%d %H:%M:%S')"
-              echo "🧪 Using TESTING profile (internal track - SAFE)"
+              SUBMIT_PROFILE="preview"
+              echo "🧪 Using PREVIEW profile (internal track - SAFE)"
             else
               SUBMIT_PROFILE="production"
-              SUBMIT_MESSAGE="Manual production build - $(date +'%Y-%m-%d %H:%M:%S')"
               echo "📱 Using PRODUCTION profile (public release)"
             fi
 
-            eas submit --platform android --profile ${SUBMIT_PROFILE} --message "${SUBMIT_MESSAGE}" --non-interactive
+            eas submit --platform android --profile ${SUBMIT_PROFILE} --latest --non-interactive
           else
             echo "⏭️ Skipping Android submission (not building Android)"
           fi
@@ -249,7 +244,7 @@ jobs:
             echo "  Version: ${{ steps.release-info.outputs.version }}"
             echo "  Profile: PRODUCTION (public release)"
           elif [[ "${{ github.event.inputs.testing_mode }}" == "true" ]]; then
-            echo "  Profile: TESTING (internal only - safe)"
+            echo "  Profile: PREVIEW (internal only - safe)"
           else
             echo "  Profile: PRODUCTION (public release)"
           fi

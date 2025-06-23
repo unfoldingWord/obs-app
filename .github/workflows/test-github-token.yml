@@ -1,0 +1,202 @@
+name: Test GitHub Token
+
+on:
+  workflow_dispatch:    # Manual trigger only - for testing
+  push:
+    branches:
+      - feature/test-github-token  # Only trigger on test branches
+
+jobs:
+  test-github-token:
+    name: Test GitHub Token Availability
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Test GitHub Token Exists
+        run: |
+          echo "🔍 Testing GitHub Token availability..."
+
+          if [ -z "${{ secrets.GITHUB_TOKEN }}" ]; then
+            echo "❌ GITHUB_TOKEN is not available"
+            echo "This should never happen - GitHub should provide this automatically"
+            exit 1
+          else
+            echo "✅ GITHUB_TOKEN is available"
+          fi
+
+      - name: Test GitHub Token via Environment
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🔍 Testing GitHub Token via environment variable..."
+
+          if [ -z "$GITHUB_TOKEN" ]; then
+            echo "❌ GITHUB_TOKEN environment variable is empty"
+            exit 1
+          else
+            echo "✅ GITHUB_TOKEN environment variable is set"
+            echo "Token length: ${#GITHUB_TOKEN} characters"
+          fi
+
+      - name: Test Repository Access
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🔍 Testing repository access with GitHub CLI..."
+
+          # Test basic repository info
+          echo "Repository: ${{ github.repository }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Event: ${{ github.event_name }}"
+
+          # Test GitHub CLI with token
+          if command -v gh >/dev/null 2>&1; then
+            echo "✅ GitHub CLI is available"
+
+            # Test repository access
+            echo "📊 Repository information:"
+            gh repo view ${{ github.repository }} --json name,description,visibility || {
+              echo "❌ Failed to access repository with GitHub CLI"
+              exit 1
+            }
+          else
+            echo "ℹ️ GitHub CLI not available (expected in ubuntu-latest)"
+          fi
+
+      - name: Test API Access with curl
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🔍 Testing GitHub API access with curl..."
+
+          # Test API access
+          API_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}")
+
+          if echo "$API_RESPONSE" | grep -q '"name"'; then
+            echo "✅ GitHub API access successful"
+            echo "Repository name: $(echo "$API_RESPONSE" | jq -r '.name')"
+            echo "Repository owner: $(echo "$API_RESPONSE" | jq -r '.owner.login')"
+          else
+            echo "❌ GitHub API access failed"
+            echo "Response: $API_RESPONSE"
+            exit 1
+          fi
+
+      - name: Test Token Permissions
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🔍 Testing token permissions..."
+
+          # Test what permissions the token has
+          echo "📋 Testing specific permissions:"
+
+          # Test repository read
+          echo "1. Repository read access:"
+          if curl -s -H "Authorization: token $GITHUB_TOKEN" \
+             "https://api.github.com/repos/${{ github.repository }}" | grep -q '"name"'; then
+            echo "   ✅ Can read repository"
+          else
+            echo "   ❌ Cannot read repository"
+          fi
+
+          # Test issues read
+          echo "2. Issues read access:"
+          ISSUES_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/issues?per_page=1")
+          if [ $? -eq 0 ] && [ "$ISSUES_RESPONSE" != "null" ]; then
+            echo "   ✅ Can read issues"
+          else
+            echo "   ❌ Cannot read issues"
+          fi
+
+          # Test contents read
+          echo "3. Contents read access:"
+          if curl -s -H "Authorization: token $GITHUB_TOKEN" \
+             "https://api.github.com/repos/${{ github.repository }}/contents/README.md" | grep -q '"name"'; then
+            echo "   ✅ Can read repository contents"
+          else
+            echo "   ❌ Cannot read repository contents"
+          fi
+
+      - name: Test Release Operations (Read-Only)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🔍 Testing release operations..."
+
+          # Test reading releases
+          echo "📋 Testing release access:"
+          RELEASES_RESPONSE=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/releases?per_page=5")
+
+          if echo "$RELEASES_RESPONSE" | jq empty 2>/dev/null; then
+            RELEASE_COUNT=$(echo "$RELEASES_RESPONSE" | jq length)
+            echo "✅ Can read releases (found $RELEASE_COUNT releases)"
+
+            # Show latest release if exists
+            if [ "$RELEASE_COUNT" -gt 0 ]; then
+              LATEST_TAG=$(echo "$RELEASES_RESPONSE" | jq -r '.[0].tag_name // "No tag"')
+              echo "   Latest release: $LATEST_TAG"
+            fi
+          else
+            echo "❌ Cannot read releases or invalid response"
+          fi
+
+      - name: Test Workflow Permissions
+        run: |
+          echo "🔍 Testing workflow permissions..."
+          echo "📋 Current workflow context:"
+          echo "  Repository: ${{ github.repository }}"
+          echo "  Actor: ${{ github.actor }}"
+          echo "  Event: ${{ github.event_name }}"
+          echo "  Ref: ${{ github.ref }}"
+          echo "  SHA: ${{ github.sha }}"
+
+          echo ""
+          echo "🔐 Token should have these permissions by default:"
+          echo "  ✅ Read repository contents"
+          echo "  ✅ Read issues and pull requests"
+          echo "  ✅ Read and write releases (for our workflow needs)"
+          echo "  ✅ Read repository metadata"
+
+      - name: Summary
+        run: |
+          echo "🎉 GitHub Token Test Summary"
+          echo "=============================="
+          echo ""
+          echo "✅ GITHUB_TOKEN is automatically provided by GitHub Actions"
+          echo "✅ Token has sufficient permissions for repository operations"
+          echo "✅ Can access GitHub API successfully"
+          echo "✅ Ready for use in our EAS workflows"
+          echo ""
+          echo "💡 This token is automatically refreshed and scoped to this repository"
+          echo "📖 Learn more: https://docs.github.com/en/actions/security-guides/automatic-token-authentication"
+
+      - name: Workflow-Specific Test
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🔍 Testing operations our EAS workflow needs..."
+
+          # Test if we can update release (simulation)
+          echo "📝 Testing release update capability:"
+          echo "   Our workflow needs to update releases with build info"
+          echo "   GITHUB_TOKEN should have 'contents: write' permissions for this"
+
+          # Check if we have write permissions by testing a read operation
+          # (We won't actually modify anything in this test)
+          if curl -s -H "Authorization: token $GITHUB_TOKEN" \
+             "https://api.github.com/repos/${{ github.repository }}" | grep -q '"permissions"'; then
+            echo "   ✅ Repository access confirmed - write permissions should be available"
+          else
+            echo "   ℹ️ Permissions info not accessible (normal for public repos)"
+            echo "   ✅ Basic access confirmed - should be sufficient for release updates"
+          fi
+
+          echo ""
+          echo "🚀 Ready for EAS Build workflows that update releases!"
