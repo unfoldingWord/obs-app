@@ -68,6 +68,6 @@
     "extends": "universe/native",
     "root": true
   },
-  "main": "expo-router/entry",
+  "main": "index.js",
   "private": true
 }
