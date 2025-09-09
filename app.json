@@ -21,7 +21,6 @@
       "expo-router",
       "expo-sqlite",
       "expo-system-ui",
-      "expo-router",
       [
         "expo-splash-screen",
         {
@@ -48,6 +47,7 @@
       },
       "associatedDomains": [],
       "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
         "CFBundleDocumentTypes": [
           {
             "CFBundleTypeRole": "Editor",
