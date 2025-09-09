@@ -215,12 +215,11 @@ export default function LanguageScreen() {
 
       // Use the standard download method which now uses embedded owner data
       await collectionsManager.downloadRemoteCollection(collection, language);
-
-      await loadCollections(); // Refresh the list
     } catch (err) {
       console.error('Download failed:', err);
       // No alert message - just silently fail and remove loading state
     } finally {
+      router.push(`/stories?collectionId=${encodeURIComponent(collection.id)}`);
       setDownloadingId(null);
     }
   };
