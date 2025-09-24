@@ -27,7 +27,7 @@
           "image": "./assets/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#006a78"
+          "backgroundColor": "#004065"
         }
       ]
     ],
@@ -43,11 +43,12 @@
         "image": "./assets/splash-icon.png",
         "imageWidth": 200,
         "resizeMode": "contain",
-        "backgroundColor": "#006a78"
+        "backgroundColor": "#004065"
       },
       "associatedDomains": [],
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
+        "LSSupportsOpeningDocumentsInPlace": true,
         "CFBundleDocumentTypes": [
           {
             "CFBundleTypeRole": "Editor",

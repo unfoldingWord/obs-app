@@ -33,7 +33,7 @@
         "track": "production"
       },
       "ios": {
-        "ascAppId": "1234567890"
+        "ascAppId": "6752297335"
       }
     },
     "preview": {
@@ -41,7 +41,7 @@
         "track": "internal"
       },
       "ios": {
-        "ascAppId": "1234567890"
+        "ascAppId": "6752297335"
       }
     }
   }
