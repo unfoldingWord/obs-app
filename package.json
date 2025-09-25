@@ -16,13 +16,13 @@
     "install:android:release": "adb install android/app/build/outputs/apk/release/app-release.apk"
   },
   "dependencies": {
-    "@expo/vector-icons": "^14.0.2",
+    "@expo/vector-icons": "~14.0.4",
     "@react-native-async-storage/async-storage": "1.23.1",
     "@types/jszip": "^3.4.1",
     "drizzle-kit": "^0.31.1",
     "drizzle-orm": "^0.44.0",
-    "expo": "~52.0.46",
-    "expo-asset": "^11.1.5",
+    "expo": "~52.0.47",
+    "expo-asset": "~11.0.5",
     "expo-constants": "~17.0.8",
     "expo-document-picker": "~13.0.3",
     "expo-drizzle-studio-plugin": "^0.1.2",

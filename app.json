@@ -21,6 +21,7 @@
       "expo-router",
       "expo-sqlite",
       "expo-system-ui",
+      "expo-asset",
       [
         "expo-splash-screen",
         {
