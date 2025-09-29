@@ -12,6 +12,7 @@ import '../global.css';
 import { DatabaseManager } from '@/core/DatabaseManager';
 import { DataMigration } from '@/db/migration';
 
+
 // Enable react-native-screens
 enableScreens();
 
