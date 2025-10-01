@@ -6,10 +6,6 @@
     "version": "1.0.1",
     "owner": "unfoldingword",
     "scheme": "obs-app",
-    "linking": {
-      "scheme": "obs-app",
-      "prefixes": ["obs-app://", "obs-app://file-import"]
-    },
     "newArchEnabled": true,
     "web": {
       "favicon": "./assets/favicon.png"
@@ -23,6 +19,19 @@
       "expo-system-ui",
       "expo-asset",
       "expo-font",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "buildToolsVersion": "35.0.0"
+          },
+          "ios": {
+            "deploymentTarget": "15.1"
+          }
+        }
+      ],
       [
         "expo-splash-screen",
         {
