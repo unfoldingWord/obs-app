@@ -7,7 +7,10 @@
     "development": {
       "environment": "development",
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "ios": {
+        "image": "macos-sequoia-15.6-xcode-26.2"
+      }
     },
     "preview": {
       "environment": "preview",
@@ -15,6 +18,9 @@
       "android": {
         "buildType": "apk",
         "withoutCredentials": true
+      },
+      "ios": {
+        "image": "macos-sequoia-15.6-xcode-26.2"
       }
     },
     "production": {
@@ -23,7 +29,8 @@
         "buildType": "app-bundle"
       },
       "ios": {
-        "distribution": "store"
+        "distribution": "store",
+        "image": "macos-sequoia-15.6-xcode-26.2"
       }
     }
   },
